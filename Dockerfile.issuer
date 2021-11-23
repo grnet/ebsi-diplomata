@@ -6,22 +6,28 @@ ENV PYTHONDONTWRITEBYTECODE  1
 ENV CODE issuer
 ENV USERNAME ${CODE}
 ENV HOMEDIR /home/${USERNAME}
+ENV WALTDIR ${HOMEDIR}/waltid-ssikit
 ENV APPDIR ${HOMEDIR}/app
 
+RUN chmod 1777 /tmp
 RUN apt-get update && apt-get install -y \
-        gcc \
-        libpq-dev \
-        postgresql-client
-RUN pip install --upgrade pip
+    gcc \
+    libpq-dev \
+    postgresql-client \
+    openjdk-17-jre \
+    openjdk-17-jdk
 
-RUN apt-get install -y openjdk-17-jre openjdk-17-jdk
+COPY ./waltid-ssikit ${WALTDIR}
+WORKDIR ${WALTDIR}
+RUN ./ssikit.sh build
 
 WORKDIR ${APPDIR}
+RUN pip install --upgrade pip
 
 COPY ./${CODE}/requirements.txt .
-RUN pip install -r requirements.txt
-
 COPY ./${CODE}/requirements-dev.txt .
+
+RUN pip install -r requirements.txt
 RUN pip install -r requirements-dev.txt
 
 COPY ./${CODE} .
