@@ -1,0 +1,29 @@
+FROM python:3.10-slim-bullseye
+
+ENV PYTHONBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE  1
+
+ENV CODE verifier
+ENV USERNAME ${CODE}
+ENV HOMEDIR /home/${USERNAME}
+ENV APPDIR ${HOMEDIR}/app
+
+RUN apt-get update && apt-get install -y \
+        gcc \
+        libpq-dev \
+        postgresql-client
+RUN pip install --upgrade pip
+
+RUN apt-get install -y openjdk-17-jre openjdk-17-jdk
+
+WORKDIR ${APPDIR}
+
+COPY ./${CODE}/requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY ./${CODE}/requirements-dev.txt .
+RUN pip install -r requirements-dev.txt
+
+COPY ./${CODE} .
+
+ENTRYPOINT ["./entrypoint.sh"]

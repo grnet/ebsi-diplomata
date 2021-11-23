@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  issuer:
+    container_name: issuer
+    build:
+      context: .
+      dockerfile: Dockerfile.issuer
+    # command: tail -F anything
+    ports:
+      - 7000:7000
+    expose:
+      - 7000
+      # environment:
+      #   - DEBUG=${ZEUS_DEBUG}
+      #   - APP_ALLOWED_HOSTS=${ZEUS_WEB_ALLOWED_HOSTS}
+      #   - SECRET_KEY=${ZEUS_WEB_SECRET_KEY}
+      #   - DATABASE=postgres
+      #   - SQL_DATABASE=${ZEUS_SQL_DATABASE}
+      #   - SQL_USER=${ZEUS_SQL_USER}
+      #   - SQL_PASSWORD=${ZEUS_SQL_PASSWORD}
+      #   - SQL_ENGINE=django.db.backends.postgresql
+      #   - SQL_HOST=${ZEUS_SQL_HOST}
+      #   - SQL_PORT=${ZEUS_SQL_PORT}
+      # volumes:
+      #   - ./web:/home/web/app
+      # depends_on:
+      #   - postgres
+  verifier:
+    container_name: verifier
+    build:
+      context: .
+      dockerfile: Dockerfile.verifier
+    # command: tail -F anything
+    ports:
+      - 7001:7001
+    expose:
+      - 7001
+      # environment:
+      #   - DEBUG=${ZEUS_DEBUG}
+      #   - SESSION=${ZEUS_SESSION}
+      #   - CORE_URL=${ZEUS_CORE_URL}
+      #   - NEXT_URL=${ZEUS_MIXER_1_NEXT_URL}
+      #   - SESS_ID=${ZEUS_SESS_ID}
+      #   - APP_SECRET_KEY=${ZEUS_MIXER_1_SECRET_KEY}
+      #   - NAME=${ZEUS_MIXER_1_NAME}
+      #   - HTTP_PORT=${ZEUS_MIXER_1_PORT}
+      #   - ELGAMAL=${ZEUS_ELGAMAL}
+      #   - MODULUS=${ZEUS_MODULUS}
+      #   - PRIMITIVE=${ZEUS_PRIMITIVE}
+      #   - ROOTORD=${ZEUS_ROOTORD}
+      #   - MIXNET=${ZEUS_MIXNET}
+      #   - MIXDIR=${ZEUS_MIXDIR}
+      #   - SK_NR_ROUNDS=${ZEUS_SK_NR_ROUNDS}
+      #   - SK_NR_PARALLEL=${ZEUS_SK_NR_PARALLEL}
+      # volumes:
+      #   - ./mixer:/home/mixer
+      # postgres:
+      #   container_name: issuer-db
+      #   image: postgres:14.0-alpine
+      #   volumes:
+      #     - postgres_data:/var/lib/postgresql/data/
+      #   environment:
+      #     - POSTGRES_DB=${ISSUER_SQL_DATABASE}
+      #     - POSTGRES_USER=${ISSUER_SQL_USER}
+      #     - POSTGRES_PASSWORD=${ISSUER_SQL_PASSWORD}
+
+volumes:
+  postgres_data:
