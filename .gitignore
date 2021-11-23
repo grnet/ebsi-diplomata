@@ -1,5 +1,9 @@
 *.sw*
 *cache*
 *.pyc
+db.sqlite3
+dist/
+build/
+*.egg-info/
 env/
 TODOS*
