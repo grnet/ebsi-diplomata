@@ -29,6 +29,9 @@ RUN mkdir -p ${STORAGE}/dids
 RUN mkdir -p ${STORAGE}/vc
 RUN mkdir -p ${STORAGE}/tokens
 
+# Directory with waltid-ssikit bash wrappers
+COPY ./scripts ${HOMEDIR}/scripts
+
 WORKDIR ${APPDIR}
 RUN pip install --upgrade pip
 
