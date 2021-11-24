@@ -16,6 +16,10 @@ Options:
                                   be generated according to an algorithm
                                   specified as follows.
   -a, --algo [Ed25519|Secp256k1]  Keygen algorithm. Default: Ed255519
+
+Examples
+  $ $(basename "$0") --name whatever --key d7080431b17f4adea29e50181115d810
+  $ $(basename "$0") --name whatever --algo Secp256k1
 "
 
 usage() { echo -n "$usage_string" 1>&2; }
