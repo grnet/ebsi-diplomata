@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y \
 COPY ./waltid-ssikit ${WALTDIR}
 WORKDIR ${WALTDIR}
 RUN ./ssikit.sh build
+RUN rm -rf data           # Remove test data
 
 WORKDIR ${APPDIR}
 RUN pip install --upgrade pip
