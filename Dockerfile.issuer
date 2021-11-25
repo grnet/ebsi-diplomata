@@ -20,17 +20,10 @@ RUN apt-get update && apt-get install -y \
 COPY ./waltid-ssikit ${WALTDIR}
 WORKDIR ${WALTDIR}
 RUN ./ssikit.sh build
-RUN rm -rf data           # Remove test data
+RUN rm -rf data && mkdir -p data/ebsi
 
-# Temporary data storage for python app
 ENV STORAGE ${HOMEDIR}/storage
-RUN mkdir -p ${STORAGE}/keys
-RUN mkdir -p ${STORAGE}/dids
-RUN mkdir -p ${STORAGE}/vc
-RUN mkdir -p ${STORAGE}/tokens
-
-# Directory with waltid-ssikit bash wrappers
-COPY ./scripts ${HOMEDIR}/scripts
+RUN mkdir -p ${STORAGE}/did
 
 WORKDIR ${APPDIR}
 RUN pip install --upgrade pip

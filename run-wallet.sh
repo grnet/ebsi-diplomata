@@ -53,11 +53,15 @@ if [ ${DO_BUILD} == true ]; then
         .
 fi
 
+SOURCE_TOKEN="${PWD}/resources/bearer-token.txt"
+TARGET_TOKEN="/home/wallet/waltid-ssikit/data/ebsi/bearer-token.txt"
 if [ ${DO_RUN} == true ]; then
     docker container rm "${CONTAINER}"
     docker run \
         --name "${CONTAINER}" \
         --volume "${PWD}"/wallet:/"${WORKDIR}" \
+        --volume "${PWD}"/scripts:/usr/local/sbin \
+        --mount type=bind,source="${SOURCE_TOKEN}",target="${TARGET_TOKEN}" \
         --interactive \
         --tty \
         "${IMAGE}":latest \

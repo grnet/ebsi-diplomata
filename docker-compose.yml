@@ -21,6 +21,10 @@ services:
       - SQL_PORT=5432
     volumes:
       - ./issuer:/home/issuer/app
+      - ./scripts:/usr/local/sbin
+      - type: bind
+        source: ./resources/bearer-token.txt
+        target: /home/issuer/waltid-ssikit/data/ebsi/bearer-token.txt
     depends_on:
       - postgres
   verifier:
@@ -36,6 +40,7 @@ services:
       - DEBUG=1
     volumes:
       - ./verifier:/home/verifier/app
+      - ./scripts:/usr/local/sbin
   postgres:
     container_name: issuer-db
     image: postgres:14.0-alpine

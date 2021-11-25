@@ -2,7 +2,7 @@
 
 usage_string="usage: ./$(basename "$0") --token <TOKEN> [--did <DID>]
 
-DID onboarding and registering to the EBSI.
+DID onboarding and registration to EBSI.
 
 IMPORTANT: Tokens are taken in raw format from 
 
@@ -11,14 +11,14 @@ https://app.preprod.ebsi.eu/users-onboarding
 and expire after 15 minutes.
 
 Options:
-  -d, --did DID         DID to onboard. If not specified, the last created DID will
-                        be used; exit with 2 if no DID exists.
-  --token FILE          File containing the bearer token. Defaults to
+  -d, --did DID   DID to onboard. If not specified, the last created DID will
+                  be used; exit with 2 if no DID exists.
+  --token FILE    File containing the bearer token. Defaults to
 
-                        ${WALTDIR}/data/ebsi/bearer-token.txt
+                  ${WALTDIR}/data/ebsi/bearer-token.txt
   
-                        Exit with 2 if expired.
-  --resolve             Resolve registered DID to check if it was correctly anchored.
+                  Exit with 2 if expired.
+  --resolve       Resolve registered DID to check if it was correctly anchored.
 
 Examples
   $ $(basename "$0") --token data/ebsi/bearer-token.txt
@@ -26,23 +26,6 @@ Examples
 "
 
 usage() { echo -ne "$usage_string" 1>&2; }
-
-get_nr_dids() {
-    NR_DIDS=$(./ssikit.sh did list | grep -c "\- [0-9]*:")
-    echo $NR_DIDS
-}
-
-get_last_did() {
-    NR_DIDS=$(get_nr_dids)
-    if [ ${NR_DIDS} == 0 ]; then
-        echo "No created DIDs found." && exit 2
-    fi
-    DID=$(./ssikit.sh did list \
-        | grep "\- ${NR_DIDS}:" \
-        | awk -F' ' '{print $3}' \
-        | tr -d '"')
-    echo $DID
-}
 
 check_token_expire() {
     resp=$1
@@ -55,7 +38,7 @@ check_token_expire() {
 set -e
 
 EBSI_PRFX="did:ebsi"
-RESOLVE=false
+DO_RESOLVE=false
 TOKEN="${WALTDIR}/data/ebsi/bearer-token.txt"
 DID=
 
@@ -78,7 +61,7 @@ do
             shift
             ;;
         --resolve)
-            RESOLVE=true
+            DO_RESOLVE=true
             shift
             ;;
         -h|--help)
@@ -91,7 +74,7 @@ done
 cd ${WALTDIR}
 
 if [ -z ${DID} ]; then
-    DID=$(get_last_did)
+    DID=$(get-did)        # Exits with 2 in case of no created DIDs found
 fi
 
 resp=$(./ssikit.sh essif onboard --did ${DID} ${TOKEN})
@@ -107,7 +90,7 @@ resp=$(./ssikit.sh essif did register --did ${DID})
 echo $resp
 # echo "[+] DID registered to EBSI"
 
-if [ ${RESOLVE} == true ]; then
+if [ ${DO_RESOLVE} == true ]; then
     resp=$(./ssikit.sh did resolve --did ${DID})
     echo $resp
     # echo "[+] Registered DID has been resolved"

@@ -4,12 +4,6 @@ usage_string="usage: ./$(basename "$0") [OPTIONS]
 
 DID creation
 
-Convenience wrapper of the \`./ssikit.sh did create [...]\` command.
-
-Arguments (mandatory):
-  --name  NAME                    The generated DID will be exported to
-                                  ${STORAGE}/dids/<NAME>.json
-                                  Existing files are overwritten.
 Options:
   -k, --key                       Specific key (ID or alias). If not provided,
                                   a newly created key will be used, which will 
@@ -18,8 +12,9 @@ Options:
   -a, --algo [Ed25519|Secp256k1]  Keygen algorithm. Default: Ed255519
 
 Examples
-  $ $(basename "$0") --name whatever --key d7080431b17f4adea29e50181115d810
-  $ $(basename "$0") --name whatever --algo Secp256k1
+  $ $(basename "$0")
+  $ $(basename "$0") --key d7080431b17f4adea29e50181115d810
+  $ $(basename "$0") --algo Secp256k1
 "
 
 usage() { echo -n "$usage_string" 1>&2; }
@@ -42,7 +37,6 @@ set -e
 
 KEY=
 ALGO=Ed25519
-NAME=
 
 while [[ $# -gt 0 ]]
 do
@@ -64,11 +58,6 @@ do
             shift
             shift
             ;;
-        --name)
-            NAME="$2"
-            shift
-            shift
-            ;;
         -h|--help)
             usage
             exit 0
@@ -76,12 +65,7 @@ do
     esac
 done
 
-if [ -z ${NAME} ]; then
-    echo "[-] No name specified"
-    usage && exit 1
-fi
-
-OUTFILE="${STORAGE}/dids/${NAME}.json"
+DID_NR=$(($(get-did --number) + 1))
 
 cd ${WALTDIR}
 
@@ -90,7 +74,9 @@ if [ -z ${KEY} ]; then
     KEY=$(get_last_key)
 fi
 
+OUTDIR="${STORAGE}/did/${DID_NR}"
+mkdir -p $OUTDIR
 ./ssikit.sh did create \
     --did-method ebsi \
     --key ${KEY} \
-    --out ${OUTFILE}
+    --out ${OUTDIR}/repr.json
