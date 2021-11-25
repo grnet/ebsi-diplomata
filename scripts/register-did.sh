@@ -2,25 +2,23 @@
 
 usage_string="usage: ./$(basename "$0") --token <TOKEN> [--did <DID>]
 
-DID onboarding to the EBSI.
+DID onboarding and registering to the EBSI.
 
-Convenience wrapper of the \`./ssikit.sh essif onboard [...]\` command.
+IMPORTANT: Tokens are taken in raw format from 
 
-NOTE: After onboarding a DID called <DID>, the relevant verifiable 
-authorization can be found at
+https://app.preprod.ebsi.eu/users-onboarding
 
-  ${STORAGE}/ebsi/<DID>/verifiable-authorization.json
+and expire after 15 minutes.
 
-Arguments (mandatory):
-  --token FILE          File containing the bearer token. Exit with 2 if expired.
-                        IMPORTANT: Tokens are taken in raw format from 
-
-                        https://app.preprod.ebsi.eu/users-onboarding/authentication
-
-                        and expire after 15 minutes.
 Options:
   -d, --did DID         DID to onboard. If not specified, the last created DID will
-                        be used; if no DID exists, exit with 2.
+                        be used; exit with 2 if no DID exists.
+  --token FILE          File containing the bearer token. Defaults to
+
+                        ${WALTDIR}/data/ebsi/bearer-token.txt
+  
+                        Exit with 2 if expired.
+  --resolve             Resolve registered DID to check if it was correctly anchored.
 
 Examples
   $ $(basename "$0") --token data/ebsi/bearer-token.txt
@@ -46,10 +44,19 @@ get_last_did() {
     echo $DID
 }
 
+check_token_expire() {
+    resp=$1
+    if echo $resp | grep -q "invalid_jwt: JWT has expired"; then
+        echo "Failed: Token has expired"
+        exit 2
+    fi
+}
+
 set -e
 
 EBSI_PRFX="did:ebsi"
-TOKEN=
+RESOLVE=false
+TOKEN="${WALTDIR}/data/ebsi/bearer-token.txt"
 DID=
 
 while [[ $# -gt 0 ]]
@@ -70,6 +77,10 @@ do
             shift
             shift
             ;;
+        --resolve)
+            RESOLVE=true
+            shift
+            ;;
         -h|--help)
             usage
             exit 0
@@ -77,28 +88,32 @@ do
     esac
 done
 
-if [ -z ${TOKEN} ]; then
-    echo "[-] No token file specified"
-    usage && exit 1
-fi
-
 cd ${WALTDIR}
 
 if [ -z ${DID} ]; then
     DID=$(get_last_did)
 fi
 
-echo $DID
-
 resp=$(./ssikit.sh essif onboard --did ${DID} ${TOKEN})
+check_token_expire $resp
+echo $resp
+# echo "[+] DID onboarded"
 
-if echo $resp | grep -q "invalid_jwt: JWT has expired"; then
-    echo "Failed: Token has expired"
-    exit 2
-else
-    DID=${DID#"$EBSI_PRFX:"}               # Strip did:ebsi:
-    DID_DIR="${STORAGE}/ebsi/${DID}"
-    JSON="verifiable-authorization.json"
-    mkdir -p $DID_DIR && cp \
-        "data/ebsi/${DID}/${JSON}" "${DID_DIR}/${JSON}"
+resp=$(./ssikit.sh essif auth-api --did ${DID})
+echo $resp
+# echo "[+] EBSI Auth API flow executed"
+
+resp=$(./ssikit.sh essif did register --did ${DID})
+echo $resp
+# echo "[+] DID registered to EBSI"
+
+if [ ${RESOLVE} == true ]; then
+    resp=$(./ssikit.sh did resolve --did ${DID})
+    echo $resp
+    # echo "[+] Registered DID has been resolved"
 fi
+
+
+STORAGE_EBSI="${STORAGE_EBSI}/ebsi"
+mkdir -p ${STORAGE_EBSI}
+cp -r "data/ebsi/${DID#"$EBSI_PRFX:"}" "${STORAGE_EBSI}/"
