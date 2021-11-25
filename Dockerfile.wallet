@@ -7,6 +7,7 @@ ENV CODE wallet
 ENV USERNAME ${CODE}
 ENV HOMEDIR /home/${USERNAME}
 ENV WALTDIR ${HOMEDIR}/waltid-ssikit
+ENV STORAGE ${HOMEDIR}/storage
 ENV APPDIR ${HOMEDIR}/app
 
 RUN chmod 1777 /tmp
@@ -22,7 +23,6 @@ WORKDIR ${WALTDIR}
 RUN ./ssikit.sh build
 RUN rm -rf data && mkdir -p data/ebsi
 
-ENV STORAGE ${HOMEDIR}/storage
 RUN mkdir -p ${STORAGE}/did
 
 WORKDIR ${APPDIR}
