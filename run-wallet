@@ -62,6 +62,7 @@ if [ ${DO_RUN} == true ]; then
         --volume "${PWD}"/wallet:/"${WORKDIR}" \
         --volume "${PWD}"/scripts:/usr/local/sbin \
         --mount type=bind,source="${SOURCE_TOKEN}",target="${TARGET_TOKEN}" \
+        --network=host \
         --interactive \
         --tty \
         "${IMAGE}":latest \

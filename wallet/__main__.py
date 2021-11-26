@@ -1,4 +1,6 @@
 import cmd, sys
+import requests
+import json
 
 class WalletShell(cmd.Cmd):
     intro = " * Type help or ? to list commands.\n"
@@ -9,6 +11,10 @@ class WalletShell(cmd.Cmd):
 
     def postloop(self):
         print('\nClosed wallet session\n')
+
+    def do_fetch(self, line):
+        resp = requests.get('http://localhost:7000/api/did')
+        print(json.dumps(resp.json(), indent=2))
 
     def do_EOF(self, line):
         """Equivalent to exit."""
