@@ -1,3 +1,5 @@
 [submodule "waltid-ssikit"]
-	path = waltid-ssikit
-	url = https://github.com/walt-id/waltid-ssikit
+    path = waltid-ssikit
+    url = https://github.com/walt-id/waltid-ssikit
+    branch = master
+    update = merge
