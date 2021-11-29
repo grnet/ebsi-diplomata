@@ -1,0 +1,86 @@
+#!/bin/bash
+
+usage_string="usage: ./$(basename "$0") [OPTIONS]
+
+Arguments:
+  --holder-did    DID of VC holder
+
+Options:
+  --issuer-did    Current issuer DID. Defaults to the last created DID.
+  --template      VC template to use. Default: VerifiableDiploma
+  --proof-type    Proof type to be used for issuance. Default: LD_PROOF
+
+Examples
+  $ $(basename "$0") --holder-did did:ebsi:zph2s2XSe6F9rn55j1QYH1C
+"
+
+usage() { echo -n "$usage_string" 1>&2; }
+
+
+TEMPLATE=VerifiableDiploma
+PROOF_TYPE=LD_PROOF
+
+while [[ $# -gt 0 ]]
+do
+    arg="$1"
+    case $arg in
+        --template)
+            TEMPLATE="$2"
+            shift
+            shift
+            ;;
+        --issuer-did)
+            ISSUER_DID="$2"
+            shift
+            shift
+            ;;
+        --holder-did)
+            HOLDER_DID="$2"
+            shift
+            shift
+            ;;
+        --proof-type)
+            HOLDER_DID="$2"
+            shift
+            shift
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "[-] Unknown option: ${arg}"
+            usage
+            exit 1
+    esac
+done
+
+if [ -z ${HOLDER_DID} ]; then
+    echo "[-] No holder DID provided"
+    usage && exit 1
+fi
+
+if [ -z ${ISSUER_DID} ]; then
+    ISSUER_DID=$(get-did)
+    if [ $? == 2 ]; then
+        echo "[-] No DID found for issuer"
+        exit 2
+    fi
+fi
+
+cd $WALTDIR
+
+OUTDIR="${STORAGE}/vc/${HOLDER_DID}"
+mkdir -p ${OUTDIR}
+SUFFIX=$(printf "%08d" $(($(ls ${OUTDIR} | wc -l) + 1)))
+OUTFILE="${OUTDIR}/vc-${SUFFIX}.json" 
+
+./ssikit.sh vc issue \
+    --template ${TEMPLATE} \
+    --issuer-did ${ISSUER_DID} \
+    --subject-did ${HOLDER_DID} \
+    --proof-type ${PROOF_TYPE} \
+    --proof-purpose assertion \
+    --interactive \
+    ${OUTFILE}
+

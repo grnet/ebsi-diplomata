@@ -24,6 +24,7 @@ RUN ./ssikit.sh build
 RUN rm -rf data && mkdir -p data/ebsi
 
 RUN mkdir -p ${STORAGE}/did
+RUN mkdir -p ${STORAGE}/vc
 
 WORKDIR ${APPDIR}
 RUN pip install --upgrade pip
