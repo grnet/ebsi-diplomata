@@ -29,6 +29,7 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 # Issuer parametrization
 WALTDIR = os.environ.get('WALTDIR')
+APPDIR = os.environ.get('APPDIR')
 STORAGE = os.environ.get('STORAGE')
 # TODO: SCRIPTSDIR
 

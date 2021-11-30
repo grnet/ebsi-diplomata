@@ -65,6 +65,5 @@ if [ ${DO_RUN} == true ]; then
         --network=host \
         --interactive \
         --tty \
-        "${IMAGE}":latest \
-        python .
+        "${IMAGE}":latest
 fi

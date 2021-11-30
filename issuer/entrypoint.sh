@@ -8,8 +8,11 @@ until pg_isready -h ${SQL_HOST} -p ${SQL_PORT}; do
     sleep 2
 done
 
+create-did
+
 python3 manage.py makemigrations --noinput
 python3 manage.py makemigrations core --noinput
 python3 manage.py migrate --noinput
 python3 manage.py runserver ${HOST}:${PORT}
+
 exec "$@"

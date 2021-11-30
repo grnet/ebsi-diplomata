@@ -2,6 +2,8 @@
 
 usage_string="usage: ./$(basename "$0") [OPTIONS]
 
+Issue VC and return the path to the corresponding file.
+
 Arguments:
   --holder-did    DID of VC holder
 
@@ -82,5 +84,8 @@ OUTFILE="${OUTDIR}/vc-${SUFFIX}.json"
     --proof-type ${PROOF_TYPE} \
     --proof-purpose assertion \
     --interactive \
-    ${OUTFILE}
+    ${OUTFILE} >/dev/null 2>&1
+
+echo ${OUTFILE}
+exit 0
 
