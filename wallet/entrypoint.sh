@@ -1,6 +1,5 @@
 #!/bin/bash
 
-create-did > /dev/null  # TODO
-python3 .               # TODO
+python3 src   # TODO
 
 exec "$@"

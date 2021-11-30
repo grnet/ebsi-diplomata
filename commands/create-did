@@ -74,9 +74,9 @@ if [ -z ${KEY} ]; then
     KEY=$(get_last_key)
 fi
 
-OUTDIR="${STORAGE}/did/${DID_NR}"
+OUTDIR="${STORAGE}/tmp"
 mkdir -p $OUTDIR
 ./ssikit.sh did create \
     --did-method ebsi \
     --key ${KEY} \
-    --out ${OUTDIR}/repr.json
+    --out ${OUTDIR}/created.json

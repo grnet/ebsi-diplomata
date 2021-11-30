@@ -8,7 +8,9 @@ until pg_isready -h ${SQL_HOST} -p ${SQL_PORT}; do
     sleep 2
 done
 
-create-did
+if [ -z "$(ls -A ${STORAGE}/did)" ]; then
+    create-did > /dev/null
+fi
 
 python3 manage.py makemigrations --noinput
 python3 manage.py makemigrations core --noinput

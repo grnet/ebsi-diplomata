@@ -23,8 +23,6 @@ WORKDIR ${WALTDIR}
 RUN ./ssikit.sh build
 RUN rm -rf data && mkdir -p data/ebsi
 
-RUN mkdir -p ${STORAGE}/did
-
 WORKDIR ${APPDIR}
 RUN pip install --upgrade pip
 
@@ -35,5 +33,7 @@ RUN pip install -r requirements.txt
 RUN pip install -r requirements-dev.txt
 
 COPY ./${CODE} .
+
+RUN ls -rtlha
 
 ENTRYPOINT ["./entrypoint.sh"]
