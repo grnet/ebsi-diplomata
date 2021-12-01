@@ -16,7 +16,7 @@ class HttpClient(object):
 
     @staticmethod
     def _create_url(address, endpoint):
-        return urljoin(address, endpoint.strip('/'))
+        return urljoin(address, endpoint.lstrip('/'))
 
     def _do_request(self, method, url, **kw):
         return getattr(requests, method)(url, **kw)

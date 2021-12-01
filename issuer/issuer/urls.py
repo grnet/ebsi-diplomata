@@ -7,11 +7,7 @@ api_endpoint = 'api/'
 core_urls = [
     path('index/', show_index),
     path('did/', show_did),
-    path('did/authorization', show_did_authorization),
-    path('did/presentation', show_did_presentation),
-    path('did/token', show_did_access_token),
-    path('did/ake1_enc', show_did_ake1_enc),
-    path('vc', recv_issuance_request),
+    path('vc/', recv_issuance_request),
 ]
 
 urlpatterns = [

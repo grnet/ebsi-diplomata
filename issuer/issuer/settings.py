@@ -27,6 +27,8 @@ SECRET_KEY = 'django-insecure-drw6!*s_ril1+bg*2y)0)sl7y#g_7s1uev$p1m$ce=xu7ahf3%
 DEBUG = int(os.environ.get('DEBUG', default=0))
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
+APPEND_SLASH = True
+
 # Issuer parametrization
 WALTDIR = os.environ.get('WALTDIR')
 APPDIR = os.environ.get('APPDIR')
