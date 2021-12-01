@@ -13,12 +13,25 @@ from ui import \
 from util import run_cmd
 from config import STORAGE, TMPDIR
 
-def create_db(path):
-    return TinyDB(path, sort_keys=True, indent=4, separators=(',', ':'))
+def init_db(path):
+    db = TinyDB(
+        path, 
+        sort_keys=True, 
+        indent=4,
+        separators=(',', ': ')
+    )
+    db.table('key')
+    db.table('did')
+    db.table('vc')
+    return db
 
-db = create_db(os.path.join(STORAGE, 'db.json'))
-did_t = db.table('did')
-vc_t = db.table('vc')
+def get_table(db, name):
+    return db.table(name)
+
+db = init_db(os.path.join(STORAGE, 'db.json'))
+key_t = get_table(db, 'key')
+did_t = get_table(db, 'did')
+vc_t  = get_table(db, 'vc')
 
 class WalletError(Exception):
     pass
