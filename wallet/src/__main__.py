@@ -1,5 +1,4 @@
 import cmd, sys
-import requests
 import json
 import os
 from tinydb import TinyDB
@@ -10,7 +9,7 @@ from ui import \
     launch_single_choice, \
     launch_multiple_choices, \
     launch_prompt
-from util import run_cmd
+from util import run_cmd, HttpClient
 from config import STORAGE, TMPDIR
 
 def init_db(path):
@@ -99,13 +98,12 @@ class WalletShell(cmd.Cmd):
         except WalletError as err:
             print(err)
         else:
-            resp = requests.post('http://localhost:7000/api/vc', json={
-                'did': did,
+            remote = 'http://localhost:7000'
+            resp = HttpClient(remote).post('api/vc/', {
+                'did': did
             })
-            # TODO: Store credentials
             credential = resp.json()
             vc_t.insert(credential)
-            # print(json.dumps(resp.json(), indent=2))
 
     def do_choose(self, line):
         result = launch_single_choice('Choose a fruit', [
