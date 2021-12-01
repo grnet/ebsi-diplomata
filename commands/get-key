@@ -2,14 +2,14 @@
 
 usage_string="usage: ./$(basename "$0") [OPTIONS]
 
-Get the last created DID. Exit with 2 if no created DID exists. See below for
+Get the last created key. Exit with 2 if no created key exists. See below for
 more options.
 
 Options:
-  --list    List all created DIDs.
-  --nr      Get the DID which appears at position nr of the list, counting from
+  --list    List all created keys.
+  --nr      Get the key which appears at position nr of the list, counting from
             one. Exit with 2 if the provided number exceeds limits.
-  --number  Number of created DIDs.
+  --number  Number of created keys.
 
 Examples
   $ $(basename "$0")
@@ -20,40 +20,40 @@ Examples
 
 usage() { echo -n "$usage_string" 1>&2; }
 
-get_nr_dids() {
-    NR_DIDS=$(./ssikit.sh did list | grep -c "\- [0-9]*:")
-    echo $NR_DIDS
+get_nr_keys() {
+    NR_KEYS=$(./ssikit.sh key list | grep -c "\- [0-9]*:")
+    echo $NR_KEYS
 }
 
-get_did() {
+get_key() { 
     POS=$1
     if [[ "$POS" -lt 1 ]] ; then
         echo "Index cannot be less than one: ${POS} < 1"
         exit 2
     fi
-    NR_DIDS=$(get_nr_dids)
-    if [[ "$POS" -gt "$NR_DIDS" ]]; then
-        echo "Provided number exceeds limits: ${POS} > ${NR_DIDS}"
+    NR_KEYS=$(get_nr_keys)
+    if [[ "$POS" -gt "$NR_KEYS" ]]; then
+        echo "Provided number exceeds limits: ${POS} > ${NR_KEYS}"
         exit 2
     fi
-    DID=$(./ssikit.sh did list \
+    KEY=$(./ssikit.sh key list \
         | grep "\- ${POS}:" \
         | awk -F' ' '{print $3}' \
         | tr -d '"')
-    echo $DID
+    echo $KEY
 }
 
-get_last_did() {
-    NR_DIDS=$(get_nr_dids)
-    if [ ${NR_DIDS} == 0 ]; then
-        echo "No created DIDs found" && exit 2
+get_last_key() {
+    NR_KEYS=$(get_nr_keys)
+    if [ ${NR_KEYS} == 0 ]; then
+        echo "No created keys found" && exit 2
     fi
-    POS=${NR_DIDS}
-    echo $(get_did $POS)
+    POS=${NR_KEYS}
+    echo $(get_key $POS)
 }
 
-get_did_list() {
-    ./ssikit.sh did list
+get_key_list() {
+    ./ssikit.sh key list
 }
 
 
@@ -92,18 +92,18 @@ cd $WALTDIR
 case $ACTION in
     DO_SHOW)
         if [ -z $POS ]; then
-            get_last_did
+            get_last_key
         else
-            get_did $POS
+            get_key $POS
         fi
         shift
         ;;
     DO_LIST)
-        get_did_list
+        get_key_list
         shift
         ;;
     DO_COUNT)
-        get_nr_dids
+        get_nr_keys
         shift
         ;;
 esac

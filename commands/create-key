@@ -1,0 +1,50 @@
+#!/bin/bash
+
+usage_string="usage: ./$(basename "$0") [OPTIONS]
+
+Generate and return key
+
+Options:
+  -a, --algo [Ed25519|Secp256k1]  Keygen algorithm. Default: Ed255519
+
+Examples
+  $ $(basename "$0")
+  $ $(basename "$0") --algo Secp256k1
+"
+
+usage() { echo -n "$usage_string" 1>&2; }
+
+set -e
+
+ALGO=Ed25519
+
+while [[ $# -gt 0 ]]
+do
+    arg="$1"
+    case $arg in
+        -a|--algo)
+            if [ "$2" == "Ed25519" ] || [ "$2" == "Secp256k1" ]; then
+                ALGO="$2"
+            else
+                echo "[-] Unrecongized keygen algorithm: ${2}"
+                usage
+                exit 1
+            fi
+            shift
+            shift
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "[-] Unknown option: ${arg}"
+            usage
+            exit 1
+    esac
+done
+
+cd ${WALTDIR}
+./ssikit.sh key gen --algorithm ${ALGO} >/dev/null 2>&1
+echo $(get-key)
+exit 0

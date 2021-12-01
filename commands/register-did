@@ -68,6 +68,10 @@ do
             usage
             exit 0
             ;;
+        *)
+            echo "[-] Unknown option: ${arg}"
+            usage
+            exit 1
     esac
 done
 
