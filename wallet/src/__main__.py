@@ -11,12 +11,10 @@ from ui import \
     launch_multiple_choices, \
     launch_prompt
 from util import run_cmd
+from config import STORAGE, TMPDIR
 
 def create_db(path):
     return TinyDB(path, sort_keys=True, indent=4, separators=(',', ':'))
-
-STORAGE = os.getenv('STORAGE')
-TMPDIR  = os.path.join(STORAGE, 'tmp')
 
 db = create_db(os.path.join(STORAGE, 'db.json'))
 did_t = db.table('did')
