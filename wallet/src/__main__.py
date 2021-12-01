@@ -2,7 +2,6 @@ import cmd, sys
 import requests
 import json
 import os
-import subprocess
 from tinydb import TinyDB
 from ui import \
     launch_yes_no, \
@@ -11,12 +10,7 @@ from ui import \
     launch_single_choice, \
     launch_multiple_choices, \
     launch_prompt
-
-def run_cmd(args):
-    result = subprocess.run(args, stdout=subprocess.PIPE)
-    resp = result.stdout.decode('utf-8').rstrip('\n')
-    code = result.returncode
-    return (resp, code)
+from util import run_cmd
 
 def create_db(path):
     return TinyDB(path, sort_keys=True, indent=4, separators=(',', ':'))
@@ -79,6 +73,11 @@ class WalletShell(cmd.Cmd):
         """Show wallet info"""
         # did = load_last_did()
         # print(json.dumps(did, indent=2))
+        did = get_last_did()
+        print(did)
+
+    def do_create(self, line):
+        create_did()
         did = get_last_did()
         print(did)
 
