@@ -4,6 +4,13 @@ import json
 import os
 import subprocess
 from tinydb import TinyDB
+from ui import \
+    launch_yes_no, \
+    launch_input, \
+    launch_number, \
+    launch_single_choice, \
+    launch_multiple_choices, \
+    launch_prompt
 
 def run_cmd(args):
     result = subprocess.run(args, stdout=subprocess.PIPE)
@@ -60,7 +67,7 @@ wallet_setup()
 
 class WalletShell(cmd.Cmd):
     intro = " * Type help or ? to list commands.\n"
-    prompt = "(wallet) > "
+    prompt = "[ebsi-wallet] >> "
 
     def preloop(self):
         print('\nStarted wallet session\n')
@@ -89,6 +96,51 @@ class WalletShell(cmd.Cmd):
             credential = resp.json()
             vc_t.insert(credential)
             # print(json.dumps(resp.json(), indent=2))
+
+    def do_choose(self, line):
+        result = launch_single_choice('Choose a fruit', [
+            'apple',
+            'banana', 
+            'orange', 
+            'watermelon',
+            'discard',
+        ])
+        if result[0] != 'discard':
+            print("You chose:", result)
+
+    def do_check(self, line):
+        result = launch_multiple_choices('Choose fruits', [
+            'apple',
+            'banana', 
+            'orange', 
+            'watermelon',
+        ])
+        print('You chose:', result)
+
+    def do_prompt(self, line):
+        results = launch_prompt({
+            'yes_no': 'Yes or no?',
+            'input': 'Give anything',
+            'number': 'Enter the beast (666):',
+            'single': {
+                'prompt': 'Choose language: ',
+                'choices': [
+                    "python", 
+                    "js", 
+                    "rust",
+                ],
+            },
+            'multiple': {
+                'prompt': 'Choose fruits with space:',
+                'choices': [
+                    "apple", 
+                    "banana", 
+                    "orange", 
+                    "watermelon"
+                ],
+            },
+        })
+        print(results)
 
     def do_EOF(self, line):
         """Equivalent to exit."""

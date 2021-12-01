@@ -34,6 +34,4 @@ RUN pip install -r requirements-dev.txt
 
 COPY ./${CODE} .
 
-RUN ls -rtlha
-
 ENTRYPOINT ["./entrypoint.sh"]
