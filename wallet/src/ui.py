@@ -58,7 +58,8 @@ def launch_number(prompt):
 
 def launch_single_choice(prompt, choices):
     menu = _mk_single_choice(prompt, choices)
-    out = menu.launch()
+    res = menu.launch()
+    out = res[0]
     return out
 
 def launch_multiple_choices(prompt, choices):

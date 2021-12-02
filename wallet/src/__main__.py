@@ -63,67 +63,123 @@ def get_did(nr, no_ebsi_prefix=False):
 def get_last_did(**kw):
     return get_did(nr=get_nr_dids(), **kw)
 
+
 def wallet_setup():
     if get_nr_dids() == 0:
         create_did()
 
 wallet_setup()
 
+
 class WalletShell(cmd.Cmd):
-    intro = " * Type help or ? to list commands.\n"
-    prompt = "[ebsi-wallet] >> "
+    intro = "Type help or ? to list commands.\n"
+    prompt = "(wallet) "
 
     def preloop(self):
-        print('\nStarted wallet session\n')
+        pass
 
     def postloop(self):
-        print('\nClosed wallet session\n')
+        pass
 
-    def do_info(self, line):
-        """Show wallet info"""
-        # did = load_last_did()
-        # print(json.dumps(did, indent=2))
-        did = get_last_did()
-        print(did)
+    def do_list(self, line):
+        group = launch_single_choice('Show list of', [
+            'Keys',
+            'DIDs',
+            'Credentials'
+        ])
+        match group:
+            case 'Keys':
+                pass
+            case 'DIDs':
+                pass
+            case 'Credentials':
+                pass
+
+    def do_inspect(self, line):
+        group = launch_single_choice('Type of object to inspect:', [
+            'Key',
+            'DID',
+            'Credential'
+        ])
+        match group:
+            case 'Key':
+                pass
+            case 'DID':
+                pass
+            case 'Credential':
+                pass
 
     def do_create(self, line):
-        create_did()
-        did = get_last_did()
-        print(did)
-
-    def do_issue(self, line):
-        """Request credentials issuance"""
-        try:
-            did = get_last_did()
-        except WalletError as err:
-            print(err)
-        else:
-            remote = 'http://localhost:7000'
-            resp = HttpClient(remote).post('api/vc/', {
-                'did': did
-            })
-            credential = resp.json()
-            vc_t.insert(credential)
-
-    def do_choose(self, line):
-        result = launch_single_choice('Choose a fruit', [
-            'apple',
-            'banana', 
-            'orange', 
-            'watermelon',
-            'discard',
+        group = launch_single_choice('Type of object to create:', [
+            'Key',
+            'DID',
         ])
-        if result[0] != 'discard':
-            print("You chose:", result)
+        match group:
+            case 'Key':
+                pass
+            case 'DID':
+                pass
 
-    def do_check(self, line):
-        result = launch_multiple_choices('Choose fruits', [
-            'apple',
-            'banana', 
-            'orange', 
-            'watermelon',
+    def do_register(self, line):
+        pass
+
+    def do_resolve(self, line):
+        pass
+
+    def do_present(self, line):
+        pass
+
+    def do_request(self, line):
+        action = launch_single_choice('Choose action to be requested:', [
+            'issuance',
+            'verification',
+            'discard'
         ])
-        print('You chose:', result)
+        match action:
+            case 'issuance':
+                try:
+                    did = get_last_did()
+                except WalletError as err:
+                    print(err)
+                else:
+                    remote = 'http://localhost:7000'
+                    resp = HttpClient(remote).post('api/vc/', {
+                        'did': did
+                    })
+                    credential = resp.json()
+                    vc_t.insert(credential)
+            case 'verification':
+                pass
+            case 'discard':
+                pass
+
+    def do_remove(self, line):
+        group = launch_single_choice('Type of object to remove:', [
+            'Key',
+            'DID',
+            'Credential'
+        ])
+        match group:
+            case 'Key':
+                pass
+            case 'DID':
+                pass
+            case 'Credential':
+                pass
+
+    def do_clear(self, line):
+        group = launch_single_choice('Choose group to clear:', [
+            'Keys',
+            'DIDs',
+            'Credentials'
+        ])
+        match group:
+            case 'Keys':
+                pass
+            case 'DIDs':
+                pass
+            case 'Credentials':
+                pass
 
     def do_prompt(self, line):
         results = launch_prompt({
@@ -151,11 +207,11 @@ class WalletShell(cmd.Cmd):
         print(results)
 
     def do_EOF(self, line):
-        """Equivalent to exit."""
+        """Equivalent to exit"""
         return True
 
     def do_exit(self, line):
-        """Close current wallet session."""
+        """Close current wallet session"""
         return self.do_EOF(line)
 
 
