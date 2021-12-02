@@ -1,7 +1,6 @@
 import cmd, sys
 import json
 import os
-from tinydb import TinyDB
 from ui import \
     launch_yes_no, \
     launch_input, \
@@ -10,70 +9,42 @@ from ui import \
     launch_multiple_choices, \
     launch_prompt
 from util import run_cmd, HttpClient
-from config import STORAGE, TMPDIR
+from config import STORAGE, TMPDIR, DBNAME, INTRO, PROMPT, \
+    _Group, _Action, _UI
+from db import DbConnector
 
-def init_db(path):
-    db = TinyDB(
-        path, 
-        sort_keys=True, 
-        indent=4,
-        separators=(',', ': ')
-    )
-    db.table('key')
-    db.table('did')
-    db.table('vc')
-    return db
+# class WalletError(Exception):
+#     pass
 
-def get_table(db, name):
-    return db.table(name)
-
-db = init_db(os.path.join(STORAGE, 'db.json'))
-key_t = get_table(db, 'key')
-did_t = get_table(db, 'did')
-vc_t  = get_table(db, 'vc')
-
-class WalletError(Exception):
-    pass
-
-def create_did():
-    args = ['create-did',]
-    _, code = run_cmd(args)
-    with open(os.path.join(TMPDIR, 'created.json'), 'r') as f:
-        created = json.load(f)
-    did_t.insert(created)
-
-def get_nr_dids():
-    return len(did_t.all())
-
-def load_did(nr):
-    if not did_t.contains(doc_id=nr):
-        err = "Requested DID not detected"
-        raise WalletError(err)
-    return did_t.get(doc_id=nr)
-
-def load_last_did():
-    return load_did(nr=get_nr_dids())
-
-def get_did(nr, no_ebsi_prefix=False):
-    out = load_did(nr)['id']
-    if no_ebsi_prefix:
-        out = out.lstrip(EBSI_PREFIX)
-    return out
-
-def get_last_did(**kw):
-    return get_did(nr=get_nr_dids(), **kw)
-
-
-def wallet_setup():
-    if get_nr_dids() == 0:
-        create_did()
-
-wallet_setup()
-
+_mapping = {
+    _UI.KEY: _Group.KEY,
+    _UI.DID: _Group.DID,
+    _UI.VC: _Group.VC,
+    _UI.ISSUE: _Action.ISSUE,
+    _UI.VERIFY: _Action.VERIFY,
+    _UI.DISCARD: _Action.DISCARD,
+}
 
 class WalletShell(cmd.Cmd):
-    intro = "Type help or ? to list commands.\n"
-    prompt = "(wallet) "
+    intro   = INTRO
+    prompt  = PROMPT
+
+    def __init__(self):
+        self._db = DbConnector(os.path.join(STORAGE, DBNAME))
+        super().__init__()
+
+    def create_did(self):
+        args = ['create-did',]
+        _, code = run_cmd(args)
+        with open(os.path.join(TMPDIR, 'created.json'), 'r') as f:
+            created = json.load(f)
+        self._db.store(created, _Group.DID)
+
+    # def get_did(nr, no_ebsi_prefix=False):
+    #     out = load_did(nr)['id']
+    #     if no_ebsi_prefix:
+    #         out = out.lstrip(EBSI_PREFIX)
+    #     return out
 
     def preloop(self):
         pass
@@ -82,43 +53,41 @@ class WalletShell(cmd.Cmd):
         pass
 
     def do_list(self, line):
-        group = launch_single_choice('Show list of', [
-            'Keys',
-            'DIDs',
-            'Credentials'
+        ans = launch_single_choice('Show list of', [
+            _UI.KEY, _UI.DID, _UI.VC,
         ])
-        match group:
-            case 'Keys':
-                pass
-            case 'DIDs':
-                pass
-            case 'Credentials':
-                pass
+        entries = self._db.get_all(_mapping[ans])
+        print(entries)
+
+    def do_count(self, line):
+        ans = launch_single_choice('Show number of', [
+            _UI.KEY, _UI.DID, _UI.VC,
+        ])
+        group = _mapping[ans]
+        nr = self._db.get_nr(group)
+        print(nr)
 
     def do_inspect(self, line):
-        group = launch_single_choice('Type of object to inspect:', [
-            'Key',
-            'DID',
-            'Credential'
+        ans = launch_single_choice('Type of object to inspect:', [
+            _UI.KEY, _UI.DID, _UI.VC,
         ])
-        match group:
-            case 'Key':
+        match _mapping[ans]:
+            case _Group.KEY:
                 pass
-            case 'DID':
+            case _Group.DID:
                 pass
-            case 'Credential':
+            case _Group.VC:
                 pass
 
     def do_create(self, line):
-        group = launch_single_choice('Type of object to create:', [
-            'Key',
-            'DID',
+        ans = launch_single_choice('Type of object to create:', [
+            _UI.KEY, _UI.DID,
         ])
-        match group:
-            case 'Key':
+        match _mapping[ans]:
+            case _Group.KEY:
                 pass
-            case 'DID':
-                pass
+            case _Group.DID:
+                self.create_did()
 
     def do_register(self, line):
         pass
@@ -130,55 +99,50 @@ class WalletShell(cmd.Cmd):
         pass
 
     def do_request(self, line):
-        action = launch_single_choice('Choose action to be requested:', [
-            'issuance',
-            'verification',
-            'discard'
+        action = launch_single_choice('Request', [
+            _UI.ISSUE, _UI.VERIFY, _UI.DISCARD,
         ])
-        match action:
-            case 'issuance':
-                try:
-                    did = get_last_did()
-                except WalletError as err:
-                    print(err)
-                else:
-                    remote = 'http://localhost:7000'
-                    resp = HttpClient(remote).post('api/vc/', {
-                        'did': did
-                    })
-                    credential = resp.json()
-                    vc_t.insert(credential)
-            case 'verification':
+        match _mapping[action]:
+            case _Action.ISSUE:
                 pass
-            case 'discard':
+                # try:
+                #     did = get_last_did()
+                # except WalletError as err:
+                #     print(err)
+                # else:
+                #     remote = 'http://localhost:7000'
+                #     resp = HttpClient(remote).post('api/vc/', {
+                #         'did': did
+                #     })
+                #     credential = resp.json()
+                #     vc_t.insert(credential)
+            case _Action.VERIFY:
+                pass
+            case _Action.DISCARD:
                 pass
 
     def do_remove(self, line):
-        group = launch_single_choice('Type of object to remove:', [
-            'Key',
-            'DID',
-            'Credential'
+        ans = launch_single_choice('Type of object to remove:', [
+            _UI.KEY, _UI.DID, _UI.VC,
         ])
-        match group:
-            case 'Key':
+        match _mapping[ans]:
+            case _Group.KEY:
                 pass
-            case 'DID':
+            case _Group.DID:
                 pass
-            case 'Credential':
+            case _Group.VC:
                 pass
 
     def do_clear(self, line):
-        group = launch_single_choice('Choose group to clear:', [
-            'Keys',
-            'DIDs',
-            'Credentials'
+        ans = launch_single_choice('Choose group to clear:', [
+            _UI.KEY, _UI.DID, _UI.VC,
         ])
-        match group:
-            case 'Keys':
+        match _mapping[ans]:
+            case _Group.KEY:
                 pass
-            case 'DIDs':
+            case _Group.DID:
                 pass
-            case 'Credentials':
+            case _Group.VC:
                 pass
 
     def do_prompt(self, line):
