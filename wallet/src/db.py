@@ -2,7 +2,6 @@ from tinydb import TinyDB, where
 from config import DBCONF, _Group
 import json
 
-# TODO
 _pkey = {
     _Group.KEY: 'kid',
     _Group.DID: 'id',
@@ -35,18 +34,19 @@ class DbConnector(object):
     def _get_all(self, group):
         return self.db.table(group).all()
 
-    def _get_all_ids(self, group):
+    def _get_pkeys(self, group):
         return list(map(
             lambda x: x[_pkey[group]],
             self.db.table(group).all(),
         ))
  
-    def _store(self, payload, group):
-        self.db.table(group).insert(payload)
-        
-    def _exists(self, pkey, group):
-        return self.db.table(group).contains(doc_id=pkey)
+    def _store(self, obj, group):
+        self.db.table(group).insert(obj)
 
+    def _remove(self, pkey, group):
+        self.db.table(group).remove(where(
+            _pkey[group])==pkey)
+        
     def _clear(self, group):
         self.db.table(group).truncate()
 
@@ -59,14 +59,14 @@ class DbConnector(object):
     def get_all(self, group):
         return self._get_all(group)
 
-    def get_all_ids(self, group):
-        return self._get_all_ids(group)
+    def get_pkeys(self, group):
+        return self._get_pkeys(group)
 
-    def store(self, payload, group):
-        self._store(payload, group)
+    def store(self, obj, group):
+        self._store(obj, group)
 
-    def exists(self, pkey, group):
-        return exists(pkey, group)
+    def remove(self, pkey, group):
+        self._remove(pkey, group)
 
     def clear(self, group):
         self._clear(group)

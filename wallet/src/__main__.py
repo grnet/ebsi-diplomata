@@ -13,7 +13,6 @@ from config import STORAGE, TMPDIR, DBNAME, INTRO, PROMPT, INDENT, \
     _Group, _Action, _UI, ED25519, SECP256
 from db import DbConnector
 
-# TODO
 _mapping = {
     _UI.KEY: _Group.KEY,
     _UI.KEYS: _Group.KEY,
@@ -47,7 +46,7 @@ class WalletShell(cmd.Cmd):
         self._db.store(created, _Group.KEY)
 
     def create_did(self):
-        # TODO
+        # TODO: Pass key as argument
         outfile = os.path.join(TMPDIR, 'created.json')
         args = ['create-did',]
         _, code = run_cmd(args)
@@ -114,7 +113,7 @@ class WalletShell(cmd.Cmd):
         except BadInputError as err:
             self.flush(err)
         else:
-            out = self._db.get_all_ids(group)
+            out = self._db.get_pkeys(group)
             self.show_list(out)
 
     def do_count(self, line):
@@ -128,20 +127,20 @@ class WalletShell(cmd.Cmd):
 
     def do_inspect(self, line):
         try:
-            group = self._resolve_group(line, prompt='Inspect')
+            group = self._resolve_group(line, prompt='Inspect from')
         except BadInputError as err:
             self.flush(err)
         else:
-            ids = self._db.get_all_ids(group)
-            if not ids:
+            pkeys = self._db.get_pkeys(group)
+            if not pkeys:
                 self.flush('Nothing found')
             else:
-                ans = launch_single_choice('Choose', ids)
-                out = self._db.get(ans, group)  # TODO: Handle None?
+                pkey = launch_single_choice('Choose', pkeys)
+                out = self._db.get(pkey, group)
                 self.flush(out)
 
     def do_create(self, line):
-        ans = launch_single_choice('Type of object to create:', [
+        ans = launch_single_choice('Create', [
             _UI.KEY, 
             _UI.DID,
         ])
@@ -213,28 +212,35 @@ class WalletShell(cmd.Cmd):
                 pass
 
     def do_remove(self, line):
-        ans = launch_single_choice('Type of object to remove:', [
-            _UI.KEY, _UI.DID, _UI.VC,
-        ])
-        match _mapping[ans]:
-            case _Group.KEY:
-                pass
-            case _Group.DID:
-                pass
-            case _Group.VC:
-                pass
+        try:
+            group = self._resolve_group(line, prompt='Remove from')
+        except BadInputError as err:
+            self.flush(err)
+        else:
+            pkeys = self._db.get_pkeys(group)
+            if not pkeys:
+                self.flush('Nothing found')
+            else:
+                pkey = launch_single_choice('Choose', pkeys)
+                warning = 'Are you sure? This cannot be undone.'
+                yes = launch_yes_no(warning)
+                if yes:
+                    self._db.remove(pkey, group)
+                    self.flush('Removed %s' % pkey)
+                else:
+                    self.flush('Aborted')
 
     def do_clear(self, line):
         try:
             group = self._resolve_group(line, prompt='Clear')
         except BadInputError as err:
-            self.flush('Could not list: %s' % err)
+            self.flush(err)
         else:
-            msg = 'Are you sure? This cannot be undone.'
-            yes = launch_yes_no(msg)
+            warning = 'Are you sure? This cannot be undone.'
+            yes = launch_yes_no(warning)
             if yes:
                 self._db.clear(group)
-                self.flush('Cleared')
+                self.flush(f'Cleared {group}s')
             else:
                 self.flush('Aborted')
 
