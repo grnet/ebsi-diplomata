@@ -1,6 +1,13 @@
-from tinydb import TinyDB
+from tinydb import TinyDB, where
 from config import DBCONF, _Group
+import json
 
+# TODO
+_pkey = {
+    _Group.KEY: 'kid',
+    _Group.DID: 'id',
+    _Group.VC:  'id',               # TODO
+}
 
 class DbConnector(object):
 
@@ -15,7 +22,12 @@ class DbConnector(object):
         return db
 
     def _get(self, pkey, group):
-        return self.db.table(group).get(doc_id=pkey)
+        filtered = self.db.table(group).search(where(
+            _pkey[group])==pkey)
+        if not filtered:
+            return None
+        out = json.loads(str(filtered[0]).replace('\'', '"'))
+        return out
 
     def _get_nr(self, group):
         return len(self.db.table(group).all())
@@ -24,15 +36,8 @@ class DbConnector(object):
         return self.db.table(group).all()
 
     def _get_all_ids(self, group):
-        match group:
-            case _Group.KEY:
-                fltr = lambda x: x['kid']
-            case _Group.DID:
-                fltr = lambda x: x['id']
-            case _Group.VC:
-                raise NotImplementedError('TODO')
         return list(map(
-            fltr,
+            lambda x: x[_pkey[group]],
             self.db.table(group).all(),
         ))
  
@@ -41,6 +46,9 @@ class DbConnector(object):
         
     def _exists(self, pkey, group):
         return self.db.table(group).contains(doc_id=pkey)
+
+    def _clear(self, group):
+        self.db.table(group).truncate()
 
     def get(self, pkey, group):
         return self._get(pkey, group)
@@ -59,3 +67,6 @@ class DbConnector(object):
 
     def exists(self, pkey, group):
         return exists(pkey, group)
+
+    def clear(self, group):
+        self._clear(group)

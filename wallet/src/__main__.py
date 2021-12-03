@@ -13,6 +13,7 @@ from config import STORAGE, TMPDIR, DBNAME, INTRO, PROMPT, INDENT, \
     _Group, _Action, _UI, ED25519, SECP256
 from db import DbConnector
 
+# TODO
 _mapping = {
     _UI.KEY: _Group.KEY,
     _UI.KEYS: _Group.KEY,
@@ -47,6 +48,7 @@ class WalletShell(cmd.Cmd):
 
     def create_did(self):
         # TODO
+        outfile = os.path.join(TMPDIR, 'created.json')
         args = ['create-did',]
         _, code = run_cmd(args)
         with open(os.path.join(TMPDIR, 'created.json'), 'r') as f:
@@ -90,14 +92,14 @@ class WalletShell(cmd.Cmd):
                 ])
                 out = _mapping[ans]
             case (
-                    _UI.KEY | 
-                    _UI.DID | 
+                    _UI.KEY |
+                    _UI.DID |
                     _UI.VC
                 ):
                 out = _mapping[aux]
             case (
-                    _Group.KEY | 
-                    _Group.DID | 
+                    _Group.KEY |
+                    _Group.DID |
                     _Group.VC
                 ):
                 out = aux
@@ -110,7 +112,7 @@ class WalletShell(cmd.Cmd):
         try:
             group = self._resolve_group(line, prompt='Show list of')
         except BadInputError as err:
-            self.flush('Could not list: %s' % err)
+            self.flush(err)
         else:
             out = self._db.get_all_ids(group)
             self.show_list(out)
@@ -119,7 +121,7 @@ class WalletShell(cmd.Cmd):
         try:
             group = self._resolve_group(line, prompt='Show number of')
         except BadInputError as err:
-            self.flush('Could not count: %s' % err)
+            self.flush(err)
         else:
             out = self._db.get_nr(group)
             self.flush(out)
@@ -128,17 +130,20 @@ class WalletShell(cmd.Cmd):
         try:
             group = self._resolve_group(line, prompt='Inspect')
         except BadInputError as err:
-            self.flush('Could not list: %s' % err)
+            self.flush(err)
         else:
-            # TODO
-            # self.flush(group)
-            choices = self._db.get_all_ids(group)
-            ans = launch_single_choice('Choose object:', choices)
-            self.flush(ans)
+            ids = self._db.get_all_ids(group)
+            if not ids:
+                self.flush('Nothing found')
+            else:
+                ans = launch_single_choice('Choose', ids)
+                out = self._db.get(ans, group)  # TODO: Handle None?
+                self.flush(out)
 
     def do_create(self, line):
         ans = launch_single_choice('Type of object to create:', [
-            _UI.KEY, _UI.DID,
+            _UI.KEY, 
+            _UI.DID,
         ])
         match _mapping[ans]:
             case _Group.KEY:
@@ -220,16 +225,18 @@ class WalletShell(cmd.Cmd):
                 pass
 
     def do_clear(self, line):
-        ans = launch_single_choice('Choose group to clear:', [
-            _UI.KEY, _UI.DID, _UI.VC,
-        ])
-        match _mapping[ans]:
-            case _Group.KEY:
-                pass
-            case _Group.DID:
-                pass
-            case _Group.VC:
-                pass
+        try:
+            group = self._resolve_group(line, prompt='Clear')
+        except BadInputError as err:
+            self.flush('Could not list: %s' % err)
+        else:
+            msg = 'Are you sure? This cannot be undone.'
+            yes = launch_yes_no(msg)
+            if yes:
+                self._db.clear(group)
+                self.flush('Cleared')
+            else:
+                self.flush('Aborted')
 
     def do_prompt(self, line):
         results = launch_prompt({
