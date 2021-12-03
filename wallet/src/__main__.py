@@ -50,7 +50,7 @@ class WalletShell(cmd.Cmd):
         outfile = os.path.join(TMPDIR, 'created.json')
         args = ['create-did',]
         _, code = run_cmd(args)
-        with open(os.path.join(TMPDIR, 'created.json'), 'r') as f:
+        with open(outfile, 'r') as f:
             created = json.load(f)
         self._db.store(created, _Group.DID)
 
@@ -74,8 +74,7 @@ class WalletShell(cmd.Cmd):
         sys.stdout.write(buff + '\n')
 
     def show_list(self, lst):
-        for _ in lst:
-            self.flush(_)
+        for _ in lst: self.flush(_)
 
     def _adjust_line(self, line):
         return line.strip().lower().rstrip('s')
@@ -190,26 +189,37 @@ class WalletShell(cmd.Cmd):
 
     def do_request(self, line):
         action = launch_single_choice('Request', [
-            _UI.ISSUE, _UI.VERIFY, _UI.DISCARD,
+            _UI.ISSUE, 
+            _UI.VERIFY, 
+            _UI.DISCARD,
         ])
         match _mapping[action]:
             case _Action.ISSUE:
-                pass
-                # try:
-                #     did = get_last_did()
-                # except BadInputError as err:
-                #     self.flush(err)
-                # else:
-                #     remote = 'http://localhost:7000'
-                #     resp = HttpClient(remote).post('api/vc/', {
-                #         'did': did
-                #     })
-                #     credential = resp.json()
-                #     vc_t.insert(credential)
+                choices = self._db.get_pkeys(_Group.DID)
+                if not choices:
+                    self.flush('No DIDs found. Please create and register one.')
+                else:
+                    did = launch_single_choice('Choose DID', choices)
+                    # TODO: Choose from known registar of issuers?
+                    remote = 'http://localhost:7000'
+                    endpoint = 'api/vc/'
+                    # TODO: Construction of payload presupposes that an API
+                    # spec on behalf of the issuer is known
+                    payload = {
+                        'did': did,
+                    }
+                    resp = HttpClient(remote).post(endpoint, payload)
+                    # TODO: Check that a credential is indeed returned. This
+                    # presupposes that an API spec on behalf of the issuer is
+                    # known
+                    credential = resp.json()
+                    self._db.store(credential, _Group.VC)
+                    self.flush('The following credential was saved to disk:')
+                    self.flush(credential['id'])
             case _Action.VERIFY:
                 pass
             case _Action.DISCARD:
-                pass
+                self.flush('Request aborted')
 
     def do_remove(self, line):
         try:
@@ -222,7 +232,7 @@ class WalletShell(cmd.Cmd):
                 self.flush('Nothing found')
             else:
                 pkey = launch_single_choice('Choose', pkeys)
-                warning = 'Are you sure? This cannot be undone.'
+                warning = 'This cannot be undone. Are you sure?'
                 yes = launch_yes_no(warning)
                 if yes:
                     self._db.remove(pkey, group)
@@ -236,7 +246,7 @@ class WalletShell(cmd.Cmd):
         except BadInputError as err:
             self.flush(err)
         else:
-            warning = 'Are you sure? This cannot be undone.'
+            warning = 'This cannot be undone. Are you sure?'
             yes = launch_yes_no(warning)
             if yes:
                 self._db.clear(group)
