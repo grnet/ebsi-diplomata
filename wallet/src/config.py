@@ -12,6 +12,10 @@ DBCONF  = {
 
 INTRO   = "Type help or ? to list commands.\n"
 PROMPT  = "(wallet) "
+INDENT  = 4
+
+ED25519 = 'Ed25519'
+SECP256 = 'Secp256k1'
 
 class _Group:
     KEY = 'key'
@@ -24,9 +28,12 @@ class _Action:
     DISCARD = 'DISCARD'
 
 class _UI:
-    KEY = 'Keys'
-    DID = 'DIDs'
-    VC  = 'Credentials'
+    KEY     = 'key'
+    KEYS    = 'keys'
+    DID     = 'DID'
+    DIDS    = 'DIDs'
+    VC      = 'credential'
+    VCS     = 'credentials'
     ISSUE   = 'issuance'
     VERIFY  = 'verification'
     DISCARD = 'discard'

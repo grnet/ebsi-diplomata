@@ -22,6 +22,19 @@ class DbConnector(object):
 
     def _get_all(self, group):
         return self.db.table(group).all()
+
+    def _get_all_ids(self, group):
+        match group:
+            case _Group.KEY:
+                fltr = lambda x: x['kid']
+            case _Group.DID:
+                fltr = lambda x: x['id']
+            case _Group.VC:
+                raise NotImplementedError('TODO')
+        return list(map(
+            fltr,
+            self.db.table(group).all(),
+        ))
  
     def _store(self, payload, group):
         self.db.table(group).insert(payload)
@@ -37,6 +50,9 @@ class DbConnector(object):
 
     def get_all(self, group):
         return self._get_all(group)
+
+    def get_all_ids(self, group):
+        return self._get_all_ids(group)
 
     def store(self, payload, group):
         self._store(payload, group)

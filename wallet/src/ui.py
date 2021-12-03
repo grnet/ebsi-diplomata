@@ -1,9 +1,9 @@
 from bullet import Bullet, Check, YesNo, Input, Password, Numbers, \
-    VerticalPrompt, SlidePrompt, ScrollBar
+    VerticalPrompt, SlidePrompt, ScrollBar, styles
 
 _base_style = {
     'indent': 0,
-    'align': 5,
+    'align': 3,
     'margin': 2,
     'shift': 0,
     'pad_right': 5,
@@ -65,7 +65,7 @@ def launch_single_choice(prompt, choices):
 def launch_multiple_choices(prompt, choices):
     menu = _mk_multiple_choices(prompt, choices)
     res = menu.launch()
-    out = list(zip(res[0], res[1]))
+    out = res[0]
     return out
 
 def launch_prompt(config):
@@ -82,6 +82,18 @@ def launch_prompt(config):
                 steps += [_mk_single_choice(**params),]
             case 'multiple':
                 steps += [_mk_multiple_choices(**params),]
-    _prompt = SlidePrompt(steps)
-    return _prompt.launch()
-
+    res = SlidePrompt(steps).launch()
+    out = []
+    for cur, key in zip(res, config.keys()):
+        match key:
+            case 'yes_no':
+                out += [cur[1]]
+            case 'input':
+                out += [cur[1]]
+            case 'number':
+                out += [cur[1]]
+            case 'single':
+                out += [cur[1][0]]
+            case 'multiple':
+                out += [cur[1][0]]
+    return out         
