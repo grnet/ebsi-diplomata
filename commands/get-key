@@ -10,8 +10,8 @@ Options:
                     counting from one. Exit with 2 if the provided number 
                     exceeds limits.
   --export OUTFILE  Export in JWK format and return path to file
-  --list            List all created keys.
-  --number          Number of created keys.
+  --list            List all created keys
+  --number          Number of created keys
 
 Examples
   $ $(basename "$0") --export key.json

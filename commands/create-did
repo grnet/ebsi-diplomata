@@ -4,42 +4,32 @@ usage_string="usage: ./$(basename "$0") [OPTIONS]
 
 DID creation
 
-Options:
-  -k, --key                       Specific key (ID or alias). If not provided,
-                                  the last created key will be used; if no such
-                                  key exissts, then a newly created key will be
-                                  usef, which will be generated accordng to an
-                                  algorithm secpified as follows.
-  -a, --algo [Ed25519|Secp256k1]  Keygen algorithm. Default: Ed255519
+Arguments:
+  -k, --key         Specific key to use
+  --export FILE     File to export DID after generation
 
 Examples
-  $ $(basename "$0")
-  $ $(basename "$0") --key d7080431b17f4adea29e50181115d810
-  $ $(basename "$0") --algo Secp256k1
+  $ $(basename "$0") --key d7080431b17f4adea29e50181115d810 --export tmp.json
 "
 
 usage() { echo -n "$usage_string" 1>&2; }
 
+set -e
+
 KEY=
-ALGO=Ed25519
+OUTFILE=
 
 while [[ $# -gt 0 ]]
 do
     arg="$1"
     case $arg in
-        -a|--algo)
-            if [ "$2" == "Ed25519" ] || [ "$2" == "Secp256k1" ]; then
-                ALGO="$2"
-            else
-                echo "[-] Unrecongized keygen algorithm: ${2}"
-                usage
-                exit 1
-            fi
+        -k|--key)
+            KEY="$2"
             shift
             shift
             ;;
-        -k|--key)
-            KEY="$2"
+        --export)
+            OUTFILE="$2"
             shift
             shift
             ;;
@@ -54,18 +44,19 @@ do
     esac
 done
 
-cd ${WALTDIR}
-
 if [ -z ${KEY} ]; then
-    KEY=$(get-key)
-    if [ $? == 2 ]; then
-        KEY=$(create-key --algo ${ALGO})
-    fi
+    echo "[-] No key provided"
+    usage
+    exit 1
 fi
 
-OUTDIR="${STORAGE}/tmp"
-mkdir -p $OUTDIR
-OUTFILE="${OUTDIR}/created.json"
+if [ -z ${OUTFILE} ]; then
+    echo "[-] No export file provided"
+    usage
+    exit 1
+fi
+
+cd ${WALTDIR}
 
 ./ssikit.sh did create \
     --did-method ebsi \

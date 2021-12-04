@@ -2,16 +2,17 @@
 
 usage_string="usage: ./$(basename "$0") [OPTIONS]
 
-Generate and return key.
+Generate key and return corresponding export file.
+
+Arguments:
+  --export FILE                   File to export key after generation
 
 Options:
   -a, --algo [Ed25519|Secp256k1]  Keygen algorithm. Default: Ed255519
-  --export OUTFILE                Export in JWK format after creation and
-                                  return path to file
 
 Examples
-  $ $(basename "$0")
-  $ $(basename "$0") --algo Secp256k1
+  $ $(basename "$0") --export tmp.json
+  $ $(basename "$0") --algo Secp256k1 --export tmp.json
 "
 
 usage() { echo -n "$usage_string" 1>&2; }
@@ -19,7 +20,6 @@ usage() { echo -n "$usage_string" 1>&2; }
 set -e
 
 ALGO=Ed25519
-DO_EXPORT=false
 OUTFILE=
 
 while [[ $# -gt 0 ]]
@@ -38,7 +38,6 @@ do
             shift
             ;;
         --export)
-            DO_EXPORT=true
             OUTFILE="$2"
             shift
             shift
@@ -55,14 +54,16 @@ do
 done
 
 
+if [ -z ${OUTFILE} ]; then
+    echo "[-] No export file provided"
+    usage
+    exit 1
+fi
+
 cd ${WALTDIR}
 
 ./ssikit.sh key gen --algorithm ${ALGO} >/dev/null 2>&1
 
-if [ ${DO_EXPORT} == true ]; then
-    echo $(get-key --export ${OUTFILE})
-else
-    echo $(get-key)
-fi
+echo $(get-key --export ${OUTFILE})
 
 exit 0

@@ -7,8 +7,9 @@ more options.
 
 Options:
   --list    List all created DIDs.
-  --nr      Get the DID which appears at position nr of the list, counting from
-            one. Exit with 2 if the provided number exceeds limits.
+  --nr      Get the DID which appears at position nr of the list, 
+            counting from one. Exit with 2 if the provided number 
+            exceeds limits.
   --number  Number of created DIDs.
 
 Examples

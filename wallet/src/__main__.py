@@ -28,6 +28,12 @@ _mapping = {
 class BadInputError(BaseException):
     pass
 
+class CreationError(BaseException):
+    pass
+
+class LoadError(BaseException):
+    pass
+
 class WalletShell(cmd.Cmd):
     intro   = INTRO
     prompt  = PROMPT
@@ -36,29 +42,51 @@ class WalletShell(cmd.Cmd):
         self._db = DbConnector(os.path.join(STORAGE, DBNAME))
         super().__init__()
 
-    def create_key(self):
-        # TODO
-        outfile = os.path.join(TMPDIR, 'created.json')
-        args = ['create-key', '--export', outfile]
-        _, code = run_cmd(args)
-        with open(outfile, 'r') as f:
+    def create_key(self, algorithm):
+        tmpfile = os.path.join(TMPDIR, 'key.json')
+        res, code = run_cmd([
+            'create-key', '--algo', algorithm, '--export', tmpfile
+        ])
+        if code != 0:
+            err = 'Could not generate key: %s' % res
+            raise CreationError(err)
+        with open(tmpfile, 'r') as f:
             created = json.load(f)
         self._db.store(created, _Group.KEY)
+        os.remove(tmpfile)
+        alias = created['kid']  # TODO
+        return alias
 
-    def create_did(self):
-        # TODO: Pass key as argument
-        outfile = os.path.join(TMPDIR, 'created.json')
-        args = ['create-did',]
-        _, code = run_cmd(args)
-        with open(outfile, 'r') as f:
+    def load_key(self, key):
+        tmpfile = os.path.join(TMPDIR, 'jwk.json')
+        entry = self._db.get(key, _Group.KEY)
+        with open(tmpfile, 'w+') as f:
+            json.dump(entry, f, indent=INDENT)
+        res, code = run_cmd(['load-key', '--file', tmpfile])
+        if code != 0:
+            err = 'Could not load key: %s' % res
+            raise LoadError(err)
+        os.remove(tmpfile)
+
+    def create_did(self, key):
+        try:
+            self.load_key(key)
+        except LoadError as err:
+            err = 'Could not create DID: %s' % err
+            raise CreationError(err)
+        tmpfile = os.path.join(TMPDIR, 'did.json')
+        res, code = run_cmd([
+            'create-did', '--key', key, '--export', tmpfile
+        ])
+        if code != 0:
+            err = 'Could not create DID: %s' % res
+            raise CreationError(err)
+        with open(tmpfile, 'r') as f:
             created = json.load(f)
         self._db.store(created, _Group.DID)
-
-    # def get_did(nr, no_ebsi_prefix=False):
-    #     out = load_did(nr)['id']
-    #     if no_ebsi_prefix:
-    #         out = out.lstrip(EBSI_PREFIX)
-    #     return out
+        os.remove(tmpfile)
+        alias = created['id']   # TODO
+        return alias
 
     def preloop(self):
         pass
@@ -76,11 +104,11 @@ class WalletShell(cmd.Cmd):
     def show_list(self, lst):
         for _ in lst: self.flush(_)
 
-    def _adjust_line(self, line):
+    def _adjust_input(self, line):
         return line.strip().lower().rstrip('s')
 
     def _resolve_group(self, line, prompt):
-        aux = self._adjust_line(line)
+        aux = self._adjust_input(line)
         match aux:
             case '':
                 ans = launch_single_choice(prompt, [
@@ -102,7 +130,7 @@ class WalletShell(cmd.Cmd):
                 ):
                 out = aux
             case _:
-                err = "Bad input: %s" % line
+                err = 'Bad input: %s' % line
                 raise BadInputError(err)
         return out
 
@@ -112,8 +140,11 @@ class WalletShell(cmd.Cmd):
         except BadInputError as err:
             self.flush(err)
         else:
-            out = self._db.get_pkeys(group)
-            self.show_list(out)
+            entries = self._db.get_pkeys(group)
+            if not entries:
+                self.flush('Nothing found')
+            else:
+                self.show_list(entries)
 
     def do_count(self, line):
         try:
@@ -121,8 +152,8 @@ class WalletShell(cmd.Cmd):
         except BadInputError as err:
             self.flush(err)
         else:
-            out = self._db.get_nr(group)
-            self.flush(out)
+            nr = self._db.get_nr(group)
+            self.flush(nr)
 
     def do_inspect(self, line):
         try:
@@ -130,13 +161,13 @@ class WalletShell(cmd.Cmd):
         except BadInputError as err:
             self.flush(err)
         else:
-            pkeys = self._db.get_pkeys(group)
-            if not pkeys:
+            choices = self._db.get_pkeys(group)
+            if not choices:
                 self.flush('Nothing found')
             else:
-                pkey = launch_single_choice('Choose', pkeys)
-                out = self._db.get(pkey, group)
-                self.flush(out)
+                pkey = launch_single_choice('Choose', choices)
+                entry = self._db.get(pkey, group)
+                self.flush(entry)
 
     def do_create(self, line):
         ans = launch_single_choice('Create', [
@@ -145,38 +176,51 @@ class WalletShell(cmd.Cmd):
         ])
         match _mapping[ans]:
             case _Group.KEY:
-                # answers = launch_prompt({
-                #     'input': 'Give a name:',
-                #     'single': {
-                #         'prompt': 'Choose keygen algorithm: ',
-                #         'choices': [
-                #             ED25519,
-                #             SECP256
-                #         ],
-                #     },
-                #     'yes_no': 'Key will be saved to disk. Proceed?'
-                # })
-                # proceed = answers[-1]
-                # if not proceed: 
-                #     self.flush('Key generation aborted')
-                # else:
-                #     params = {
-                #         'name': answers[0],
-                #         'algo': answers[1],
-                #     }
-                #     self.flush(params)
-                self.create_key()
+                answers = launch_prompt({
+                    'single': {
+                        'prompt': 'Choose keygen algorithm: ',
+                        'choices': [
+                            ED25519,
+                            SECP256
+                        ],
+                    },
+                    'yes_no': 'A new key will be saved to disk. Proceed?',
+                })
+                algorithm, proceed = answers
+                if not proceed: 
+                    self.flush('Key generation aborted')
+                else:
+                    self.flush('Creating %s key (takes seconds) ...' \
+                        % algorithm)
+                    try:
+                        alias = self.create_key(algorithm)
+                    except CreationError as err:
+                        self.flush(err)
+                    else:
+                        self.flush('Created key: %s' % alias)
             case _Group.DID:
-                # answers = launch_prompt({
-                #     'single': {
-                #         'prompt': 'Choose key: ',
-                #         'choices': [
-                #             'watermelon',
-                #             # put non-empty list of keys here
-                #         ],
-                #     },
-                # })
-                self.create_did()
+                choices = self._db.get_pkeys(_Group.KEY)
+                if not choices:
+                    self.flush('No keys found. Must first create one.')
+                else:
+                    answers = launch_prompt({
+                        'single': {
+                            'prompt': 'Choose key: ',
+                            'choices': choices
+                        },
+                        'yes_no': 'A new DID will be saved to disk. Proceed?',
+                    })
+                    key, proceed = answers
+                    if not proceed: 
+                        self.flush('DID generation aborted')
+                    else:
+                        self.flush('Creating DID (takes seconds) ...')
+                        try:
+                            alias = self.create_did(key)
+                        except CreationError as err:
+                            self.flush(err)
+                        else:
+                            self.flush('Created DID: %s' % alias)
 
     def do_register(self, line):
         pass
@@ -197,7 +241,7 @@ class WalletShell(cmd.Cmd):
             case _Action.ISSUE:
                 choices = self._db.get_pkeys(_Group.DID)
                 if not choices:
-                    self.flush('No DIDs found. Please create and register one.')
+                    self.flush('No DIDs found. Must first create one.')
                 else:
                     did = launch_single_choice('Choose DID', choices)
                     # TODO: Choose from known registar of issuers?
@@ -227,11 +271,11 @@ class WalletShell(cmd.Cmd):
         except BadInputError as err:
             self.flush(err)
         else:
-            pkeys = self._db.get_pkeys(group)
-            if not pkeys:
+            choices = self._db.get_pkeys(group)
+            if not choices:
                 self.flush('Nothing found')
             else:
-                pkey = launch_single_choice('Choose', pkeys)
+                pkey = launch_single_choice('Choose', choices)
                 warning = 'This cannot be undone. Are you sure?'
                 yes = launch_yes_no(warning)
                 if yes:
@@ -253,31 +297,6 @@ class WalletShell(cmd.Cmd):
                 self.flush(f'Cleared {group}s')
             else:
                 self.flush('Aborted')
-
-    def do_prompt(self, line):
-        results = launch_prompt({
-            'yes_no': 'Yes or no?',
-            'input': 'Give anything',
-            'number': 'Enter the beast (666):',
-            'single': {
-                'prompt': 'Choose language: ',
-                'choices': [
-                    "python", 
-                    "js", 
-                    "rust",
-                ],
-            },
-            'multiple': {
-                'prompt': 'Choose fruits with space:',
-                'choices': [
-                    "apple", 
-                    "banana", 
-                    "orange", 
-                    "watermelon"
-                ],
-            },
-        })
-        self.flush(results)
 
     def do_EOF(self, line):
         """Equivalent to exit"""
