@@ -142,7 +142,7 @@ class WalletShell(cmd.Cmd):
         except BadInputError as err:
             self.flush(err)
         else:
-            entries = self._db.get_pkeys(group)
+            entries = self._db.get_aliases(group)
             if not entries:
                 self.flush('Nothing found')
             else:
@@ -163,12 +163,12 @@ class WalletShell(cmd.Cmd):
         except BadInputError as err:
             self.flush(err)
         else:
-            choices = self._db.get_pkeys(group)
-            if not choices:
+            aliases = self._db.get_aliases(group)
+            if not aliases:
                 self.flush('Nothing found')
             else:
-                pkey = launch_single_choice('Choose', choices)
-                entry = self._db.get(pkey, group)
+                alias = launch_single_choice('Choose', alises)
+                entry = self._db.get(alias, group)
                 self.flush(entry)
 
     def do_create(self, line):
@@ -201,14 +201,14 @@ class WalletShell(cmd.Cmd):
                     else:
                         self.flush('Created key: %s' % alias)
             case _Group.DID:
-                choices = self._db.get_pkeys(_Group.KEY)
-                if not choices:
+                keys = self._db.get_aliases(_Group.KEY)
+                if not keys:
                     self.flush('No keys found. Must first create one.')
                 else:
                     answers = launch_prompt({
                         'single': {
                             'prompt': 'Choose key: ',
-                            'choices': choices
+                            'choices': keys
                         },
                         'yes_no': 'A new DID will be saved to disk. Proceed?',
                     })
@@ -241,11 +241,11 @@ class WalletShell(cmd.Cmd):
         ])
         match _mapping[action]:
             case _Action.ISSUE:
-                choices = self._db.get_pkeys(_Group.DID)
-                if not choices:
+                dids = self._db.get_aliases(_Group.DID)
+                if not dids:
                     self.flush('No DIDs found. Must first create one.')
                 else:
-                    did = launch_single_choice('Choose DID', choices)
+                    did = launch_single_choice('Choose DID', dids)
                     # TODO: Choose from known registar of issuers?
                     remote = 'http://localhost:7000'
                     endpoint = 'api/vc/'
@@ -253,7 +253,9 @@ class WalletShell(cmd.Cmd):
                     # spec on behalf of the issuer is known
                     payload = {
                         'did': did,
+                        # TODO: Provide more info, e.g. name, diploma etc.
                     }
+                    # TODO: Handle connection errors and timeouts
                     resp = HttpClient(remote).post(endpoint, payload)
                     # TODO: Check that a credential is indeed returned. This
                     # presupposes that an API spec on behalf of the issuer is
@@ -265,7 +267,7 @@ class WalletShell(cmd.Cmd):
             case _Action.VERIFY:
                 pass
             case _Action.DISCARD:
-                self.flush('Request aborted')
+                self.flush('Aborted')
 
     def do_remove(self, line):
         try:
@@ -273,16 +275,16 @@ class WalletShell(cmd.Cmd):
         except BadInputError as err:
             self.flush(err)
         else:
-            choices = self._db.get_pkeys(group)
-            if not choices:
+            aliases = self._db.get_aliases(group)
+            if not aliases:
                 self.flush('Nothing found')
             else:
-                pkey = launch_single_choice('Choose', choices)
+                alias = launch_single_choice('Choose', aliases)
                 warning = 'This cannot be undone. Are you sure?'
                 yes = launch_yes_no(warning)
                 if yes:
-                    self._db.remove(pkey, group)
-                    self.flush('Removed %s' % pkey)
+                    self._db.remove(alias, group)
+                    self.flush('Removed %s' % alias)
                 else:
                     self.flush('Aborted')
 

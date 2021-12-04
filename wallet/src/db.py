@@ -34,7 +34,7 @@ class DbConnector(object):
     def _get_all(self, group):
         return self.db.table(group).all()
 
-    def _get_pkeys(self, group):
+    def _get_aliases(self, group):
         return list(map(
             lambda x: x[_pkey[group]],
             self.db.table(group).all(),
@@ -59,8 +59,8 @@ class DbConnector(object):
     def get_all(self, group):
         return self._get_all(group)
 
-    def get_pkeys(self, group):
-        return self._get_pkeys(group)
+    def get_aliases(self, group):
+        return self._get_aliases(group)
 
     def store(self, obj, group):
         self._store(obj, group)
