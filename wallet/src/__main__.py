@@ -25,6 +25,8 @@ _mapping = {
     _UI.DISCARD: _Action.DISCARD,
 }
 
+__version__ = '0.0.1'
+
 class BadInputError(BaseException):
     pass
 
@@ -35,7 +37,7 @@ class LoadError(BaseException):
     pass
 
 class WalletShell(cmd.Cmd):
-    intro   = INTRO
+    intro   = INTRO.format(__version__)
     prompt  = PROMPT
 
     def __init__(self):
@@ -299,12 +301,84 @@ class WalletShell(cmd.Cmd):
                 self.flush('Aborted')
 
     def do_EOF(self, line):
-        """Equivalent to exit"""
         return True
 
-    def do_exit(self, line):
-        """Close current wallet session"""
-        return self.do_EOF(line)
+    do_exit = do_EOF
+    do_quit = do_EOF
+    do_q    = do_EOF
+
+    def flush_help(self, *messages):
+        self.flush('\n'.join(messages))
+
+    def help_list(self):
+        self.flush_help(
+            'list [key | did | credentials]',
+            'List objects of provided type',
+        )
+
+    def help_count(self):
+        self.flush_help(
+            'count [key | did | credentials]',
+            'Count objects of provided type',
+        )
+
+    def help_inspect(self):
+        msg = '\n'.join([
+            'TODO',
+        ])
+        self.flush(msg)
+
+    def help_create(self):
+        msg = '\n'.join([
+            'TODO',
+        ])
+        self.flush(msg)
+
+    def help_register(self):
+        msg = '\n'.join([
+            'TODO',
+        ])
+        self.flush(msg)
+
+    def help_resolve(self):
+        msg = '\n'.join([
+            'TODO',
+        ])
+        self.flush(msg)
+
+    def help_present(self):
+        msg = '\n'.join([
+            'TODO'
+        ])
+        self.flush(msg)
+
+    def help_request(self):
+        msg = '\n'.join([
+            'TODO'
+        ])
+        self.flush(msg)
+
+    def help_remove(self):
+        msg = '\n'.join([
+            'TODO',
+        ])
+        self.flush(msg)
+
+    def help_clear(self):
+        msg = '\n'.join([
+            'TODO',
+        ])
+        self.flush(msg)
+
+    def help_EOF(self):
+        msg = '\n'.join([
+            'Quit current wallet session',
+        ])
+        self.flush(msg)
+
+    help_exit   = help_EOF
+    help_quit   = help_EOF
+    help_q      = help_EOF
 
 
 if __name__ == '__main__':

@@ -11,8 +11,16 @@ DBCONF  = {
     'separators': [',', ': '],
 }
 
-INTRO   = "Type help or ? to list commands.\n"
 PROMPT  = "(wallet) "
+INTRO = """\
+
+Interactive shell for EBSI-Diplomata Wallet v{}
+--------------------------------------------------
+
+Type `q` or `Ctrl-D` to quit.
+Type `help` or `?` for an overview 
+Type `help <command>` for details
+"""
 INDENT  = 4
 
 ED25519 = 'Ed25519'
