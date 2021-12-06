@@ -36,4 +36,7 @@ RUN pip install -r requirements-dev.txt
 
 COPY ./${CODE} .
 
+ENV TMPDIR ${HOMEDIR}/tmp
+RUN mkdir -p ${TMPDIR}
+
 ENTRYPOINT ["./entrypoint.sh"]

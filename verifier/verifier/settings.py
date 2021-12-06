@@ -26,8 +26,13 @@ SECRET_KEY = 'django-insecure-i_6!8f7s53+++35ar66f)3d0@+(f@!=rn2(he98r(_xsfjg37+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = int(os.environ.get('DEBUG', default=0))
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
-
 APPEND_SLASH = True
+
+# Verifier configuration
+WALTDIR = os.environ.get('WALTDIR')
+APPDIR = os.environ.get('APPDIR')
+STORAGE = os.environ.get('STORAGE')
+TMPDIR = os.environ.get('TMPDIR')
 
 # Application definition
 

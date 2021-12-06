@@ -1,18 +1,19 @@
 #!/bin/bash
 
-usage_string="usage: ./$(basename "$0") --token <TOKEN> [--did <DID>]
+usage_string="usage: ./$(basename "$0") --did <DID> [--token <TOKEN>]
 
 DID onboarding and registration to EBSI.
 
-IMPORTANT: Tokens are taken in raw format from 
+IMPORTANT: Tokens are taken from 
 
-https://app.preprod.ebsi.eu/users-onboarding
+          https://app.preprod.ebsi.eu/users-onboarding
 
 and expire after 15 minutes.
 
+Arguments:
+  -d, --did DID   DID to onboard
+
 Options:
-  -d, --did DID   DID to onboard. If not specified, the last created DID will
-                  be used; exit with 2 if no DID exists.
   --token FILE    File containing the bearer token. Defaults to
 
                   ${WALTDIR}/data/ebsi/bearer-token.txt
@@ -21,19 +22,10 @@ Options:
   --resolve       Resolve registered DID to check if it was correctly anchored.
 
 Examples
-  $ $(basename "$0") --token data/ebsi/bearer-token.txt
   $ $(basename "$0") --token data/ebsi/bearer-token.txt --did zjmoeYH3t3FQn93qTqLUQ9j 
 "
 
 usage() { echo -ne "$usage_string" 1>&2; }
-
-check_token_expire() {
-    resp=$1
-    if echo $resp | grep -q "invalid_jwt: JWT has expired"; then
-        echo "Failed: Token has expired"
-        exit 2
-    fi
-}
 
 set -e
 
@@ -75,32 +67,31 @@ do
     esac
 done
 
+if [ -z ${DID} ]; then
+    echo '[-] No DID provided'
+    usage && exit 1
+fi
+
 cd ${WALTDIR}
 
-if [ -z ${DID} ]; then
-    DID=$(get-did)        # Exits with 2 in case of no created DIDs found
+resp=$(./ssikit.sh essif onboard --did ${DID} ${TOKEN})
+
+if echo $resp | grep -q "invalid_jwt: JWT has expired"; then
+    echo "EBSI onboarding failed: Token has expired"
+    exit 2
 fi
 
-resp=$(./ssikit.sh essif onboard --did ${DID} ${TOKEN})
-check_token_expire $resp
-echo $resp
-# echo "[+] DID onboarded"
+if echo $resp | grep -q "invalid_argument: Incorrect format JWT"; then
+    echo "EBSI onboarding failed: Invalid token format"
+    exit 2
+fi
 
-resp=$(./ssikit.sh essif auth-api --did ${DID})
-echo $resp
-# echo "[+] EBSI Auth API flow executed"
+./ssikit.sh essif auth-api --did ${DID}
+# TODO: Check response for error
 
-resp=$(./ssikit.sh essif did register --did ${DID})
-echo $resp
-# echo "[+] DID registered to EBSI"
+./ssikit.sh essif did register --did ${DID}
+# TODO: Check response for error
 
 if [ ${DO_RESOLVE} == true ]; then
-    resp=$(./ssikit.sh did resolve --did ${DID})
-    echo $resp
-    # echo "[+] Registered DID has been resolved"
+    resolve-did --did ${DID}  # exit with 1 if not resolved
 fi
-
-
-STORAGE_EBSI="${STORAGE_EBSI}/ebsi"
-mkdir -p ${STORAGE_EBSI}
-cp -r "data/ebsi/${DID#"$EBSI_PRFX:"}" "${STORAGE_EBSI}/"

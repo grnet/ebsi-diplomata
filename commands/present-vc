@@ -1,0 +1,67 @@
+#!/bin/bash
+
+usage_string="usage: ./$(basename "$0") [OPTIONS]
+
+Create a verifiable presentation from the provided credentials.
+
+Arguments:
+  --holder-did        DID of the holder owning the provided credentials.
+                      Must coincide with the credentialSubject.id attribute of
+                      of the provided credentials.
+  --credential FILE   File containing VC (can be given multiple times)
+
+Examples
+  $ $(basename "$0") --holder-did did:ebsi:zph2s2XSe6F9rn55j1QYH1C \
+        --credential vc1.json --credential vc2.json
+"
+
+usage() { echo -n "$usage_string" 1>&2; }
+
+HOLDER_DID=
+CREDENTIALS=
+
+while [[ $# -gt 0 ]]
+do
+    arg="$1"
+    case $arg in
+        --holder-did)
+            HOLDER_DID="$2"
+            shift
+            shift
+            ;;
+        --credential)
+            CREDENTIALS+="$2"
+            shift
+            shift
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "[-] Unknown option: ${arg}"
+            usage
+            exit 1
+    esac
+done
+
+if [ -z ${HOLDER_DID} ]; then
+    echo "[-] No holder DID provided"
+    usage && exit 1
+fi
+
+if [ ${#CREDENTIALS[@]} -eq 0 ]; then
+    echo "[-] No credential files provided"
+    usage && exit 1
+fi
+    
+cd $WALTDIR
+
+echo $CREDENTIALS
+
+./ssikit.sh vc present \
+    --holder-did ${HOLDER_DID} \
+    ${CREDENTIALS} #>/dev/null 2>&1
+
+exit 0
+

@@ -1,0 +1,61 @@
+#!/bin/bash
+
+usage_string="usage: ./$(basename "$0") [OPTIONS]
+
+...
+
+Arguments:
+  ...
+
+Options:
+  ...
+
+Examples
+  $ $(basename "$0") ...
+"
+
+usage() { echo -n "$usage_string" 1>&2; }
+
+
+CREDENTIAL=
+POLICY=SignaturePolicy
+
+while [[ $# -gt 0 ]]
+do
+    arg="$1"
+    case $arg in
+        --credential)
+            CREDENTIAL="$2"
+            shift
+            shift
+            ;;
+        --policy)
+            POLICY="$2"
+            shift
+            shift
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "[-] Unknown option: ${arg}"
+            usage
+            exit 1
+    esac
+done
+
+cd $WALTDIR
+
+# OUTDIR="${STORAGE}/vc/${HOLDER_DID}"
+# mkdir -p ${OUTDIR}
+# SUFFIX=$(printf "%08d" $(($(ls ${OUTDIR} | wc -l) + 1)))
+# OUTFILE="${OUTDIR}/vc-${SUFFIX}.json" 
+
+./ssikit.sh vc verify \
+    --policy ${POLICY} \
+    ${CREDENTIAL} >/dev/null 2>&1
+
+# echo ${OUTFILE}
+exit 0
+

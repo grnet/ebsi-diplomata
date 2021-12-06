@@ -36,6 +36,12 @@ class CreationError(BaseException):
 class LoadError(BaseException):
     pass
 
+class RegistrationError(BaseException):
+    pass
+
+class ResolutionError(BaseException):
+    pass
+
 class WalletShell(cmd.Cmd):
     intro   = INTRO.format(__version__)
     prompt  = PROMPT
@@ -70,7 +76,19 @@ class WalletShell(cmd.Cmd):
             raise LoadError(err)
         os.remove(tmpfile)
 
-    def create_did(self, key):
+    def register_did(self, did, token):
+        token_file = os.path.join(TMPDIR, 'bearer-token.txt')
+        with open(token_file, 'w+') as f:
+            f.write(token)
+        res, code = run_cmd(['register-did',
+            '--did', did, '--token', token_file,
+            '--resolve',])
+        if code != 0:
+            err = 'Could not register: %s' % res
+            raise RegistrationError(err)
+        os.remove(token_file)
+
+    def create_did(self, key, token):
         try:
             self.load_key(key)
         except LoadError as err:
@@ -85,10 +103,35 @@ class WalletShell(cmd.Cmd):
             raise CreationError(err)
         with open(tmpfile, 'r') as f:
             created = json.load(f)
+        alias = created['id']       # TODO
+        try:
+            self.register_did(alias, token)
+        except RegistrationError as err:
+            raise CreationError(err)
+        # NOTE: check data/ebsi/<did>/
+        # NOTE: Check data/did/resolved/did-ebsi-*.json
         self._db.store(created, _Group.DID)
         os.remove(tmpfile)
-        alias = created['id']   # TODO
         return alias
+
+    def resolve_did(self, alias):
+        res, code = run_cmd(['resolve-did', '--did', alias,])
+        if code != 0:
+            err = res
+            raise ResolutionError(err)
+        # NOTE: check data/ebsi/<did>/
+        # NOTE: Check data/did/resolved/did-ebsi-*.json
+
+    # def create_verifiable_presentation(self, vc_files, did):
+    #     args = ['present-vc', '--holder-did', did,]
+    #     for credential in vc_files:
+    #         args += ['--credential', credential,]
+    #     res, code = run_cmd(args)
+    #     # import pdb; pdb.set_trace()
+    #     if code != 0:
+    #         err = 'Could not present: %s' % res
+    #         raise CreationError(err)
+    #     # TODO: Where was it saved?
 
     def preloop(self):
         pass
@@ -103,7 +146,7 @@ class WalletShell(cmd.Cmd):
             buff = str(buff)
         sys.stdout.write(buff + '\n')
 
-    def show_list(self, lst):
+    def flush_list(self, lst):
         for _ in lst: self.flush(_)
 
     def _adjust_input(self, line):
@@ -146,7 +189,7 @@ class WalletShell(cmd.Cmd):
             if not entries:
                 self.flush('Nothing found')
             else:
-                self.show_list(entries)
+                self.flush_list(entries)
 
     def do_count(self, line):
         try:
@@ -210,25 +253,29 @@ class WalletShell(cmd.Cmd):
                             'prompt': 'Choose key: ',
                             'choices': keys
                         },
+                        'input': 'Token: ',
                         'yes_no': 'A new DID will be saved to disk. Proceed?',
                     })
-                    key, proceed = answers
+                    key, token, proceed = answers
                     if not proceed: 
                         self.flush('DID generation aborted')
                     else:
                         self.flush('Creating DID (takes seconds) ...')
                         try:
-                            alias = self.create_did(key)
+                            alias = self.create_did(key, token)
                         except CreationError as err:
                             self.flush(err)
                         else:
                             self.flush('Created DID: %s' % alias)
 
-    def do_register(self, line):
-        pass
-
     def do_resolve(self, line):
-        pass
+        alias = launch_input('Give DID: ')
+        try:
+            self.resolve_did(alias)
+        except ResolutionError as err:
+            self.flush('Cound not resolve: %s' % err)
+        else:
+            self.flush('DID resolved')
 
     def do_present(self, line):
         pass
@@ -241,16 +288,16 @@ class WalletShell(cmd.Cmd):
         ])
         match _mapping[action]:
             case _Action.ISSUE:
-                dids = self._db.get_aliases(_Group.DID)
-                if not dids:
+                choices = self._db.get_aliases(_Group.DID)
+                if not choices:
                     self.flush('No DIDs found. Must first create one.')
                 else:
-                    did = launch_single_choice('Choose DID', dids)
+                    did = launch_single_choice('Choose DID', choices)
                     # TODO: Choose from known registar of issuers?
                     remote = 'http://localhost:7000'
                     endpoint = 'api/vc/'
                     # TODO: Construction of payload presupposes that an API
-                    # spec on behalf of the issuer is known
+                    # spec is known on behalf of the issuer
                     payload = {
                         'did': did,
                         # TODO: Provide more info, e.g. name, diploma etc.
@@ -265,7 +312,60 @@ class WalletShell(cmd.Cmd):
                     self.flush('The following credential was saved to disk:')
                     self.flush(credential['id'])
             case _Action.VERIFY:
-                pass
+                # choices = self._db.get_aliases(_Group.VC)
+                # if not choices:
+                #     self.flush('No credentials found')
+                # else:
+                #     alias = launch_single_choice('Choose credential', choices)
+                #     credential = self._db.get(alias, _Group.VC)
+                #     # TODO: Choose from known registar of verifiers?
+                #     remote = 'http://localhost:7001'
+                #     endpoint = 'api/vc/'
+                #     # TODO: Construction of payload presupposes that an API
+                #     # spec is known on behalf of the verifier
+                #     payload = {
+                #         'credential': credential,
+                #     }
+                #     resp = HttpClient(remote).post(endpoint, payload)
+                #     # TODO
+                #     self.flush(resp.json())
+                did_choices = self._db.get_aliases(_Group.DID)
+                if not did_choices:
+                    self.flush('No DIDs found. Must create at least one.')
+                else:
+                    did = launch_single_choice('Choose DID', did_choices)
+                    vc_choices = self._db.get_vcs_by_did(did)
+                    if not vc_choices:
+                        self.flush('No credentials found for the provided DID.')
+                    else:
+                        selected = launch_multiple_choices(
+                            'Select credentials to present', vc_choices)
+                        credentials = [self._db.get(alias, _Group.VC) for alias
+                            in selected]
+                        if not credentials:
+                            self.flush('Aborted')
+                        else:
+                            vc_files = []
+                            for c in credentials:
+                                tmpfile = os.path.join(TMPDIR, '%s.json' \
+                                    % c['id'])
+                                with open(tmpfile, 'w+') as f:
+                                    json.dump(c, f, indent=INDENT)
+                                vc_files += [tmpfile,]
+                            try:
+                                vp = self.create_verifiable_presentation(
+                                        vc_files, did)
+                            except CreationError as err:
+                                self.flush(err)
+                            else:
+                                pass    # TODO
+                                #
+                                #
+                                #
+                            import pdb; pdb.set_trace()
+                            for tmpfile in vc_files:
+                                os.remove(tmpfile)
+                            # print(credentials)
             case _Action.DISCARD:
                 self.flush('Aborted')
 
@@ -331,12 +431,6 @@ class WalletShell(cmd.Cmd):
         self.flush(msg)
 
     def help_create(self):
-        msg = '\n'.join([
-            'TODO',
-        ])
-        self.flush(msg)
-
-    def help_register(self):
         msg = '\n'.join([
             'TODO',
         ])

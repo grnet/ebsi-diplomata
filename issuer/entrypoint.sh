@@ -12,6 +12,12 @@ if [ -z "$(ls -A ${STORAGE}/did)" ]; then
     create-did > /dev/null
 fi
 
+# TODO: Make these persistent
+cd /home/issuer
+create-key --export key.json
+create-did --key $(get-key) --export did.json
+cd -
+
 python3 manage.py makemigrations --noinput
 python3 manage.py makemigrations core --noinput
 python3 manage.py migrate --noinput

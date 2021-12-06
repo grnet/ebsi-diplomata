@@ -20,9 +20,9 @@ class DbConnector(object):
             db.table(group)
         return db
 
-    def _get(self, pkey, group):
-        filtered = self.db.table(group).search(where(
-            _pkey[group])==pkey)
+    def _get(self, alias, group):
+        filtered = self.db.table(group).search(
+            where(_pkey[group])==alias)
         if not filtered:
             return None
         out = json.loads(str(filtered[0]).replace('\'', '"'))
@@ -39,19 +39,31 @@ class DbConnector(object):
             lambda x: x[_pkey[group]],
             self.db.table(group).all(),
         ))
+
+    def _get_vcs_by_did(self, alias):
+        filtered = self.db.table(_Group.VC).search(
+            where('credentialSubject')['id']==alias)
+        out = list(map(
+            # lambda x: json.loads(str(x).replace('\'', '"')),
+            lambda x: x['id'],
+            filtered,
+        ))
+        # import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
+        return out
  
     def _store(self, obj, group):
         self.db.table(group).insert(obj)
 
-    def _remove(self, pkey, group):
+    def _remove(self, alias, group):
         self.db.table(group).remove(where(
-            _pkey[group])==pkey)
+            _pkey[group])==alias)
         
     def _clear(self, group):
         self.db.table(group).truncate()
 
-    def get(self, pkey, group):
-        return self._get(pkey, group)
+    def get(self, alias, group):
+        return self._get(alias, group)
  
     def get_nr(self, group):
         return self._get_nr(group)
@@ -62,11 +74,14 @@ class DbConnector(object):
     def get_aliases(self, group):
         return self._get_aliases(group)
 
+    def get_vcs_by_did(self, alias):
+        return self._get_vcs_by_did(alias)
+
     def store(self, obj, group):
         self._store(obj, group)
 
-    def remove(self, pkey, group):
-        self._remove(pkey, group)
+    def remove(self, alias, group):
+        self._remove(alias, group)
 
     def clear(self, group):
         self._clear(group)
