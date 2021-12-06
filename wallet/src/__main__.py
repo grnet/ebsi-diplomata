@@ -184,35 +184,35 @@ class WalletShell(cmd.Cmd):
             group = self._resolve_group(line, prompt='Show list of')
         except BadInputError as err:
             self.flush(err)
-        else:
-            entries = self._db.get_aliases(group)
-            if not entries:
-                self.flush('Nothing found')
-            else:
-                self.flush_list(entries)
+            return
+        entries = self._db.get_aliases(group)
+        if not entries:
+            self.flush('Nothing found')
+            return
+        self.flush_list(entries)
 
     def do_count(self, line):
         try:
             group = self._resolve_group(line, prompt='Show number of')
         except BadInputError as err:
             self.flush(err)
-        else:
-            nr = self._db.get_nr(group)
-            self.flush(nr)
+            return
+        nr = self._db.get_nr(group)
+        self.flush(nr)
 
     def do_inspect(self, line):
         try:
             group = self._resolve_group(line, prompt='Inspect from')
         except BadInputError as err:
             self.flush(err)
-        else:
-            aliases = self._db.get_aliases(group)
-            if not aliases:
-                self.flush('Nothing found')
-            else:
-                alias = launch_single_choice('Choose', alises)
-                entry = self._db.get(alias, group)
-                self.flush(entry)
+            return
+        aliases = self._db.get_aliases(group)
+        if not aliases:
+            self.flush('Nothing found')
+            return
+        alias = launch_single_choice('Choose', aliases)
+        entry = self._db.get(alias, group)
+        self.flush(entry)
 
     def do_create(self, line):
         ans = launch_single_choice('Create', [
@@ -234,39 +234,39 @@ class WalletShell(cmd.Cmd):
                 algorithm, proceed = answers
                 if not proceed: 
                     self.flush('Key generation aborted')
-                else:
-                    self.flush('Creating %s key (takes seconds) ...' \
-                        % algorithm)
-                    try:
-                        alias = self.create_key(algorithm)
-                    except CreationError as err:
-                        self.flush(err)
-                    else:
-                        self.flush('Created key: %s' % alias)
+                    return
+                self.flush('Creating %s key (takes seconds) ...' \
+                    % algorithm)
+                try:
+                    alias = self.create_key(algorithm)
+                except CreationError as err:
+                    self.flush(err)
+                    return
+                self.flush('Created key: %s' % alias)
             case _Group.DID:
                 keys = self._db.get_aliases(_Group.KEY)
                 if not keys:
                     self.flush('No keys found. Must first create one.')
-                else:
-                    answers = launch_prompt({
-                        'single': {
-                            'prompt': 'Choose key: ',
-                            'choices': keys
-                        },
-                        'input': 'Token: ',
-                        'yes_no': 'A new DID will be saved to disk. Proceed?',
-                    })
-                    key, token, proceed = answers
-                    if not proceed: 
-                        self.flush('DID generation aborted')
-                    else:
-                        self.flush('Creating DID (takes seconds) ...')
-                        try:
-                            alias = self.create_did(key, token)
-                        except CreationError as err:
-                            self.flush(err)
-                        else:
-                            self.flush('Created DID: %s' % alias)
+                    return
+                answers = launch_prompt({
+                    'single': {
+                        'prompt': 'Choose key: ',
+                        'choices': keys
+                    },
+                    'input': 'Token: ',
+                    'yes_no': 'A new DID will be saved to disk. Proceed?',
+                })
+                key, token, proceed = answers
+                if not proceed: 
+                    self.flush('DID generation aborted')
+                    return
+                self.flush('Creating DID (takes seconds) ...')
+                try:
+                    alias = self.create_did(key, token)
+                except CreationError as err:
+                    self.flush(err)
+                    return
+                self.flush('Created DID: %s' % alias)
 
     def do_resolve(self, line):
         alias = launch_input('Give DID: ')
@@ -274,8 +274,8 @@ class WalletShell(cmd.Cmd):
             self.resolve_did(alias)
         except ResolutionError as err:
             self.flush('Cound not resolve: %s' % err)
-        else:
-            self.flush('DID resolved')
+            return
+        self.flush('DID resolved')
 
     def do_present(self, line):
         pass
@@ -291,81 +291,80 @@ class WalletShell(cmd.Cmd):
                 choices = self._db.get_aliases(_Group.DID)
                 if not choices:
                     self.flush('No DIDs found. Must first create one.')
-                else:
-                    did = launch_single_choice('Choose DID', choices)
-                    # TODO: Choose from known registar of issuers?
-                    remote = 'http://localhost:7000'
-                    endpoint = 'api/vc/'
-                    # TODO: Construction of payload presupposes that an API
-                    # spec is known on behalf of the issuer
-                    payload = {
-                        'did': did,
-                        # TODO: Provide more info, e.g. name, diploma etc.
-                    }
-                    # TODO: Handle connection errors and timeouts
-                    resp = HttpClient(remote).post(endpoint, payload)
-                    # TODO: Check that a credential is indeed returned. This
-                    # presupposes that an API spec on behalf of the issuer is
-                    # known
-                    credential = resp.json()
-                    self._db.store(credential, _Group.VC)
-                    self.flush('The following credential was saved to disk:')
-                    self.flush(credential['id'])
+                    return
+                did = launch_single_choice('Choose DID', choices)
+                # TODO: Choose from known registar of issuers?
+                remote = 'http://localhost:7000'
+                endpoint = 'api/vc/'
+                # TODO: Construction of payload presupposes that an API
+                # spec is known on behalf of the issuer
+                payload = {
+                    'did': did,
+                    # TODO: Provide more info, e.g. name, diploma etc.
+                }
+                # TODO: Handle connection errors and timeouts
+                resp = HttpClient(remote).post(endpoint, payload)
+                # TODO: Check that a credential is indeed returned. This
+                # presupposes that an API spec on behalf of the issuer is
+                # known
+                credential = resp.json()
+                self._db.store(credential, _Group.VC)
+                self.flush('The following credential was saved to disk:')
+                self.flush(credential['id'])
             case _Action.VERIFY:
                 # choices = self._db.get_aliases(_Group.VC)
                 # if not choices:
                 #     self.flush('No credentials found')
-                # else:
-                #     alias = launch_single_choice('Choose credential', choices)
-                #     credential = self._db.get(alias, _Group.VC)
-                #     # TODO: Choose from known registar of verifiers?
-                #     remote = 'http://localhost:7001'
-                #     endpoint = 'api/vc/'
-                #     # TODO: Construction of payload presupposes that an API
-                #     # spec is known on behalf of the verifier
-                #     payload = {
-                #         'credential': credential,
-                #     }
-                #     resp = HttpClient(remote).post(endpoint, payload)
-                #     # TODO
-                #     self.flush(resp.json())
+                #     return
+                # alias = launch_single_choice('Choose credential', choices)
+                # credential = self._db.get(alias, _Group.VC)
+                # # TODO: Choose from known registar of verifiers?
+                # remote = 'http://localhost:7001'
+                # endpoint = 'api/vc/'
+                # # TODO: Construction of payload presupposes that an API
+                # # spec is known on behalf of the verifier
+                # payload = {
+                #     'credential': credential,
+                # }
+                # resp = HttpClient(remote).post(endpoint, payload)
+                # # TODO
+                # self.flush(resp.json())
                 did_choices = self._db.get_aliases(_Group.DID)
                 if not did_choices:
                     self.flush('No DIDs found. Must create at least one.')
-                else:
-                    did = launch_single_choice('Choose DID', did_choices)
-                    vc_choices = self._db.get_vcs_by_did(did)
-                    if not vc_choices:
-                        self.flush('No credentials found for the provided DID.')
-                    else:
-                        selected = launch_multiple_choices(
-                            'Select credentials to present', vc_choices)
-                        credentials = [self._db.get(alias, _Group.VC) for alias
-                            in selected]
-                        if not credentials:
-                            self.flush('Aborted')
-                        else:
-                            vc_files = []
-                            for c in credentials:
-                                tmpfile = os.path.join(TMPDIR, '%s.json' \
-                                    % c['id'])
-                                with open(tmpfile, 'w+') as f:
-                                    json.dump(c, f, indent=INDENT)
-                                vc_files += [tmpfile,]
-                            try:
-                                vp = self.create_verifiable_presentation(
-                                        vc_files, did)
-                            except CreationError as err:
-                                self.flush(err)
-                            else:
-                                pass    # TODO
-                                #
-                                #
-                                #
-                            import pdb; pdb.set_trace()
-                            for tmpfile in vc_files:
-                                os.remove(tmpfile)
-                            # print(credentials)
+                    return
+                did = launch_single_choice('Choose DID', did_choices)
+                vc_choices = self._db.get_vcs_by_did(did)
+                if not vc_choices:
+                    self.flush('No credentials found for the provided DID')
+                    return
+                selected = launch_multiple_choices(
+                    'Select credentials to present', vc_choices)
+                credentials = [self._db.get(alias, _Group.VC) for alias
+                    in selected]
+                if not credentials:
+                    self.flush('Aborted')
+                    return
+                vc_files = []
+                for c in credentials:
+                    tmpfile = os.path.join(TMPDIR, '%s.json' \
+                        % c['id'])
+                    with open(tmpfile, 'w+') as f:
+                        json.dump(c, f, indent=INDENT)
+                    vc_files += [tmpfile,]
+                # try:
+                #     vp = self.create_verifiable_presentation(vc_files, 
+                #             did)
+                # except CreationError as err:
+                #     self.flush(err)
+                #     return
+                pass    # TODO
+                #
+                #
+                #
+                # import pdb; pdb.set_trace()
+                for tmpfile in vc_files:
+                    os.remove(tmpfile)
             case _Action.DISCARD:
                 self.flush('Aborted')
 
@@ -374,33 +373,33 @@ class WalletShell(cmd.Cmd):
             group = self._resolve_group(line, prompt='Remove from')
         except BadInputError as err:
             self.flush(err)
+            return
+        aliases = self._db.get_aliases(group)
+        if not aliases:
+            self.flush('Nothing found')
+            return
+        alias = launch_single_choice('Choose', aliases)
+        warning = 'This cannot be undone. Are you sure?'
+        yes = launch_yes_no(warning)
+        if yes:
+            self._db.remove(alias, group)
+            self.flush('Removed %s' % alias)
         else:
-            aliases = self._db.get_aliases(group)
-            if not aliases:
-                self.flush('Nothing found')
-            else:
-                alias = launch_single_choice('Choose', aliases)
-                warning = 'This cannot be undone. Are you sure?'
-                yes = launch_yes_no(warning)
-                if yes:
-                    self._db.remove(alias, group)
-                    self.flush('Removed %s' % alias)
-                else:
-                    self.flush('Aborted')
+            self.flush('Aborted')
 
     def do_clear(self, line):
         try:
             group = self._resolve_group(line, prompt='Clear')
         except BadInputError as err:
             self.flush(err)
+            return
+        warning = 'This cannot be undone. Are you sure?'
+        yes = launch_yes_no(warning)
+        if yes:
+            self._db.clear(group)
+            self.flush(f'Cleared {group}s')
         else:
-            warning = 'This cannot be undone. Are you sure?'
-            yes = launch_yes_no(warning)
-            if yes:
-                self._db.clear(group)
-                self.flush(f'Cleared {group}s')
-            else:
-                self.flush('Aborted')
+            self.flush('Aborted')
 
     def do_EOF(self, line):
         return True
