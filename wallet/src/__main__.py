@@ -9,7 +9,7 @@ from ui import \
     launch_multiple_choices, \
     launch_prompt
 from util import run_cmd, HttpClient
-from config import STORAGE, TMPDIR, DBNAME, INTRO, PROMPT, INDENT, \
+from conf import STORAGE, TMPDIR, DBNAME, INTRO, PROMPT, INDENT, \
     _Group, _Action, _UI, ED25519, SECP256
 from db import DbConnector
 
