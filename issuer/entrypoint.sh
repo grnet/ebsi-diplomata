@@ -19,7 +19,7 @@ create-did --key $(get-key) --export did.json
 cd -
 
 python3 manage.py makemigrations --noinput
-python3 manage.py makemigrations core --noinput
+python3 manage.py makemigrations issuer --noinput
 python3 manage.py migrate --noinput
 python3 manage.py runserver ${HOST}:${PORT}
 

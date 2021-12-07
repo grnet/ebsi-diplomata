@@ -43,7 +43,7 @@ def get_did_resource(did, resource):
 
 def resolve_vc_args(payload):
     holder_did = payload['did']
-    # TODO: The issuer should here check credentials against the payload
+    # TODO: Issuer should here check credentials against the payload
     # submitted by the holder and appropriately fill the following template
     vc_payload = {
         'holder_did': holder_did,

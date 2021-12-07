@@ -1,15 +1,16 @@
 from django.contrib import admin
 from django.urls import include, path
-from core.api import *
+from issuer.api import *
 
 api_endpoint = 'api/'
 
-core_urls = [
+issuer_urls = [
     path('index/', show_index),
-    path('vc/', recv_vc),
+    path('did/', show_did),
+    path('vc/', recv_issuance_request),
 ]
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path(api_endpoint, include(core_urls)),
+    path(api_endpoint, include(issuer_urls)),
 ]
