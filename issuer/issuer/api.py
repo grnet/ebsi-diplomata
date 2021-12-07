@@ -7,6 +7,10 @@ import json
 import os
 from issuer.logic import get_did, run_cmd, issue_vc, get_did_resource, \
     resolve_vc_args
+from common import load_issuer
+
+
+issuer = load_issuer()
 
 @require_http_methods(['GET',])
 def show_info(request):

@@ -11,6 +11,13 @@ EBSI_PREFIX = 'did:ebsi:'
 EBSI_DIR    = os.path.join(settings.WALTDIR, 'data', 'ebsi')
 APPSCRIPTS  = os.path.join(settings.APPDIR, 'scripts')
 
+
+class Issuer(object):
+
+    @classmethod
+    def init_from_app(cls, settings):
+        return cls()    # TODO
+
 def run_cmd(args):
     result = subprocess.run(args, stdout=subprocess.PIPE)
     resp = result.stdout.decode('utf-8').rstrip('\n')
