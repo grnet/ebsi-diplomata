@@ -43,7 +43,7 @@ class App(object):
     def store(self, obj, group):
         self._db.store(obj, group)
 
-    def remove(alias, group):
+    def remove(self, alias, group):
         self._db.remove(alias, group)
 
     def clear(self, group):
