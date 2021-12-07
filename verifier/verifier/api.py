@@ -11,15 +11,13 @@ verifier = load_verifier()
 
 @require_http_methods(['GET',])
 def show_info(request):
-    out = {'TODO': 'Include here verifier info'}
+    out = verifier.get_info()
     return JsonResponse(out, safe=False)
 
 @csrf_exempt
 @require_http_methods(['POST',])
 def verify_credentials(request):
     payload = json.loads(request.body)
-    tmpfile = os.path.join(settings.TMPDIR, 'vc.json')
-    with open(tmpfile, 'w+') as f:
-        json.dump(payload, f, indent=4)
-    out = {'msg': 'OK'}
+    verifier.verify_credentials(payload)    # TODO
+    out = {'msg': 'OK'}                     # TODO
     return JsonResponse(out, safe=False)

@@ -11,13 +11,6 @@ EBSI_PREFIX = 'did:ebsi:'
 EBSI_DIR    = os.path.join(settings.WALTDIR, 'data', 'ebsi')
 APPSCRIPTS  = os.path.join(settings.APPDIR, 'scripts')
 
-
-class Issuer(object):
-
-    @classmethod
-    def init_from_app(cls, settings):
-        return cls()    # TODO
-
 def run_cmd(args):
     result = subprocess.run(args, stdout=subprocess.PIPE)
     resp = result.stdout.decode('utf-8').rstrip('\n')
@@ -89,3 +82,38 @@ def resolve_vc_args(payload):
     }
     vc_args = list(vc_payload.values()) # TODO
     return vc_args
+
+
+class Issuer(object):
+
+    @classmethod
+    def init_from_app(cls, settings):
+        return cls()                                        # TODO
+
+    def get_info(self):
+        return {'TODO': 'Include here issuer info'}
+
+    def get_did(self):
+        resp, code = get_did()                              # TODO
+        # TODO
+        if code == 0:
+            _path = os.path.join(settings.STORAGE, 'did', 
+                '1', 'repr.json')                           # TODO
+            with open(_path, 'r') as f:
+                out = json.load(f)
+        else:
+            out = {'error': resp}
+        return out
+
+    def issue_credentials(self, payload):
+        args = resolve_vc_args(payload)
+        resp, code = issue_vc(*args)
+        out = {}
+        # TODO
+        if code == 0:
+            vc_file = resp
+            with open(vc_file, 'r') as f:
+                out = json.load(f)
+        else:
+            out['error'] = resp
+        return out
