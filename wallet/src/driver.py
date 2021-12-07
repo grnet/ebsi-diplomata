@@ -47,11 +47,11 @@ class WalletShell(cmd.Cmd, MenuHandler):
     def _flush_help(self, *messages):
         self._flush('\n'.join(messages))
 
-    def _adjust_input(self, line):
+    def _normalize_input(self, line):
         return line.strip().lower().rstrip('s')
 
     def _resolve_group(self, line, prompt):
-        aux = self._adjust_input(line)
+        aux = self._normalize_input(line)
         match aux:
             case '':
                 ans = self.launch_single_choice(prompt, [
@@ -157,7 +157,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
                     return
                 answers = self.launch_prompt({
                     'single': {
-                        'prompt': 'Choose key: ',
+                        'prompt': 'Choose key:',
                         'choices': keys
                     },
                     'input': 'Token: ',
@@ -176,7 +176,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 self._flush('Created DID: %s' % alias)
 
     def do_resolve(self, line):
-        alias = self.launch_input('Give DID: ')
+        alias = self.launch_input('Give DID:')
         self._flush('Resolving ...')
         try:
             did = self.app.resolve_did(alias)

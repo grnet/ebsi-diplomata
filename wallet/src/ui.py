@@ -28,29 +28,29 @@ _style = {
 
 class MenuHandler(object):
 
-    def _adjust_prompt(self, prompt):
+    def _normalize_prompt(self, prompt):
         return prompt + (' ' if not prompt.endswith(' ') \
             else '')
 
     def _mk_yes_no(self, prompt):
-        prompt = self._adjust_prompt(prompt)
+        prompt = self._normalize_prompt(prompt)
         return YesNo(prompt)
 
     def _mk_input(self, prompt):
-        prompt = self._adjust_prompt(prompt)
+        prompt = self._normalize_prompt(prompt)
         return Input(prompt)
 
     def _mk_number(self, prompt):
-        prompt = self._adjust_prompt(prompt)
+        prompt = self._normalize_prompt(prompt)
         return Numbers(prompt, **_style['number'],)
 
     def _mk_single_choice(self, prompt, choices):
-        prompt = self._adjust_prompt(prompt)
+        prompt = self._normalize_prompt(prompt)
         return Bullet(prompt=prompt, choices=choices,
             **_style['bullet'],)
 
     def _mk_multiple_choices(self, prompt, choices):
-        prompt = self._adjust_prompt(prompt)
+        prompt = self._normalize_prompt(prompt)
         return Check(prompt=prompt, choices=choices,
             **_style['check'],)
 
