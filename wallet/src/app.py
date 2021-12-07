@@ -34,8 +34,8 @@ class App(object):
     def get_nr(self, group):
         return self._db.get_nr(group)
 
-    def get(self, alias, group):
-        return self._db.get(alias, group)
+    def get_entry(self, alias, group):
+        return self._db.get_entry(alias, group)
 
     def get_vcs_by_did(self, alias):
         return self._db.get_vcs_by_did(alias)
@@ -66,7 +66,7 @@ class App(object):
 
     def load_key(self, key):
         tmpfile = os.path.join(TMPDIR, 'jwk.json')
-        entry = self._db.get(key, _Group.KEY)
+        entry = self._db.get_entry(key, _Group.KEY)
         with open(tmpfile, 'w+') as f:
             json.dump(entry, f, indent=INDENT)
         res, code = run_cmd(['load-key', '--file', tmpfile])

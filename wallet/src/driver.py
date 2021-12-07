@@ -118,7 +118,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
             self._flush('Nothing found')
             return
         alias = self.launch_single_choice('Choose', aliases)
-        entry = self.app.get(alias, group)
+        entry = self.app.get_entry(alias, group)
         self._flush(entry)
 
     def do_create(self, line):
@@ -226,7 +226,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 #     return
                 # alias = self.launch_single_choice('Choose credential', 
                 #     choices)
-                # credential = self.app.get(alias, _Group.VC)
+                # credential = self.app.get_entry(alias, _Group.VC)
                 # # TODO: Choose from known registar of verifiers?
                 # remote = 'http://localhost:7001'
                 # endpoint = 'api/vc/'
@@ -249,7 +249,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
                     return
                 selected = self.launch_multiple_choices(
                     'Select credentials to present', vc_choices)
-                credentials = [self.app.get(alias, _Group.VC) for alias
+                credentials = [self.app.get_entry(alias, _Group.VC) for alias
                     in selected]
                 if not credentials:
                     self._flush('Aborted')

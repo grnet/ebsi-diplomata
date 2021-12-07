@@ -20,7 +20,7 @@ class DbConnector(object):
             db.table(group)
         return db
 
-    def _get(self, alias, group):
+    def _get_entry(self, alias, group):
         filtered = self.db.table(group).search(
             where(_pkey[group])==alias)
         if not filtered:
@@ -64,8 +64,8 @@ class DbConnector(object):
     def _clear(self, group):
         self.db.table(group).truncate()
 
-    def get(self, alias, group):
-        return self._get(alias, group)
+    def get_entry(self, alias, group):
+        return self._get_entry(alias, group)
  
     def get_nr(self, group):
         return self._get_nr(group)
