@@ -6,13 +6,13 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 @require_http_methods(['GET',])
-def show_index(request):
+def show_info(request):
     out = {'TODO': 'Include here verifier info'}
     return JsonResponse(out, safe=False)
 
 @csrf_exempt
 @require_http_methods(['POST',])
-def recv_vc(request):
+def verify_credentials(request):
     payload = json.loads(request.body)
     tmpfile = os.path.join(settings.TMPDIR, 'vc.json')
     with open(tmpfile, 'w+') as f:

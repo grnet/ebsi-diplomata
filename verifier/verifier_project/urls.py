@@ -2,11 +2,11 @@ from django.contrib import admin
 from django.urls import include, path
 from verifier.api import *
 
-api_endpoint = 'api/'
+api_endpoint = 'api/v1/'
 
 verifier_urls = [
-    path('index/', show_index),
-    path('vc/', recv_vc),
+    path('index/', show_info),
+    path('credentials/verify/', verify_credentials),
 ]
 
 urlpatterns = [

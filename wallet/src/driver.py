@@ -203,7 +203,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 did = self.launch_single_choice('Choose DID', choices)
                 # TODO: Choose from known registar of issuers?
                 remote = 'http://localhost:7000'
-                endpoint = 'api/vc/'
+                endpoint = 'api/v1/credentials/issue/'
                 # TODO: Construction of payload presupposes that an API
                 # spec is known on behalf of the issuer
                 payload = {
@@ -229,7 +229,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 # credential = self.app.get_entry(alias, _Group.VC)
                 # # TODO: Choose from known registar of verifiers?
                 # remote = 'http://localhost:7001'
-                # endpoint = 'api/vc/'
+                # endpoint = 'api/v1/credentials/verify/'
                 # # TODO: Construction of payload presupposes that an API
                 # # spec is known on behalf of the verifier
                 # payload = {

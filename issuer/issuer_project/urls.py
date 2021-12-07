@@ -2,12 +2,12 @@ from django.contrib import admin
 from django.urls import include, path
 from issuer.api import *
 
-api_endpoint = 'api/'
+api_endpoint = 'api/v1/'
 
 issuer_urls = [
-    path('index/', show_index),
+    path('index/', show_info),
     path('did/', show_did),
-    path('vc/', recv_issuance_request),
+    path('credentials/issue/', issue_credentials),
 ]
 
 urlpatterns = [

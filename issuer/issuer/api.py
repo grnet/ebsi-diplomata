@@ -82,24 +82,8 @@ def resolve_vc_args(payload):
     vc_args = list(vc_payload.values()) # TODO
     return vc_args
 
-@csrf_exempt
-@require_http_methods(['POST',])
-def recv_issuance_request(request):
-    payload = json.loads(request.body)
-    args = resolve_vc_args(payload)
-    resp, code = issue_vc(*args)
-    out = {}
-    # TODO
-    if code == 0:
-        vc_file = resp
-        with open(vc_file, 'r') as f:
-            out = json.load(f)
-    else:
-        out['error'] = resp
-    return JsonResponse(out, safe=False)
-
 @require_http_methods(['GET',])
-def show_index(request):
+def show_info(request):
     out = {'TODO': 'Include here issuer info'}
     return JsonResponse(out, safe=False)
 
@@ -115,3 +99,18 @@ def show_did(request):
         out = {'error': resp}
     return JsonResponse(out, safe=False)
 
+@csrf_exempt
+@require_http_methods(['POST',])
+def issue_credentials(request):
+    payload = json.loads(request.body)
+    args = resolve_vc_args(payload)
+    resp, code = issue_vc(*args)
+    out = {}
+    # TODO
+    if code == 0:
+        vc_file = resp
+        with open(vc_file, 'r') as f:
+            out = json.load(f)
+    else:
+        out['error'] = resp
+    return JsonResponse(out, safe=False)
