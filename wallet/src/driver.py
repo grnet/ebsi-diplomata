@@ -1,13 +1,7 @@
 import cmd, sys
 import json
 import os
-from ui import \
-    launch_yes_no, \
-    launch_input, \
-    launch_number, \
-    launch_single_choice, \
-    launch_multiple_choices, \
-    launch_prompt
+from ui import MenuHandler
 from util import run_cmd, HttpClient
 from conf import STORAGE, TMPDIR, DBNAME, INTRO, PROMPT, INDENT, \
     _Group, _Action, _UI, ED25519, SECP256
@@ -42,7 +36,7 @@ class RegistrationError(BaseException):
 class ResolutionError(BaseException):
     pass
 
-class WalletShell(cmd.Cmd):
+class WalletShell(cmd.Cmd, MenuHandler):
     intro   = INTRO.format(__version__)
     prompt  = PROMPT
 
@@ -125,16 +119,21 @@ class WalletShell(cmd.Cmd):
         # NOTE: check data/ebsi/<did>/
         # NOTE: Check data/did/resolved/did-ebsi-*.json
 
-    # def create_verifiable_presentation(self, vc_files, did):
-    #     args = ['present-vc', '--holder-did', did,]
-    #     for credential in vc_files:
-    #         args += ['--credential', credential,]
-    #     res, code = run_cmd(args)
-    #     # import pdb; pdb.set_trace()
-    #     if code != 0:
-    #         err = 'Could not present: %s' % res
-    #         raise CreationError(err)
-    #     # TODO: Where was it saved?
+    def create_verifiable_presentation(self, vc_files, did):
+        key = self._db.get_key_from_did(did)
+        try:
+            self.load_key(key)
+        except LoadError as err:
+            err = 'Could not create DID: %s' % err
+            raise CreationError(err)
+        args = ['present-vc', '--holder-did', did,]
+        for credential in vc_files:
+            args += ['--credential', credential,]
+        res, code = run_cmd(args)
+        if code != 0:
+            err = 'Could not present: %s' % res
+            raise CreationError(err)
+        # TODO: Where was it saved?
 
     def preloop(self):
         pass
@@ -152,6 +151,9 @@ class WalletShell(cmd.Cmd):
     def flush_list(self, lst):
         for _ in lst: self.flush(_)
 
+    def flush_help(self, *messages):
+        self.flush('\n'.join(messages))
+
     def _adjust_input(self, line):
         return line.strip().lower().rstrip('s')
 
@@ -159,7 +161,7 @@ class WalletShell(cmd.Cmd):
         aux = self._adjust_input(line)
         match aux:
             case '':
-                ans = launch_single_choice(prompt, [
+                ans = self.launch_single_choice(prompt, [
                     _UI.KEYS, 
                     _UI.DIDS, 
                     _UI.VCS,
@@ -213,18 +215,18 @@ class WalletShell(cmd.Cmd):
         if not aliases:
             self.flush('Nothing found')
             return
-        alias = launch_single_choice('Choose', aliases)
+        alias = self.launch_single_choice('Choose', aliases)
         entry = self._db.get(alias, group)
         self.flush(entry)
 
     def do_create(self, line):
-        ans = launch_single_choice('Create', [
+        ans = self.launch_single_choice('Create', [
             _UI.KEY, 
             _UI.DID,
         ])
         match _mapping[ans]:
             case _Group.KEY:
-                answers = launch_prompt({
+                answers = self.launch_prompt({
                     'single': {
                         'prompt': 'Choose keygen algorithm: ',
                         'choices': [
@@ -251,7 +253,7 @@ class WalletShell(cmd.Cmd):
                 if not keys:
                     self.flush('No keys found. Must first create one.')
                     return
-                answers = launch_prompt({
+                answers = self.launch_prompt({
                     'single': {
                         'prompt': 'Choose key: ',
                         'choices': keys
@@ -272,7 +274,7 @@ class WalletShell(cmd.Cmd):
                 self.flush('Created DID: %s' % alias)
 
     def do_resolve(self, line):
-        alias = launch_input('Give DID: ')
+        alias = self.launch_input('Give DID: ')
         try:
             self.resolve_did(alias)
         except ResolutionError as err:
@@ -284,7 +286,7 @@ class WalletShell(cmd.Cmd):
         pass
 
     def do_request(self, line):
-        action = launch_single_choice('Request', [
+        action = self.launch_single_choice('Request', [
             _UI.ISSUE, 
             _UI.VERIFY, 
             _UI.DISCARD,
@@ -295,7 +297,7 @@ class WalletShell(cmd.Cmd):
                 if not choices:
                     self.flush('No DIDs found. Must first create one.')
                     return
-                did = launch_single_choice('Choose DID', choices)
+                did = self.launch_single_choice('Choose DID', choices)
                 # TODO: Choose from known registar of issuers?
                 remote = 'http://localhost:7000'
                 endpoint = 'api/vc/'
@@ -319,7 +321,8 @@ class WalletShell(cmd.Cmd):
                 # if not choices:
                 #     self.flush('No credentials found')
                 #     return
-                # alias = launch_single_choice('Choose credential', choices)
+                # alias = self.launch_single_choice('Choose credential', 
+                #     choices)
                 # credential = self._db.get(alias, _Group.VC)
                 # # TODO: Choose from known registar of verifiers?
                 # remote = 'http://localhost:7001'
@@ -336,12 +339,12 @@ class WalletShell(cmd.Cmd):
                 if not did_choices:
                     self.flush('No DIDs found. Must create at least one.')
                     return
-                did = launch_single_choice('Choose DID', did_choices)
+                did = self.launch_single_choice('Choose DID', did_choices)
                 vc_choices = self._db.get_vcs_by_did(did)
                 if not vc_choices:
                     self.flush('No credentials found for the provided DID')
                     return
-                selected = launch_multiple_choices(
+                selected = self.launch_multiple_choices(
                     'Select credentials to present', vc_choices)
                 credentials = [self._db.get(alias, _Group.VC) for alias
                     in selected]
@@ -355,17 +358,17 @@ class WalletShell(cmd.Cmd):
                     with open(tmpfile, 'w+') as f:
                         json.dump(c, f, indent=INDENT)
                     vc_files += [tmpfile,]
-                # try:
-                #     vp = self.create_verifiable_presentation(vc_files, 
-                #             did)
-                # except CreationError as err:
-                #     self.flush(err)
-                #     return
+                try:
+                    vp = self.create_verifiable_presentation(vc_files, 
+                            did)
+                except CreationError as err:
+                    self.flush(err)
+                    return
                 pass    # TODO
                 #
                 #
                 #
-                # import pdb; pdb.set_trace()
+                import pdb; pdb.set_trace()
                 for tmpfile in vc_files:
                     os.remove(tmpfile)
             case _Action.DISCARD:
@@ -381,9 +384,9 @@ class WalletShell(cmd.Cmd):
         if not aliases:
             self.flush('Nothing found')
             return
-        alias = launch_single_choice('Choose', aliases)
+        alias = self.launch_single_choice('Choose', aliases)
         warning = 'This cannot be undone. Are you sure?'
-        yes = launch_yes_no(warning)
+        yes = self.launch_yes_no(warning)
         if yes:
             self._db.remove(alias, group)
             self.flush('Removed %s' % alias)
@@ -397,7 +400,7 @@ class WalletShell(cmd.Cmd):
             self.flush(err)
             return
         warning = 'This cannot be undone. Are you sure?'
-        yes = launch_yes_no(warning)
+        yes = self.launch_yes_no(warning)
         if yes:
             self._db.clear(group)
             self.flush(f'Cleared {group}s')
@@ -410,9 +413,6 @@ class WalletShell(cmd.Cmd):
     do_exit = do_EOF
     do_quit = do_EOF
     do_q    = do_EOF
-
-    def flush_help(self, *messages):
-        self.flush('\n'.join(messages))
 
     def help_list(self):
         self.flush_help(

@@ -44,13 +44,15 @@ class DbConnector(object):
         filtered = self.db.table(_Group.VC).search(
             where('credentialSubject')['id']==alias)
         out = list(map(
-            # lambda x: json.loads(str(x).replace('\'', '"')),
             lambda x: x['id'],
             filtered,
         ))
-        # import pdb; pdb.set_trace()
-        # import pdb; pdb.set_trace()
         return out
+
+    def _get_key_from_did(self, alias):
+        did = self._get(alias, _Group.DID)
+        if did:
+            return did['verificationMethod'][0]['publicKeyJwk']['kid']
  
     def _store(self, obj, group):
         self.db.table(group).insert(obj)
@@ -76,6 +78,9 @@ class DbConnector(object):
 
     def get_vcs_by_did(self, alias):
         return self._get_vcs_by_did(alias)
+
+    def get_key_from_did(self, alias):
+        return self._get_key_from_did(alias)
 
     def store(self, obj, group):
         self._store(obj, group)

@@ -26,74 +26,77 @@ _style = {
     },
 }
 
-def _adjust_prompt(prompt):
-    return prompt + (' ' if not prompt.endswith(' ') else '')
+class MenuHandler(object):
 
-def _mk_yes_no(prompt):
-    return YesNo(_adjust_prompt(prompt))
+    def _adjust_prompt(self, prompt):
+        return prompt + (' ' if not prompt.endswith(' ') \
+            else '')
 
-def _mk_input(prompt):
-    return Input(_adjust_prompt(prompt))
+    def _mk_yes_no(self, prompt):
+        return YesNo(_adjust_prompt(prompt))
 
-def _mk_number(prompt):
-    return Numbers(_adjust_prompt(prompt),
-        **_style['number'],)
+    def _mk_input(self, prompt):
+        return Input(_adjust_prompt(prompt))
 
-def _mk_single_choice(prompt, choices):
-    return Bullet(prompt=prompt, choices=choices,
-        **_style['bullet'],)
+    def _mk_number(self, prompt):
+        return Numbers(_adjust_prompt(prompt),
+            **_style['number'],)
 
-def _mk_multiple_choices(prompt, choices):
-    return Check(prompt=prompt, choices=choices,
-        **_style['check'],)
+    def _mk_single_choice(self, prompt, choices):
+        return Bullet(prompt=prompt, choices=choices,
+            **_style['bullet'],)
 
-def launch_yes_no(prompt):
-    return _mk_yes_no(prompt).launch()
+    def _mk_multiple_choices(self, prompt, choices):
+        return Check(prompt=prompt, choices=choices,
+            **_style['check'],)
 
-def launch_input(prompt):
-    return _mk_input(prompt).launch()
+    def launch_yes_no(self, prompt):
+        return _mk_yes_no(prompt).launch()
 
-def launch_number(prompt):
-    return _mk_number(prompt).launch()
+    def launch_input(self, prompt):
+        return _mk_input(prompt).launch()
 
-def launch_single_choice(prompt, choices):
-    menu = _mk_single_choice(prompt, choices)
-    res = menu.launch()
-    out = res[0]
-    return out
+    def launch_number(self, prompt):
+        return _mk_number(prompt).launch()
 
-def launch_multiple_choices(prompt, choices):
-    menu = _mk_multiple_choices(prompt, choices)
-    res = menu.launch()
-    out = res[0]
-    return out
+    def launch_single_choice(self, prompt, choices):
+        menu = self._mk_single_choice(prompt, choices)
+        res = menu.launch()
+        out = res[0]
+        return out
 
-def launch_prompt(config):
-    steps = []
-    for key, params in config.items():
-        match key:
-            case 'yes_no':
-                steps += [_mk_yes_no(params),]
-            case 'input':
-                steps += [_mk_input(params),]
-            case 'number':
-                steps += [_mk_number(params),]
-            case 'single':
-                steps += [_mk_single_choice(**params),]
-            case 'multiple':
-                steps += [_mk_multiple_choices(**params),]
-    res = SlidePrompt(steps).launch()
-    out = []
-    for cur, key in zip(res, config.keys()):
-        match key:
-            case 'yes_no':
-                out += [cur[1]]
-            case 'input':
-                out += [cur[1]]
-            case 'number':
-                out += [cur[1]]
-            case 'single':
-                out += [cur[1][0]]
-            case 'multiple':
-                out += [cur[1][0]]
-    return out         
+    def launch_multiple_choices(self, prompt, choices):
+        menu = self._mk_multiple_choices(prompt, choices)
+        res = menu.launch()
+        out = res[0]
+        return out
+
+    def launch_prompt(self, config):
+        steps = []
+        for key, params in config.items():
+            match key:
+                case 'yes_no':
+                    steps += [_mk_yes_no(params),]
+                case 'input':
+                    steps += [_mk_input(params),]
+                case 'number':
+                    steps += [_mk_number(params),]
+                case 'single':
+                    steps += [_mk_single_choice(**params),]
+                case 'multiple':
+                    steps += [_mk_multiple_choices(**params),]
+        res = SlidePrompt(steps).launch()
+        out = []
+        for cur, key in zip(res, config.keys()):
+            match key:
+                case 'yes_no':
+                    out += [cur[1]]
+                case 'input':
+                    out += [cur[1]]
+                case 'number':
+                    out += [cur[1]]
+                case 'single':
+                    out += [cur[1][0]]
+                case 'multiple':
+                    out += [cur[1][0]]
+        return out         
