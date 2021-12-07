@@ -3,6 +3,7 @@ from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
+from issuer.logic import IssuanceError
 from common import load_issuer
 
 
@@ -20,7 +21,10 @@ def show_did(request):
 
 @csrf_exempt
 @require_http_methods(['POST',])
-def issue_credentials(request):
+def issue_credential(request):
     payload = json.loads(request.body)
-    out = issuer.issue_credentials(payload)
+    try:
+        out = issuer.issue_credential(payload)
+    except IssuanceError as err:
+        out = {'err': err}
     return JsonResponse(out, safe=False)

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Sole purpose of this script is to run `issue-vc` in a non-interactive
-# fashion. This is not robust; take care to provide correct arguments.
+# fashion. It is not robust, so take care to provide correct arguments.
 
 HOLDER_DID="${1}"
 PERSON_IDENTIFIER="${2}"

@@ -33,6 +33,7 @@ WALTDIR = os.environ.get('WALTDIR')
 APPDIR = os.environ.get('APPDIR')
 STORAGE = os.environ.get('STORAGE')
 TMPDIR = os.environ.get('TMPDIR')
+EBSI_PRFX = 'did:ebsi:'
 
 
 # Application definition

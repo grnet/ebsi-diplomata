@@ -7,7 +7,7 @@ api_endpoint = 'api/v1/'
 issuer_urls = [
     path('index/', show_info),
     path('did/', show_did),
-    path('credentials/issue/', issue_credentials),
+    path('credentials/issue/', issue_credential),
 ]
 
 urlpatterns = [
