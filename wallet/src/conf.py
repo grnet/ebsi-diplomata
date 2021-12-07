@@ -1,8 +1,10 @@
 import os
 
-STORAGE = os.getenv('STORAGE')
-HOMEDIR = os.getenv('HOMEDIR')
-TMPDIR  = os.getenv('TMPDIR')
+STORAGE     = os.getenv('STORAGE')
+HOMEDIR     = os.getenv('HOMEDIR')
+TMPDIR      = os.getenv('TMPDIR')
+WALTDIR     = os.getenv('WALTDIR')
+RESOLVED    = os.path.join(WALTDIR, 'data/did/resolved')
 
 DBNAME  = 'db.json'
 DBCONF  = {
@@ -25,6 +27,8 @@ INDENT  = 4
 
 ED25519 = 'Ed25519'
 SECP256 = 'Secp256k1'
+
+EBSI_PRFX = "did:ebsi"
 
 class _Group:
     KEY = 'key'

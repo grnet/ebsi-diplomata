@@ -1,8 +1,8 @@
 import json
 import os
 from util import run_cmd
-from conf import STORAGE, TMPDIR, DBNAME, INDENT, \
-    _Group,  ED25519, SECP256
+from conf import STORAGE, TMPDIR, RESOLVED, DBNAME, INDENT, \
+    _Group,  ED25519, SECP256, EBSI_PRFX
 from db import DbConnector
 
 
@@ -107,8 +107,6 @@ class App(object):
             self.register_did(alias, token)
         except RegistrationError as err:
             raise CreationError(err)
-        # NOTE: check data/ebsi/<did>/
-        # NOTE: Check data/did/resolved/did-ebsi-*.json
         self._db.store(created, _Group.DID)
         os.remove(tmpfile)
         return alias
@@ -118,8 +116,11 @@ class App(object):
         if code != 0:
             err = res
             raise ResolutionError(err)
-        # NOTE: check data/ebsi/<did>/
-        # NOTE: Check data/did/resolved/did-ebsi-*.json
+        resolved = os.path.join(RESOLVED, 'did-ebsi-%s.json' % \
+            alias.lstrip(EBSI_PRFX))
+        with open(resolved) as f:
+            out = json.load(f)
+        return out
 
     def create_verifiable_presentation(self, vc_files, did):
         # key = self._db.get_key_from_did(did)

@@ -177,12 +177,13 @@ class WalletShell(cmd.Cmd, MenuHandler):
 
     def do_resolve(self, line):
         alias = self.launch_input('Give DID: ')
+        self._flush('Resolving ...')
         try:
-            self.app.resolve_did(alias)
+            did = self.app.resolve_did(alias)
         except ResolutionError as err:
             self._flush('Cound not resolve: %s' % err)
             return
-        self._flush('DID resolved')
+        self._flush(did)
 
     def do_present(self, line):
         pass
