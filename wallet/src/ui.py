@@ -33,31 +33,35 @@ class MenuHandler(object):
             else '')
 
     def _mk_yes_no(self, prompt):
-        return YesNo(_adjust_prompt(prompt))
+        prompt = self._adjust_prompt(prompt)
+        return YesNo(prompt)
 
     def _mk_input(self, prompt):
-        return Input(_adjust_prompt(prompt))
+        prompt = self._adjust_prompt(prompt)
+        return Input(prompt)
 
     def _mk_number(self, prompt):
-        return Numbers(_adjust_prompt(prompt),
-            **_style['number'],)
+        prompt = self._adjust_prompt(prompt)
+        return Numbers(prompt, **_style['number'],)
 
     def _mk_single_choice(self, prompt, choices):
+        prompt = self._adjust_prompt(prompt)
         return Bullet(prompt=prompt, choices=choices,
             **_style['bullet'],)
 
     def _mk_multiple_choices(self, prompt, choices):
+        prompt = self._adjust_prompt(prompt)
         return Check(prompt=prompt, choices=choices,
             **_style['check'],)
 
     def launch_yes_no(self, prompt):
-        return _mk_yes_no(prompt).launch()
+        return self._mk_yes_no(prompt).launch()
 
     def launch_input(self, prompt):
-        return _mk_input(prompt).launch()
+        return self._mk_input(prompt).launch()
 
     def launch_number(self, prompt):
-        return _mk_number(prompt).launch()
+        return self._mk_number(prompt).launch()
 
     def launch_single_choice(self, prompt, choices):
         menu = self._mk_single_choice(prompt, choices)
@@ -76,15 +80,15 @@ class MenuHandler(object):
         for key, params in config.items():
             match key:
                 case 'yes_no':
-                    steps += [_mk_yes_no(params),]
+                    steps += [self._mk_yes_no(params),]
                 case 'input':
-                    steps += [_mk_input(params),]
+                    steps += [self._mk_input(params),]
                 case 'number':
-                    steps += [_mk_number(params),]
+                    steps += [self._mk_number(params),]
                 case 'single':
-                    steps += [_mk_single_choice(**params),]
+                    steps += [self._mk_single_choice(**params),]
                 case 'multiple':
-                    steps += [_mk_multiple_choices(**params),]
+                    steps += [self._mk_multiple_choices(**params),]
         res = SlidePrompt(steps).launch()
         out = []
         for cur, key in zip(res, config.keys()):
