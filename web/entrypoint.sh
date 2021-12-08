@@ -1,7 +1,6 @@
 #!/bin/bash
 
-HOST=0.0.0.0
-PORT=7000
+HTTP_HOST=0.0.0.0
 
 until pg_isready -h ${SQL_HOST} -p ${SQL_PORT}; do 
     echo "Connecting to database..."
@@ -13,14 +12,13 @@ if [ -z "$(ls -A ${STORAGE}/did)" ]; then
 fi
 
 # TODO: Make these persistent
-cd /home/issuer
+cd /home/web
 create-key --export key.json
 create-did --key $(get-key) --export did.json
 cd -
 
 python3 manage.py makemigrations --noinput
-python3 manage.py makemigrations issuer --noinput
 python3 manage.py migrate --noinput
-python3 manage.py runserver ${HOST}:${PORT}
+python3 manage.py runserver ${HTTP_HOST}:${HTTP_PORT}
 
 exec "$@"

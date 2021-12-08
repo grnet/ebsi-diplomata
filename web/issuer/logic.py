@@ -2,13 +2,8 @@ from django.conf import settings
 import subprocess
 import json
 import os
+from .ebsi_lib import run_cmd
 
-
-def run_cmd(args):
-    result = subprocess.run(args, stdout=subprocess.PIPE)
-    resp = result.stdout.decode('utf-8').rstrip('\n')
-    code = result.returncode
-    return (resp, code)
 
 def get_did(nr=None, no_ebsi_prefix=False):
     args = ['get-did',]
@@ -46,7 +41,7 @@ class Issuer(object):
     def issue_credential(self, payload):
         # TODO: Issuer should here fill the following template by comparing the
         # submitted payload against its database. Empty strings lead to the
-        # demo defaults of the walt library.
+        # demo defaults of the walt library. 
         vc_content = {
             'holder_did': payload['did'],
             'person_identifier': '',

@@ -1,5 +1,5 @@
 from tinydb import TinyDB, where
-from conf import DBCONF, _Group
+from .conf import DBCONF, _Group
 import json
 
 _pkey = {

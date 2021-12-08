@@ -3,7 +3,7 @@ FROM python:3.10-slim-bullseye
 ENV PYTHONBUFFERED 1
 ENV PYTHONDONTWRITEBYTECODE  1
 
-ENV CODE issuer
+ENV CODE web
 ENV USERNAME ${CODE}
 ENV HOMEDIR /home/${USERNAME}
 ENV WALTDIR ${HOMEDIR}/waltid-ssikit
@@ -22,9 +22,6 @@ COPY ./waltid-ssikit ${WALTDIR}
 WORKDIR ${WALTDIR}
 RUN ./ssikit.sh build
 RUN rm -rf data && mkdir -p data/ebsi
-
-RUN mkdir -p ${STORAGE}/did
-RUN mkdir -p ${STORAGE}/vc
 
 WORKDIR ${APPDIR}
 RUN pip install --upgrade pip

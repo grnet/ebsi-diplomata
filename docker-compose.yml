@@ -5,13 +5,14 @@ services:
     container_name: issuer
     build:
       context: .
-      dockerfile: Dockerfile.issuer
+      dockerfile: Dockerfile.web
     ports:
       - 7000:7000
     expose:
       - 7000
     environment:
       - DEBUG=1
+      - HTTP_PORT=7000
       - DATABASE=postgres
       - SQL_DATABASE=issuer_db
       - SQL_USER=issuer_db_user
@@ -27,30 +28,50 @@ services:
         source: ./resources/bearer-token.txt
         target: /home/issuer/waltid-ssikit/data/ebsi/bearer-token.txt
     depends_on:
-      - postgres
+      - issuer_postgres
+  issuer_postgres:
+    container_name: issuer-db
+    image: postgres:14.0-alpine
+    volumes:
+      - issuer_postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_DB=issuer_db
+      - POSTGRES_USER=issuer_db_user
+      - POSTGRES_PASSWORD=issuer_db_password
   verifier:
     container_name: verifier
     build:
       context: .
-      dockerfile: Dockerfile.verifier
+      dockerfile: Dockerfile.web
     ports:
       - 7001:7001
     expose:
       - 7001
     environment:
       - DEBUG=1
+      - HTTP_PORT=7001
+      - DATABASE=postgres
+      - SQL_DATABASE=verifier_db
+      - SQL_USER=verifier_db_user
+      - SQL_PASSWORD=verifier_db_password
+      - SQL_ENGINE=django.db.backends.postgresql
+      - SQL_HOST=verifier-db
+      - SQL_PORT=5432
     volumes:
       - ./verifier:/home/verifier/app
       - ./storage/verifier:/home/verifier/storage
       - ./commands:/usr/local/sbin
-  postgres:
-    container_name: issuer-db
+    depends_on:
+      - verifier_postgres
+  verifier_postgres:
+    container_name: verifier-db
     image: postgres:14.0-alpine
     volumes:
-      - postgres_data:/var/lib/postgresql/data/
+      - verifier_postgres_data:/var/lib/postgresql/data/
     environment:
-      - POSTGRES_DB=issuer_db
-      - POSTGRES_USER=issuer_db_user
-      - POSTGRES_PASSWORD=issuer_db_password
+      - POSTGRES_DB=verifier_db
+      - POSTGRES_USER=verifier_db_user
+      - POSTGRES_PASSWORD=verifier_db_password
 volumes:
-  postgres_data:
+  issuer_postgres_data:
+  verifier_postgres_data:

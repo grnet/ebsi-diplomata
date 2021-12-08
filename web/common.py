@@ -5,3 +5,6 @@ def _app(label):
 
 def load_issuer():
     return _app('issuer').get_issuer()
+
+def load_verifier():
+    return _app('verifier').get_verifier()
