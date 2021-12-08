@@ -2,7 +2,7 @@ from django.conf import settings
 import subprocess
 import json
 import os
-from .ebsi_lib import run_cmd
+from ebsi_lib import run_cmd
 
 
 def get_did(nr=None, no_ebsi_prefix=False):
