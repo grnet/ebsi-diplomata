@@ -25,17 +25,44 @@ class App(object):
     def get_aliases(self, group):
         return self._db.get_aliases(group)
 
+    def get_keys(self):
+        return self._db.get_aliases(_Group.KEY)
+
+    def get_dids(self):
+        return self._db.get_aliases(_Group.DID)
+
+    def get_credentials(self):
+        return self._db.get_aliases(_Group.VC)
+
+    def get_credentials_by_did(self, alias):
+        return self._db.get_credentials_by_did(alias)
+
     def get_nr(self, group):
         return self._db.get_nr(group)
 
     def get_entry(self, alias, group):
         return self._db.get_entry(alias, group)
 
-    def get_vcs_by_did(self, alias):
-        return self._db.get_vcs_by_did(alias)
+    def get_key(self, alias):
+        return self._db.get_entry(alias, _Group.KEY)
+
+    def get_did(self, alias):
+        return self._db.get_entry(alias, _Group.DID)
+
+    def get_credential(self, alias):
+        return self._db.get_entry(alias, _Group.VC)
 
     def store(self, obj, group):
         self._db.store(obj, group)
+
+    def store_key(self, obj):
+        self._db.store(obj, _Group.KEY)
+
+    def store_did(self, obj):
+        self._db.store(obj, _Group.DID)
+
+    def store_credential(self, obj):
+        self._db.store(obj, _Group.VC)
 
     def remove(self, alias, group):
         self._db.remove(alias, group)

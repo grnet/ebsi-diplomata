@@ -4,10 +4,7 @@ usage_string="usage: ./$(basename "$0") --did <DID> [--token <TOKEN>]
 
 DID onboarding and registration to EBSI.
 
-IMPORTANT: Tokens are taken from 
-
-          https://app.preprod.ebsi.eu/users-onboarding
-
+NOTE: Tokens are taken from https://app.preprod.ebsi.eu/users-onboarding
 and expire after 15 minutes.
 
 Arguments:

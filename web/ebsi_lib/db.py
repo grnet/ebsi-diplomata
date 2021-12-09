@@ -40,7 +40,7 @@ class DbConnector(object):
             self.db.table(group).all(),
         ))
 
-    def _get_vcs_by_did(self, alias):
+    def _get_credentials_by_did(self, alias):
         filtered = self.db.table(_Group.VC).search(
             where('credentialSubject')['id']==alias)
         out = list(map(
@@ -76,8 +76,8 @@ class DbConnector(object):
     def get_aliases(self, group):
         return self._get_aliases(group)
 
-    def get_vcs_by_did(self, alias):
-        return self._get_vcs_by_did(alias)
+    def get_credentials_by_did(self, alias):
+        return self._get_credentials_by_did(alias)
 
     def get_key_from_did(self, alias):
         return self._get_key_from_did(alias)

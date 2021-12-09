@@ -150,7 +150,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
                     return
                 self._flush('Created key: %s' % alias)
             case _Group.DID:
-                keys = self.app.get_aliases(_Group.KEY)
+                keys = self.app.get_keys()
                 if not keys:
                     self._flush('No keys found. Must first create one.')
                     return
@@ -219,7 +219,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
                     self._flush(resp['message'])# TODO
                     return
                 credential = resp.json()        # TODO: Validate structure
-                self.app.store(credential, _Group.VC)
+                self.app.store_credential(credential)
                 self._flush('The following credential was saved to disk:')
                 self._flush(credential['id'])
             case _Action.VERIFY:
@@ -246,14 +246,14 @@ class WalletShell(cmd.Cmd, MenuHandler):
                     self._flush('No DIDs found. Must create at least one.')
                     return
                 did = self.launch_single_choice('Choose DID', did_choices)
-                vc_choices = self.app.get_vcs_by_did(did)
+                vc_choices = self.app.get_credentials_by_did(did)
                 if not vc_choices:
                     self._flush('No credentials found for the provided DID')
                     return
                 selected = self.launch_multiple_choices(
                     'Select credentials to present', vc_choices)
-                credentials = [self.app.get_entry(alias, _Group.VC) for alias
-                    in selected]
+                credentials = [self.app.get_credential(alias) for alias in
+                    selected]
                 if not credentials:
                     self._flush('Aborted')
                     return
