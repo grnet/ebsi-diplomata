@@ -54,10 +54,12 @@ resp=$(./ssikit.sh did resolve --did ${DID})
 if echo $resp | grep -qi "not found" ; then
     echo "DID not found"
     exit 1
-elif echo $resp | grep -qi "invalid: 400 Bad Request"; then
+fi
+
+if echo $resp | grep -qi "invalid: 400 Bad Request"; then
     echo "Invalid DID"
     exit 2
-else
-    echo "DID resolved"
-    exit 0
 fi
+
+echo "DID resolved"
+exit 0

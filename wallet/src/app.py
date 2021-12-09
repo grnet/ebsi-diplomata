@@ -74,6 +74,17 @@ class App(object):
         os.remove(token_file)
         return res, code
 
+    def _resolve_did(self, alias):
+        res, code = run_cmd(['resolve-did', '--did', alias,])
+        return res, code
+
+    def _retrieve_resolved_did(self, alias):
+        resolved = os.path.join(RESOLVED, 'did-ebsi-%s.json' % \
+            alias.lstrip(EBSI_PRFX))
+        with open(resolved, 'r') as f:
+            out = json.load(f)
+        return out
+
     def create_key(self, algorithm):
         outfile = os.path.join(TMPDIR, 'key.json')
         res, code = self._generate_key(algorithm, outfile)
@@ -109,14 +120,11 @@ class App(object):
         return alias
 
     def resolve_did(self, alias):
-        res, code = run_cmd(['resolve-did', '--did', alias,])
+        res, code = self._resolve_did(alias)
         if code != 0:
-            err = res
+            err = 'Could not resolve: %s' % res
             raise ResolutionError(err)
-        resolved = os.path.join(RESOLVED, 'did-ebsi-%s.json' % \
-            alias.lstrip(EBSI_PRFX))
-        with open(resolved) as f:
-            out = json.load(f)
+        out = self._retrieve_resolved_did(alias)
         return out
 
     def create_verifiable_presentation(self, vc_files, did):

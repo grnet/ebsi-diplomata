@@ -180,7 +180,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
         try:
             did = self.app.resolve_did(alias)
         except ResolutionError as err:
-            self._flush('Cound not resolve: %s' % err)
+            self._flush(err)
             return
         self._flush(did)
 
