@@ -20,9 +20,12 @@ services:
       - SQL_ENGINE=django.db.backends.postgresql
       - SQL_HOST=issuer-db
       - SQL_PORT=5432
+      - ISSUER_EBSI_TOKEN=${WEB_EBSI_TOKEN}
+      - ISSUER_KEYGEN_ALGO=${WEB_KEYGEN_ALGO}
+      - ISSUER_FORCE_DID=${WEB_FORCE_DID}
     volumes:
-      - ./issuer:/home/issuer/app
-      - ./storage/issuer:/home/issuer/storage
+      - ./web:/home/web/app
+      - ./storage/issuer:/home/web/storage
       - ./commands:/usr/local/sbin
       - type: bind
         source: ./resources/bearer-token.txt
@@ -57,9 +60,12 @@ services:
       - SQL_ENGINE=django.db.backends.postgresql
       - SQL_HOST=verifier-db
       - SQL_PORT=5432
+      - VERIFIER_EBSI_TOKEN=${WEB_EBSI_TOKEN}
+      - VERIFIER_KEYGEN_ALGO=${WEB_KEYGEN_ALGO}
+      - VERIFIER_FORCE_DID=${WEB_FORCE_DID}
     volumes:
-      - ./verifier:/home/verifier/app
-      - ./storage/verifier:/home/verifier/storage
+      - ./web:/home/web/app
+      - ./storage/verifier:/home/web/storage
       - ./commands:/usr/local/sbin
     depends_on:
       - verifier_postgres

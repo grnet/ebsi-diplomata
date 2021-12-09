@@ -13,7 +13,7 @@ git clone git@gitlab.grnet.gr:devs/priviledge/ebsi-diplomata.git --recurse-submo
 Build the wallet application as follows:
 
 ```commandline
-./run-wallet --only-build
+./run-wallet.sh --only-build
 ```
 
 Build the issuer and verifier services as follows:
@@ -34,7 +34,7 @@ and visit localhost at ports `7000` and `7001` respectively. Run locally
 the wallet app with
 
 ```commandline
-./run-wallet
+./run-wallet.sh
 ```
 
 You are now ready to interact with the services.

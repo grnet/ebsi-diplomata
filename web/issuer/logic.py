@@ -2,22 +2,31 @@ from django.conf import settings
 import subprocess
 import json
 import os
-from ebsi_lib import run_cmd
+from ebsi_lib import run_cmd, EbsiApp
+from ebsi_lib.conf import _Group, SECP256, ED25519
+from ebsi_lib.app import CreationError
 
-
-def get_did(nr=None, no_ebsi_prefix=False):
-    args = ['get-did',]
-    if nr:
-        args += ['--nr', str(nr)]
-    resp, code = run_cmd(args)
-    if no_ebsi_prefix:
-        resp = resp.lstrip(settings.EBSI_PRFX)
-    return (resp, code)
 
 class IssuanceError(BaseException):
     pass
 
-class Issuer(object):
+class Issuer(EbsiApp):
+
+    def __init__(self, *args):
+        super().__init__()
+        if any((
+            bool(int(os.environ.get('ISSUER_FORCE_DID', default=0))),   # TODO
+            self.get_nr(_Group.DID) == 0,
+        )):
+            algorithm = os.getenv('ISSUER_KEYGEN_ALGO', ED25519)        # TODO
+            token = os.getenv('ISSUER_EBSI_TOKEN', '')                  # TODO
+            self.clear(_Group.KEY)
+            self.clear(_Group.DID)
+            key = self.create_key(algorithm)
+            try:
+                self.create_did(key, token)
+            except CreationError as err:
+                raise
 
     @classmethod
     def init_from_app(cls, settings):
@@ -27,15 +36,12 @@ class Issuer(object):
         return {'TODO': 'Include here issuer info'}         # TODO
 
     def get_did(self):
-        resp, code = get_did()                              # TODO
-        # TODO
-        if code == 0:
-            _path = os.path.join(settings.STORAGE, 'did', 
-                '1', 'repr.json')                           # TODO
-            with open(_path, 'r') as f:
-                out = json.load(f)
+        dids = self.get_aliases(_Group.DID)
+        if not dids:
+            out = {'message': 'No DIDs found'}
         else:
-            out = {'error': resp}
+            alias = dids[-1]
+            out = self.get_entry(alias, _Group.DID)
         return out
 
     def issue_credential(self, payload):
