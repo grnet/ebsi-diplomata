@@ -3,6 +3,8 @@
 # Sole purpose of this script is to run `issue-vc` in a non-interactive
 # fashion. It is not robust, so take care to provide correct arguments.
 
+set -e
+
 HOLDER_DID="${1}"
 PERSON_IDENTIFIER="${2}"
 PERSON_FAMILY_NAME="${3}"
@@ -69,4 +71,12 @@ args+="${LEARNING_SPECIFICATION_EVIDENCE_DOCUMENT}\n"
 args+="${LEARNING_SPECIFICATION_SUBJECT_PRESENCE}\n"
 args+="${LEARNING_SPECIFICATION_DOCUMENT_PRESENCE}\n"
 
-printf $args | issue-vc --holder-did ${HOLDER_DID}
+ISSUER_DID="${33}"                                      # TODO
+OUTFILE="${34}"                                         # TODO
+printf $args | issue-vc \
+    --issuer-did ${ISSUER_DID} \
+    --holder-did ${HOLDER_DID} \
+    --export ${OUTFILE}
+# TODO: Check here output of the above command and exit with appopriate status
+# code
+exit 0

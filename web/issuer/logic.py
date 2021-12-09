@@ -3,11 +3,14 @@ import subprocess
 import json
 import os
 from ebsi_lib import run_cmd, EbsiApp
-from ebsi_lib.conf import _Group, SECP256, ED25519
+from ebsi_lib.conf import _Group, SECP256, ED25519, TMPDIR
 from ebsi_lib.app import CreationError
 
 
-class IssuanceError(BaseException):
+class IssuanceError(BaseException):     # TODO
+    pass
+
+class IdentityError(BaseException):     # TODO
     pass
 
 class Issuer(EbsiApp):
@@ -35,13 +38,15 @@ class Issuer(EbsiApp):
     def get_info(self):
         return {'TODO': 'Include here issuer info'}         # TODO
 
-    def get_did(self):
+    def get_did(self, full=False):                          # TODO
         dids = self.get_aliases(_Group.DID)
         if not dids:
-            out = {'message': 'No DIDs found'}
-        else:
-            alias = dids[-1]
-            out = self.get_entry(alias, _Group.DID)
+            err = 'No DID found'
+            raise IdentityError(err)
+        alias = dids[-1]
+        if not full:
+            return alias
+        out = self.get_entry(alias, _Group.DID)
         return out
 
     def issue_credential(self, payload):
@@ -82,14 +87,17 @@ class Issuer(EbsiApp):
             'learning_specification_subject_presence': '',
             'learning_specification_document_presence': '',
         }
+        # TODO
+        tmpfile = os.path.join(TMPDIR, 'vc.json')
         res, code = run_cmd([
-            os.path.join(settings.APPDIR, 'issuer', 'issue-vc-ni'),
-            *vc_content.values(),
+            os.path.join(settings.APPDIR, 'issuer', 'issue-vc-ni'), # TODO
+            *vc_content.values(),   # TODO
+            self.get_did(),         # TODO
+            tmpfile,                # TODO
         ])
         if code != 0:
             err = 'Could not issue credential: %s' % res
             raise IssuanceError(err)
-        tmpfile = res                   # Credential export
         with open(tmpfile, 'r') as f:
             out = json.load(f)
         os.remove(tmpfile)

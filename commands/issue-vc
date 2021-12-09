@@ -5,12 +5,13 @@ usage_string="usage: ./$(basename "$0") [OPTIONS]
 Issue VC and return the path to the corresponding file.
 
 Arguments:
-  --holder-did    DID of VC holder
+  --issuer-did DID  Current issuer DID
+  --holder-did DID  DID of VC holder
+  --export OUTFILE  File to export key after generation
 
 Options:
-  --issuer-did    Current issuer DID. Defaults to the last created DID.
-  --template      VC template to use. Default: VerifiableDiploma
-  --proof-type    Proof type to be used for issuance. Default: LD_PROOF
+  --template        VC template to use. Default: VerifiableDiploma
+  --proof-type      Proof type to be used for issuance. Default: LD_PROOF
 
 Examples
   $ $(basename "$0") --holder-did did:ebsi:zph2s2XSe6F9rn55j1QYH1C
@@ -18,6 +19,7 @@ Examples
 
 usage() { echo -n "$usage_string" 1>&2; }
 
+set -e
 
 TEMPLATE=VerifiableDiploma
 PROOF_TYPE=LD_PROOF
@@ -26,11 +28,6 @@ while [[ $# -gt 0 ]]
 do
     arg="$1"
     case $arg in
-        --template)
-            TEMPLATE="$2"
-            shift
-            shift
-            ;;
         --issuer-did)
             ISSUER_DID="$2"
             shift
@@ -38,6 +35,16 @@ do
             ;;
         --holder-did)
             HOLDER_DID="$2"
+            shift
+            shift
+            ;;
+        --export)
+            OUTFILE="$2"
+            shift
+            shift
+            ;;
+        --template)
+            TEMPLATE="$2"
             shift
             shift
             ;;
@@ -63,19 +70,16 @@ if [ -z ${HOLDER_DID} ]; then
 fi
 
 if [ -z ${ISSUER_DID} ]; then
-    ISSUER_DID=$(get-did)
-    if [ $? == 2 ]; then
-        echo "[-] No DID found for issuer"
-        exit 2
-    fi
+    echo "[-] No issuer DID provided"
+    usage && exit 1
+fi
+
+if [ -z ${OUTFILE} ]; then
+    echo "[-] No export file provided"
+    usage && exit 1
 fi
 
 cd $WALTDIR
-
-OUTDIR="${STORAGE}/vc/${HOLDER_DID}"
-mkdir -p ${OUTDIR}
-SUFFIX=$(printf "%08d" $(($(ls ${OUTDIR} | wc -l) + 1)))
-OUTFILE="${OUTDIR}/vc-${SUFFIX}.json" 
 
 ./ssikit.sh vc issue \
     --template ${TEMPLATE} \
@@ -84,8 +88,8 @@ OUTFILE="${OUTDIR}/vc-${SUFFIX}.json"
     --proof-type ${PROOF_TYPE} \
     --proof-purpose assertion \
     --interactive \
-    ${OUTFILE} >/dev/null 2>&1
-
-echo ${OUTFILE}
+    ${OUTFILE} > /dev/null
+# TODO: Check here output of the above command and exit with appopriate status
+# code
 exit 0
 

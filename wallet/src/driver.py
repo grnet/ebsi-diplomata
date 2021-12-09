@@ -215,7 +215,11 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 # TODO: Check that a credential is indeed returned. This
                 # presupposes that an API spec on behalf of the issuer is
                 # known
-                credential = resp.json()
+                resp = resp.json()
+                if 'message' in resp:           # TODO: Check code instead
+                    self._flush(resp['message'])# TODO
+                    return
+                credential = resp.json()        # TODO: Validate structure
                 self.app.store(credential, _Group.VC)
                 self._flush('The following credential was saved to disk:')
                 self._flush(credential['id'])
