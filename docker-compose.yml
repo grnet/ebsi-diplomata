@@ -27,9 +27,6 @@ services:
       - ./web:/home/web/app
       - ./storage/issuer:/home/web/storage
       - ./commands:/usr/local/sbin
-      - type: bind
-        source: ./resources/bearer-token.txt
-        target: /home/issuer/waltid-ssikit/data/ebsi/bearer-token.txt
     depends_on:
       - issuer_postgres
   issuer_postgres:
