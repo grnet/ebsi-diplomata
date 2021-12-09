@@ -11,18 +11,15 @@ IMPORTANT: Tokens are taken from
 and expire after 15 minutes.
 
 Arguments:
-  -d, --did DID   DID to onboard
+  --did ALIAS     DID to onboard
+  --token FILE    File containing the bearer token. Exit with 2 if expired
+                  or malformed.
 
 Options:
-  --token FILE    File containing the bearer token. Defaults to
-
-                  ${WALTDIR}/data/ebsi/bearer-token.txt
-  
-                  Exit with 2 if expired.
-  --resolve       Resolve registered DID to check if it was correctly anchored.
+  --resolve       Resolve registered DID to check if it was anchored.
 
 Examples
-  $ $(basename "$0") --token data/ebsi/bearer-token.txt --did zjmoeYH3t3FQn93qTqLUQ9j 
+  $ $(basename "$0") --token bearer-token.txt --did zjmoeYH3t3FQn93qTqLUQ9j 
 "
 
 usage() { echo -ne "$usage_string" 1>&2; }
@@ -31,7 +28,7 @@ set -e
 
 EBSI_PRFX="did:ebsi"
 DO_RESOLVE=false
-TOKEN="${WALTDIR}/data/ebsi/bearer-token.txt"
+TOKEN=
 DID=
 
 while [[ $# -gt 0 ]]
@@ -69,6 +66,11 @@ done
 
 if [ -z ${DID} ]; then
     echo '[-] No DID provided'
+    usage && exit 1
+fi
+
+if [ -z ${TOKEN} ]; then
+    echo '[-] No token file provided'
     usage && exit 1
 fi
 

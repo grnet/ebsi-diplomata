@@ -9,12 +9,6 @@ from .db import DbConnector
 class CreationError(BaseException):
     pass
 
-class LoadError(BaseException):
-    pass
-
-class RegistrationError(BaseException):
-    pass
-
 class ResolutionError(BaseException):
     pass
 
@@ -49,15 +43,40 @@ class App(object):
     def clear(self, group):
         self._db.clear(group)
 
-    def generate_key(self, algorithm, outfile):
+    def _generate_key(self, algorithm, outfile):
         res, code = run_cmd([
             'generate-key', '--algo', algorithm, '--export', outfile,
         ])
         return res, code
 
+    def _load_key(self, alias):
+        outfile = os.path.join(TMPDIR, 'jwk.json')
+        entry = self._db.get_entry(alias, _Group.KEY)
+        with open(outfile, 'w+') as f:
+            json.dump(entry, f, indent=INDENT)
+        res, code = run_cmd(['load-key', '--file', outfile])
+        os.remove(outfile)
+        return res, code
+
+    def _generate_did(self, key, outfile):
+        res, code = run_cmd([
+            'generate-did', '--key', key, '--export', outfile,
+        ])
+        return res, code
+
+    def _register_did(self, alias, token):
+        token_file = os.path.join(TMPDIR, 'bearer-token.txt')
+        with open(token_file, 'w+') as f:
+            f.write(token)
+        res, code = run_cmd(['register-did', '--did', alias, 
+            '--token', token_file, '--resolve',
+        ])
+        os.remove(token_file)
+        return res, code
+
     def create_key(self, algorithm):
         outfile = os.path.join(TMPDIR, 'key.json')
-        res, code = self.generate_key(algorithm, outfile)
+        res, code = self._generate_key(algorithm, outfile)
         if code != 0:
             err = 'Could not generate key: %s' % res
             raise CreationError(err)
@@ -68,51 +87,25 @@ class App(object):
         alias = created['kid']  # TODO
         return alias
 
-    def load_key(self, key):
-        tmpfile = os.path.join(TMPDIR, 'jwk.json')
-        entry = self._db.get_entry(key, _Group.KEY)
-        with open(tmpfile, 'w+') as f:
-            json.dump(entry, f, indent=INDENT)
-        res, code = run_cmd(['load-key', '--file', tmpfile])
+    def create_did(self, key, token):
+        res, code = self._load_key(key)
         if code != 0:
             err = 'Could not load key: %s' % res
-            raise LoadError(err)
-        os.remove(tmpfile)
-
-    def register_did(self, did, token):
-        token_file = os.path.join(TMPDIR, 'bearer-token.txt')
-        with open(token_file, 'w+') as f:
-            f.write(token)
-        res, code = run_cmd(['register-did',
-            '--did', did, '--token', token_file,
-            '--resolve',])
-        if code != 0:
-            err = 'Could not register: %s' % res
-            raise RegistrationError(err)
-        os.remove(token_file)
-
-    def create_did(self, key, token):
-        try:
-            self.load_key(key)
-        except LoadError as err:
-            err = 'Could not create DID: %s' % err
             raise CreationError(err)
-        tmpfile = os.path.join(TMPDIR, 'did.json')
-        res, code = run_cmd([
-            'create-did', '--key', key, '--export', tmpfile
-        ])
+        outfile = os.path.join(TMPDIR, 'did.json')
+        res, code = self._generate_did(key, outfile)
         if code != 0:
-            err = 'Could not create DID: %s' % res
+            err = 'Could not generate DID: %s' % res
             raise CreationError(err)
-        with open(tmpfile, 'r') as f:
+        with open(outfile, 'r') as f:
             created = json.load(f)
+        os.remove(outfile)
         alias = created['id']       # TODO
-        try:
-            self.register_did(alias, token)
-        except RegistrationError as err:
+        res, code = self._register_did(alias, token)
+        if code != 0:
+            err = 'Could not register DID: %s' % res
             raise CreationError(err)
         self._db.store(created, _Group.DID)
-        os.remove(tmpfile)
         return alias
 
     def resolve_did(self, alias):
@@ -127,12 +120,7 @@ class App(object):
         return out
 
     def create_verifiable_presentation(self, vc_files, did):
-        # key = self._db.get_key_from_did(did)
-        # try:
-        #     self.load_key(key)
-        # except LoadError as err:
-        #     err = 'Could not create vp: %s' % err
-        #     raise CreationError(err)
+        # self.load_did(did)    # TODO
         args = ['present-vc', '--holder-did', did,]
         for credential in vc_files:
             args += ['--credential', credential,]
