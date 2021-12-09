@@ -287,12 +287,14 @@ class WalletShell(cmd.Cmd, MenuHandler):
         if not aliases:
             self._flush('Nothing found')
             return
-        alias = self.launch_single_choice('Choose', aliases)
+        chosen = self.launch_multiple_choices('Choose entries to remove',
+            aliases)
         warning = 'This cannot be undone. Are you sure?'
         yes = self.launch_yes_no(warning)
         if yes:
-            self.app.remove(alias, group)
-            self._flush('Removed %s' % alias)
+            for alias in chosen:
+                self.app.remove(alias, group)
+                self._flush('Removed %s' % alias)
         else:
             self._flush('Aborted')
 
