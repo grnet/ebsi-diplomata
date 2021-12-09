@@ -49,18 +49,22 @@ class App(object):
     def clear(self, group):
         self._db.clear(group)
 
-    def create_key(self, algorithm):
-        tmpfile = os.path.join(TMPDIR, 'key.json')
+    def generate_key(self, algorithm, outfile):
         res, code = run_cmd([
-            'create-key', '--algo', algorithm, '--export', tmpfile
+            'generate-key', '--algo', algorithm, '--export', outfile,
         ])
+        return res, code
+
+    def create_key(self, algorithm):
+        outfile = os.path.join(TMPDIR, 'key.json')
+        res, code = self.generate_key(algorithm, outfile)
         if code != 0:
             err = 'Could not generate key: %s' % res
             raise CreationError(err)
-        with open(tmpfile, 'r') as f:
+        with open(outfile, 'r') as f:
             created = json.load(f)
         self._db.store(created, _Group.KEY)
-        os.remove(tmpfile)
+        os.remove(outfile)
         alias = created['kid']  # TODO
         return alias
 
