@@ -1,6 +1,7 @@
 import json
 import os
 import subprocess
+from .conf import _Group
 
 def run_cmd(args):
     rslt = subprocess.run(args, stdout=subprocess.PIPE)

@@ -16,28 +16,44 @@ class IdentityError(BaseException):     # TODO
 
 class Issuer(SSIApp):
 
-    def __init__(self, *args):
-        super().__init__(
-            dbpath=os.path.join(settings.STORAGE, 'db.json'),           # TODO
-            tmpdir=settings.TMPDIR,                                     # TODO
-        )
-        if any((
-            bool(int(os.environ.get('ISSUER_FORCE_DID', default=0))),   # TODO
-            self.get_nr_dids() == 0,
-        )):
-            algo = os.getenv('ISSUER_KEYGEN_ALGO')
-            token = os.getenv('ISSUER_EBSI_TOKEN', '')                  # TODO
+    def __init__(self, dbpath, tmpdir, algo, token='',
+            force_did=False):
+        super().__init__(dbpath, tmpdir)
+        if self.get_nr_dids() == 0 or force_did:
             self.clear_keys()
             self.clear_dids()
             key = self.create_key(algo)
-            try:
-                self.create_did(key, token)
-            except SSICreationError as err:
-                raise
+            self.create_did(key, token)
 
     @classmethod
     def init_from_app(cls, settings):
-        return cls()                                        # TODO
+        config = cls.derive_config(settings)
+        return cls.create(config)
+
+    @classmethod
+    def create(cls, config):
+        dbpath = config['dbpath']
+        tmpdir = config['tmpdir']
+        algo = config['algo']
+        token = config.get('token', '')
+        force_did = config.get('force_did', False)
+        return cls(dbpath, tmpdir, algo, token, force_did)
+
+    @classmethod
+    def derive_config(cls, settings):
+        out = {}
+        dbpath = os.path.join(settings.STORAGE, 'db.json')      # TODO
+        tmpdir = settings.TMPDIR
+        algo = os.environ.get('ISSUER_KEYGEN_ALGO', 'Ed25519')  # TODO
+        token = os.environ.get('ISSUER_EBSI_TOKEN', '')         # TODO
+        force_did = bool(int(os.environ.get('ISSUER_FORCE_DID',
+            default=0)))                                        # TODO
+        out['dbpath'] = dbpath
+        out['tmpdir'] = tmpdir
+        out['algo'] = algo
+        out['token'] = token
+        out['force_did'] = force_did
+        return out
 
     def get_info(self):
         return {'TODO': 'Include here issuer info'}         # TODO
@@ -91,9 +107,10 @@ class Issuer(SSIApp):
             'learning_specification_document_presence': '',
         }
         # TODO
-        tmpfile = os.path.join(TMPDIR, 'vc.json')
+        tmpfile = os.path.join(settings.TMPDIR, 'vc.json')
         res, code = run_cmd([
-            os.path.join(settings.APPDIR, 'issuer', 'issue-credential-ni'), # TODO
+            os.path.join(settings.APPDIR, 'issuer',
+                'issue-credential-ni.sh'), # TODO
             *vc_content.values(),   # TODO
             self.get_did(),         # TODO
             tmpfile,                # TODO
