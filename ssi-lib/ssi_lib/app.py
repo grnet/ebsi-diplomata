@@ -5,13 +5,13 @@ from .db import DbConnector
 from .walt import WaltWrapper
 
 
-class CreationError(BaseException):
+class SSICreationError(BaseException):
     pass
 
-class ResolutionError(BaseException):
+class SSIResolutionError(BaseException):
     pass
 
-class App(WaltWrapper):
+class SSIApp(WaltWrapper):
 
     def __init__(self, dbpath, tmpdir):
         self._db = DbConnector(dbpath)
@@ -77,7 +77,7 @@ class App(WaltWrapper):
         res, code = self._generate_key(algorithm, outfile)
         if code != 0:
             err = 'Could not generate key: %s' % res
-            raise CreationError(err)
+            raise SSICreationError(err)
         with open(outfile, 'r') as f:
             created = json.load(f)
         self._db.store(created, _Group.KEY)
@@ -89,12 +89,12 @@ class App(WaltWrapper):
         res, code = self._load_key(key)
         if code != 0:
             err = 'Could not load key: %s' % res
-            raise CreationError(err)
+            raise SSICreationError(err)
         outfile = os.path.join(self.tmpdir, 'did.json')
         res, code = self._generate_did(key, outfile)
         if code != 0:
             err = 'Could not generate DID: %s' % res
-            raise CreationError(err)
+            raise SSICreationError(err)
         with open(outfile, 'r') as f:
             created = json.load(f)
         os.remove(outfile)
@@ -102,7 +102,7 @@ class App(WaltWrapper):
         res, code = self._register_did(alias, token)
         if code != 0:
             err = 'Could not register DID: %s' % res
-            raise CreationError(err)
+            raise SSICreationError(err)
         self._db.store(created, _Group.DID)
         return alias
 
@@ -110,7 +110,7 @@ class App(WaltWrapper):
         res, code = self._resolve_did(alias)
         if code != 0:
             err = 'Could not resolve: %s' % res
-            raise ResolutionError(err)
+            raise SSIResolutionError(err)
 
     def create_verifiable_presentation(self, vc_files, did):
         # self.load_did(did)    # TODO
@@ -121,5 +121,5 @@ class App(WaltWrapper):
         res, code = run_cmd(args)
         if code != 0:
             err = 'Could not present: %s' % res
-            raise CreationError(err)
+            raise SSICreationError(err)
         # TODO: Where was it saved?
