@@ -32,6 +32,14 @@ COPY ./${CODE}/requirements-dev.txt .
 RUN pip install -r requirements.txt
 RUN pip install -r requirements-dev.txt
 
+# Install manually ssi-lib (not available at pip registry)
+COPY ./ssi-lib ./ssi-lib
+WORKDIR ssi-lib 
+RUN rm -rf build/ dist/ ssi_lib.egg-info
+RUN python3 setup.py install 
+WORKDIR ..
+RUN rm -rf ssi-lib
+
 COPY ./${CODE} .
 
 ENV TMPDIR ${HOMEDIR}/tmp
