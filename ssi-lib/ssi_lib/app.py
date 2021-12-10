@@ -42,6 +42,15 @@ class SSIApp(WaltWrapper):
     def get_nr(self, group):
         return self._db.get_nr(group)
 
+    def get_nr_keys(self):
+        return self._db.get_nr(_Group.KEY)
+
+    def get_nr_dids(self):
+        return self._db.get_nr(_Group.DID)
+
+    def get_nr_credentials(self):
+        return self._db.get_nr(_Group.VC)
+
     def get_entry(self, alias, group):
         return self._db.get_entry(alias, group)
 
@@ -71,6 +80,15 @@ class SSIApp(WaltWrapper):
 
     def clear(self, group):
         self._db.clear(group)
+
+    def clear_keys(self):
+        self._db.clear(_Group.KEY)
+
+    def clear_dids(self):
+        self._db.clear(_Group.DID)
+
+    def clear_credentials(self):
+        self._db.clear(_Group.VC)
 
     def create_key(self, algorithm):
         outfile = os.path.join(self.tmpdir, 'jwk.json')
@@ -112,10 +130,13 @@ class SSIApp(WaltWrapper):
             err = 'Could not resolve: %s' % res
             raise SSIResolutionError(err)
 
+    def issue_credential(self, *args):
+        raise NotImplementedError('TODO')
+
     def create_verifiable_presentation(self, vc_files, did):
         # self.load_did(did)    # TODO
         # TODO: Trasfer part to walt-wrapper
-        args = ['present-vc', '--holder-did', did,]
+        args = ['present-crendetial', '--holder-did', did,]
         for credential in vc_files:
             args += ['--credential', credential,]
         res, code = run_cmd(args)
@@ -123,3 +144,6 @@ class SSIApp(WaltWrapper):
             err = 'Could not present: %s' % res
             raise SSICreationError(err)
         # TODO: Where was it saved?
+
+    def verify_credentials(self, *args):
+        raise NotImplementedError('TODO')

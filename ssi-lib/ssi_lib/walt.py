@@ -48,3 +48,12 @@ class WaltWrapper(object):
     def _resolve_did(self, alias):
         res, code = run_cmd(['resolve-did', '--did', alias,])
         return res, code
+
+    def _issue_credential(self, *args):
+        raise NotImplementedError('TODO')
+
+    def _present_credentials(self, *args):
+        raise NotImplementedError('TODO')
+
+    def _verify_credential(self, *args):
+        raise NotImplementedError('TODO')

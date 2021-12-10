@@ -4,8 +4,7 @@ import json
 import os
 
 from ssi_lib.walt import run_cmd
-from ssi_lib import SSIApp, SSICreationError as CreationError
-from ssi_lib.conf import _Group # TODO: Get rid of this?
+from ssi_lib import SSIApp, SSICreationError
 
 
 class IssuanceError(BaseException):     # TODO
@@ -24,16 +23,16 @@ class Issuer(SSIApp):
         )
         if any((
             bool(int(os.environ.get('ISSUER_FORCE_DID', default=0))),   # TODO
-            self.get_nr(_Group.DID) == 0,
+            self.get_nr_dids() == 0,
         )):
-            algorithm = os.getenv('ISSUER_KEYGEN_ALGO')
+            algo = os.getenv('ISSUER_KEYGEN_ALGO')
             token = os.getenv('ISSUER_EBSI_TOKEN', '')                  # TODO
-            self.clear(_Group.KEY)
-            self.clear(_Group.DID)
-            key = self.create_key(algorithm)
+            self.clear_keys()
+            self.clear_dids()
+            key = self.create_key(algo)
             try:
                 self.create_did(key, token)
-            except CreationError as err:
+            except SSICreationError as err:
                 raise
 
     @classmethod
@@ -44,15 +43,14 @@ class Issuer(SSIApp):
         return {'TODO': 'Include here issuer info'}         # TODO
 
     def get_did(self, full=False):                          # TODO
-        dids = self.get_aliases(_Group.DID)
+        dids = self.get_dids()
         if not dids:
             err = 'No DID found'
             raise IdentityError(err)
         alias = dids[-1]
         if not full:
             return alias
-        out = self.get_entry(alias, _Group.DID)
-        return out
+        return super().get_did(alias)
 
     def issue_credential(self, payload):
         # TODO: Issuer should here fill the following template by comparing the
@@ -95,7 +93,7 @@ class Issuer(SSIApp):
         # TODO
         tmpfile = os.path.join(TMPDIR, 'vc.json')
         res, code = run_cmd([
-            os.path.join(settings.APPDIR, 'issuer', 'issue-vc-ni'), # TODO
+            os.path.join(settings.APPDIR, 'issuer', 'issue-credential-ni'), # TODO
             *vc_content.values(),   # TODO
             self.get_did(),         # TODO
             tmpfile,                # TODO

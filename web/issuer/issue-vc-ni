@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Sole purpose of this script is to run `issue-vc` in a non-interactive
+# Sole purpose of this script is to run `issue-credential` in a non-interactive
 # fashion. It is not robust, so take care to provide correct arguments.
 
 set -e
@@ -73,7 +73,7 @@ args+="${LEARNING_SPECIFICATION_DOCUMENT_PRESENCE}\n"
 
 ISSUER_DID="${33}"                                      # TODO
 OUTFILE="${34}"                                         # TODO
-printf $args | issue-vc \
+printf $args | issue-credential \
     --issuer-did ${ISSUER_DID} \
     --holder-did ${HOLDER_DID} \
     --export ${OUTFILE}
