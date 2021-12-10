@@ -1,9 +1,61 @@
 import json
 import os
-from util import run_cmd
+import subprocess
 from conf import STORAGE, TMPDIR, RESOLVED, DBNAME, INDENT, \
     _Group,  ED25519, SECP256, EBSI_PRFX
 from db import DbConnector
+
+
+def run_cmd(args):
+    rslt = subprocess.run(args, stdout=subprocess.PIPE)
+    resp = rslt.stdout.decode('utf-8').rstrip('\n')
+    code = rslt.returncode
+    return (resp, code)
+
+
+class WaltWrapper(object):
+
+    def _generate_key(self, algorithm, outfile):
+        res, code = run_cmd([
+            'generate-key', '--algo', algorithm, '--export', outfile,
+        ])
+        return res, code
+
+    def _load_key(self, alias):
+        outfile = os.path.join(TMPDIR, 'jwk.json')
+        entry = self._db.get_entry(alias, _Group.KEY)
+        with open(outfile, 'w+') as f:
+            json.dump(entry, f, indent=INDENT)
+        res, code = run_cmd(['load-key', '--file', outfile])
+        os.remove(outfile)
+        return res, code
+
+    def _generate_did(self, key, outfile):
+        res, code = run_cmd([
+            'generate-did', '--key', key, '--export', outfile,
+        ])
+        return res, code
+
+    def _register_did(self, alias, token):
+        token_file = os.path.join(TMPDIR, 'bearer-token.txt')
+        with open(token_file, 'w+') as f:
+            f.write(token)
+        res, code = run_cmd(['register-did', '--did', alias, 
+            '--token', token_file, '--resolve',
+        ])
+        os.remove(token_file)
+        return res, code
+
+    def _resolve_did(self, alias):
+        res, code = run_cmd(['resolve-did', '--did', alias,])
+        return res, code
+
+    def _retrieve_resolved_did(self, alias):
+        resolved = os.path.join(RESOLVED, 'did-ebsi-%s.json' % \
+            alias.lstrip(EBSI_PRFX))
+        with open(resolved, 'r') as f:
+            out = json.load(f)
+        return out
 
 
 class CreationError(BaseException):
@@ -12,8 +64,7 @@ class CreationError(BaseException):
 class ResolutionError(BaseException):
     pass
 
-
-class App(object):
+class App(WaltWrapper):
 
     def __init__(self):
         self._db = DbConnector(os.path.join(STORAGE, DBNAME))
@@ -70,48 +121,6 @@ class App(object):
     def clear(self, group):
         self._db.clear(group)
 
-    def _generate_key(self, algorithm, outfile):
-        res, code = run_cmd([
-            'generate-key', '--algo', algorithm, '--export', outfile,
-        ])
-        return res, code
-
-    def _load_key(self, alias):
-        outfile = os.path.join(TMPDIR, 'jwk.json')
-        entry = self._db.get_entry(alias, _Group.KEY)
-        with open(outfile, 'w+') as f:
-            json.dump(entry, f, indent=INDENT)
-        res, code = run_cmd(['load-key', '--file', outfile])
-        os.remove(outfile)
-        return res, code
-
-    def _generate_did(self, key, outfile):
-        res, code = run_cmd([
-            'generate-did', '--key', key, '--export', outfile,
-        ])
-        return res, code
-
-    def _register_did(self, alias, token):
-        token_file = os.path.join(TMPDIR, 'bearer-token.txt')
-        with open(token_file, 'w+') as f:
-            f.write(token)
-        res, code = run_cmd(['register-did', '--did', alias, 
-            '--token', token_file, '--resolve',
-        ])
-        os.remove(token_file)
-        return res, code
-
-    def _resolve_did(self, alias):
-        res, code = run_cmd(['resolve-did', '--did', alias,])
-        return res, code
-
-    def _retrieve_resolved_did(self, alias):
-        resolved = os.path.join(RESOLVED, 'did-ebsi-%s.json' % \
-            alias.lstrip(EBSI_PRFX))
-        with open(resolved, 'r') as f:
-            out = json.load(f)
-        return out
-
     def create_key(self, algorithm):
         outfile = os.path.join(TMPDIR, 'key.json')
         res, code = self._generate_key(algorithm, outfile)
@@ -156,6 +165,7 @@ class App(object):
 
     def create_verifiable_presentation(self, vc_files, did):
         # self.load_did(did)    # TODO
+        # TODO: Trasfer part to walt-wrapper
         args = ['present-vc', '--holder-did', did,]
         for credential in vc_files:
             args += ['--credential', credential,]
