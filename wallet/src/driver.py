@@ -3,8 +3,8 @@ import json
 import os
 from ui import MenuHandler
 from util import HttpClient
-from conf import STORAGE, TMPDIR, DBNAME, INTRO, PROMPT, INDENT, \
-    _Action, _UI, ED25519, SECP256
+from conf import TMPDIR, INTRO, PROMPT, INDENT, RESOLVED, \
+    _Action, _UI, EBSI_PRFX, ED25519, SECP256
 from app import CreationError, ResolutionError, _Group
 
 _mapping = {
@@ -74,6 +74,13 @@ class WalletShell(cmd.Cmd, MenuHandler):
             case _:
                 err = 'Bad input: %s' % line
                 raise BadInputError(err)
+        return out
+
+    def _retrieve_resolved_did(self, alias):
+        resolved = os.path.join(RESOLVED, 'did-ebsi-%s.json' % \
+            alias.lstrip(EBSI_PRFX))
+        with open(resolved, 'r') as f:
+            out = json.load(f)
         return out
 
     def run(self):
@@ -178,10 +185,11 @@ class WalletShell(cmd.Cmd, MenuHandler):
         alias = self.launch_input('Give DID:')
         self._flush('Resolving ...')
         try:
-            did = self.app.resolve_did(alias)
+            self.app.resolve_did(alias)
         except ResolutionError as err:
             self._flush(err)
             return
+        did = self._retrieve_resolved_did(alias)
         self._flush(did)
 
     def do_present(self, line):

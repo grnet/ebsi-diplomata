@@ -1,8 +1,8 @@
 import json
 import os
 import subprocess
-from conf import TMPDIR, RESOLVED
-from ssi_conf import _Group, EBSI_PRFX
+from conf import TMPDIR
+from ssi_conf import _Group
 from db import DbConnector
 
 
@@ -49,13 +49,6 @@ class WaltWrapper(object):
     def _resolve_did(self, alias):
         res, code = run_cmd(['resolve-did', '--did', alias,])
         return res, code
-
-    def _retrieve_resolved_did(self, alias):
-        resolved = os.path.join(RESOLVED, 'did-ebsi-%s.json' % \
-            alias.lstrip(EBSI_PRFX))
-        with open(resolved, 'r') as f:
-            out = json.load(f)
-        return out
 
 
 class CreationError(BaseException):
@@ -161,8 +154,6 @@ class App(WaltWrapper):
         if code != 0:
             err = 'Could not resolve: %s' % res
             raise ResolutionError(err)
-        out = self._retrieve_resolved_did(alias)
-        return out
 
     def create_verifiable_presentation(self, vc_files, did):
         # self.load_did(did)    # TODO

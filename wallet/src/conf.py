@@ -8,6 +8,7 @@ RESOLVED    = os.path.join(WALTDIR, 'data/did/resolved')
 
 DBNAME  = 'db.json'
 
+EBSI_PRFX = "did:ebsi"
 ED25519 = 'Ed25519'
 SECP256 = 'Secp256k1'
 
