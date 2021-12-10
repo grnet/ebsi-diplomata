@@ -1,6 +1,12 @@
 from tinydb import TinyDB, where
-from conf import DBCONF, _Group
 import json
+from .conf import _Group
+
+DBCONF  = {
+    'sort_keys': True,
+    'indent': 4,
+    'separators': [',', ': '],
+}
 
 _pkey = {
     _Group.KEY: 'kid',

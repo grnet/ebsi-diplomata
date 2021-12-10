@@ -2,9 +2,9 @@ from django.conf import settings
 import subprocess
 import json
 import os
-from ebsi_lib import run_cmd, EbsiApp
-from ebsi_lib.conf import _Group, SECP256, ED25519, TMPDIR
-from ebsi_lib.app import CreationError
+
+from ssi_lib.walt import run_cmd
+from ssi_lib import SSIApp, SSICreationError
 
 
 class IssuanceError(BaseException):     # TODO
@@ -13,22 +13,26 @@ class IssuanceError(BaseException):     # TODO
 class IdentityError(BaseException):     # TODO
     pass
 
-class Issuer(EbsiApp):
+
+class Issuer(SSIApp):
 
     def __init__(self, *args):
-        super().__init__()
+        super().__init__(
+            dbpath=os.path.join(settings.STORAGE, 'db.json'),           # TODO
+            tmpdir=settings.TMPDIR,                                     # TODO
+        )
         if any((
             bool(int(os.environ.get('ISSUER_FORCE_DID', default=0))),   # TODO
-            self.get_nr(_Group.DID) == 0,
+            self.get_nr_dids() == 0,
         )):
-            algorithm = os.getenv('ISSUER_KEYGEN_ALGO', ED25519)        # TODO
+            algo = os.getenv('ISSUER_KEYGEN_ALGO')
             token = os.getenv('ISSUER_EBSI_TOKEN', '')                  # TODO
-            self.clear(_Group.KEY)
-            self.clear(_Group.DID)
-            key = self.create_key(algorithm)
+            self.clear_keys()
+            self.clear_dids()
+            key = self.create_key(algo)
             try:
                 self.create_did(key, token)
-            except CreationError as err:
+            except SSICreationError as err:
                 raise
 
     @classmethod
@@ -39,15 +43,14 @@ class Issuer(EbsiApp):
         return {'TODO': 'Include here issuer info'}         # TODO
 
     def get_did(self, full=False):                          # TODO
-        dids = self.get_aliases(_Group.DID)
+        dids = self.get_dids()
         if not dids:
             err = 'No DID found'
             raise IdentityError(err)
         alias = dids[-1]
         if not full:
             return alias
-        out = self.get_entry(alias, _Group.DID)
-        return out
+        return super().get_did(alias)
 
     def issue_credential(self, payload):
         # TODO: Issuer should here fill the following template by comparing the
@@ -90,7 +93,7 @@ class Issuer(EbsiApp):
         # TODO
         tmpfile = os.path.join(TMPDIR, 'vc.json')
         res, code = run_cmd([
-            os.path.join(settings.APPDIR, 'issuer', 'issue-vc-ni'), # TODO
+            os.path.join(settings.APPDIR, 'issuer', 'issue-credential-ni'), # TODO
             *vc_content.values(),   # TODO
             self.get_did(),         # TODO
             tmpfile,                # TODO
