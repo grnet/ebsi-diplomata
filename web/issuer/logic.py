@@ -2,9 +2,10 @@ from django.conf import settings
 import subprocess
 import json
 import os
-from ebsi_lib import run_cmd, EbsiApp
-from ebsi_lib.conf import _Group, SECP256, ED25519, TMPDIR
-from ebsi_lib.app import CreationError
+
+from ssi_lib.walt import run_cmd
+from ssi_lib import SSIApp, SSICreationError as CreationError
+from ssi_lib.conf import _Group # TODO: Get rid of this?
 
 
 class IssuanceError(BaseException):     # TODO
@@ -13,15 +14,19 @@ class IssuanceError(BaseException):     # TODO
 class IdentityError(BaseException):     # TODO
     pass
 
-class Issuer(EbsiApp):
+
+class Issuer(SSIApp):
 
     def __init__(self, *args):
-        super().__init__()
+        super().__init__(
+            dbpath=os.path.join(settings.STORAGE, 'db.json'),           # TODO
+            tmpdir=settings.TMPDIR,                                     # TODO
+        )
         if any((
             bool(int(os.environ.get('ISSUER_FORCE_DID', default=0))),   # TODO
             self.get_nr(_Group.DID) == 0,
         )):
-            algorithm = os.getenv('ISSUER_KEYGEN_ALGO', ED25519)        # TODO
+            algorithm = os.getenv('ISSUER_KEYGEN_ALGO')
             token = os.getenv('ISSUER_EBSI_TOKEN', '')                  # TODO
             self.clear(_Group.KEY)
             self.clear(_Group.DID)
