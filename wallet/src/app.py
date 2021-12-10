@@ -1,7 +1,6 @@
 import json
 import os
 import subprocess
-from conf import TMPDIR
 from ssi_conf import _Group
 from db import DbConnector
 
@@ -15,6 +14,9 @@ def run_cmd(args):
 
 class WaltWrapper(object):
 
+    def __init__(self, tmpdir):
+        self.tmpdir = tmpdir
+
     def _generate_key(self, algorithm, outfile):
         res, code = run_cmd([
             'generate-key', '--algo', algorithm, '--export', outfile,
@@ -22,7 +24,7 @@ class WaltWrapper(object):
         return res, code
 
     def _load_key(self, alias):
-        outfile = os.path.join(TMPDIR, 'jwk.json')
+        outfile = os.path.join(self.tmpdir, 'jwk.json')
         entry = self._db.get_entry(alias, _Group.KEY)
         with open(outfile, 'w+') as f:
             json.dump(entry, f)
@@ -37,7 +39,7 @@ class WaltWrapper(object):
         return res, code
 
     def _register_did(self, alias, token):
-        token_file = os.path.join(TMPDIR, 'bearer-token.txt')
+        token_file = os.path.join(self.tmpdir, 'bearer-token.txt')
         with open(token_file, 'w+') as f:
             f.write(token)
         res, code = run_cmd(['register-did', '--did', alias, 
@@ -59,13 +61,16 @@ class ResolutionError(BaseException):
 
 class App(WaltWrapper):
 
-    def __init__(self, dbpath):
+    def __init__(self, dbpath, tmpdir):
         self._db = DbConnector(dbpath)
+        self.tmpdir = tmpdir
+        super().__init__(tmpdir)
 
     @classmethod
     def create(cls, config):
         dbpath = config['db']
-        return cls(dbpath)
+        tmpdir = config['tmp']
+        return cls(dbpath, tmpdir)
 
     def get_aliases(self, group):
         return self._db.get_aliases(group)
@@ -116,7 +121,7 @@ class App(WaltWrapper):
         self._db.clear(group)
 
     def create_key(self, algorithm):
-        outfile = os.path.join(TMPDIR, 'key.json')
+        outfile = os.path.join(self.tmpdir, 'jwk.json')
         res, code = self._generate_key(algorithm, outfile)
         if code != 0:
             err = 'Could not generate key: %s' % res
@@ -133,7 +138,7 @@ class App(WaltWrapper):
         if code != 0:
             err = 'Could not load key: %s' % res
             raise CreationError(err)
-        outfile = os.path.join(TMPDIR, 'did.json')
+        outfile = os.path.join(self.tmpdir, 'did.json')
         res, code = self._generate_did(key, outfile)
         if code != 0:
             err = 'Could not generate DID: %s' % res
