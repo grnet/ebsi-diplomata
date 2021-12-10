@@ -8,6 +8,7 @@ from conf import TMPDIR, INTRO, PROMPT, INDENT, RESOLVED, \
 from ssi_lib import SSICreationError as CreationError, \
         SSIResolutionError as ResolutionError
 from ssi_lib.conf import _Group   # TODO: Get rid of this?
+from ssi_lib.walt import run_cmd    # TODO: Get rid of this
 
 _mapping = {
     _UI.KEY: _Group.KEY,
@@ -26,6 +27,12 @@ __version__ = '0.0.1'
 class BadInputError(BaseException):
     pass
 
+class IssuanceError(BaseException):
+    pass
+
+class VerificationError(BaseException):
+    pass
+
 
 class WalletShell(cmd.Cmd, MenuHandler):
     intro   = INTRO.format(__version__)
@@ -35,18 +42,26 @@ class WalletShell(cmd.Cmd, MenuHandler):
         self.app = app
         super().__init__()
 
-    def _flush(self, buff):
+    def flush(self, buff):
         if type(buff) in (dict, list,):
             buff = json.dumps(buff, indent=INDENT)
         else:
             buff = str(buff)
         sys.stdout.write(buff + '\n')
 
-    def _flush_list(self, lst):
-        for _ in lst: self._flush(_)
+    def flush_list(self, lst):
+        for _ in lst: self.flush(_)
 
-    def _flush_help(self, *messages):
-        self._flush('\n'.join(messages))
+    def flush_help(self, *messages):
+        self.flush('\n'.join(messages))
+
+    def dump(self, obj, filename):
+        filename = filename + ('.json' \
+            if not filename.endswith('.json') else '')
+        tmpfile = os.path.join(TMPDIR, filename)
+        with open(tmpfile, 'w+') as f:
+            json.dump(obj, f)
+        return tmpfile
 
     def _normalize_input(self, line):
         return line.strip().lower().rstrip('s')
@@ -98,36 +113,36 @@ class WalletShell(cmd.Cmd, MenuHandler):
         try:
             group = self._resolve_group(line, prompt='Show list of')
         except BadInputError as err:
-            self._flush(err)
+            self.flush(err)
             return
         entries = self.app.get_aliases(group)
         if not entries:
-            self._flush('Nothing found')
+            self.flush('Nothing found')
             return
-        self._flush_list(entries)
+        self.flush_list(entries)
 
     def do_count(self, line):
         try:
             group = self._resolve_group(line, prompt='Show number of')
         except BadInputError as err:
-            self._flush(err)
+            self.flush(err)
             return
         nr = self.app.get_nr(group)
-        self._flush(nr)
+        self.flush(nr)
 
     def do_inspect(self, line):
         try:
             group = self._resolve_group(line, prompt='Inspect from')
         except BadInputError as err:
-            self._flush(err)
+            self.flush(err)
             return
         aliases = self.app.get_aliases(group)
         if not aliases:
-            self._flush('Nothing found')
+            self.flush('Nothing found')
             return
         alias = self.launch_single_choice('Choose', aliases)
         entry = self.app.get_entry(alias, group)
-        self._flush(entry)
+        self.flush(entry)
 
     def do_create(self, line):
         ans = self.launch_single_choice('Create', [
@@ -148,54 +163,156 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 })
                 algorithm, proceed = answers
                 if not proceed: 
-                    self._flush('Key generation aborted')
+                    self.flush('Key generation aborted')
                     return
-                self._flush('Creating %s key (takes seconds) ...' \
+                self.flush('Creating %s key (takes seconds) ...' \
                     % algorithm)
                 try:
                     alias = self.app.create_key(algorithm)
                 except CreationError as err:
-                    self._flush(err)
+                    self.flush(err)
                     return
-                self._flush('Created key: %s' % alias)
+                self.flush('Created key: %s' % alias)
             case _Group.DID:
                 keys = self.app.get_keys()
                 if not keys:
-                    self._flush('No keys found. Must first create one.')
+                    self.flush('No keys found. Must first create one.')
                     return
-                answers = self.launch_prompt({
-                    'single': {
-                        'prompt': 'Choose key:',
-                        'choices': keys
-                    },
-                    'input': 'Token: ',
-                    'yes_no': 'A new DID will be saved to disk. Proceed?',
-                })
-                key, token, proceed = answers
-                if not proceed: 
-                    self._flush('DID generation aborted')
+                key = self.launch_single_choice('Choose key:', keys)
+                yes = self.launch_yes_no('Do you want to provide a token?')
+                token = self.launch_input('Token:') if yes else ''
+                if not token:
+                    yes = self.launch_yes_no(
+                        'WARNING: No token provided. The newly created DID will' +
+                        ' not be registered to the EBSI. Proceed?'
+                    )
+                    if not yes:
+                        self.flush('DID creation aborted')
+                        return
+                onboard = False
+                if token:
+                    onboard = self.launch_yes_no(
+                        'Register the newly created DID to EBSI?')
+                yes = self.launch_yes_no(
+                    'A new DID will be saved to disk. Proceed?')
+                if not yes: 
+                    self.flush('DID creation aborted')
                     return
-                self._flush('Creating DID (takes seconds) ...')
+                self.flush('Creating DID (takes seconds) ...')
                 try:
-                    alias = self.app.create_did(key, token)
+                    alias = self.app.create_did(key, token, onboard)
                 except CreationError as err:
-                    self._flush(err)
+                    self.flush(err)
                     return
-                self._flush('Created DID: %s' % alias)
+                self.flush('Created DID: %s' % alias)
 
     def do_resolve(self, line):
         alias = self.launch_input('Give DID:')
-        self._flush('Resolving ...')
+        self.flush('Resolving ...')
         try:
             self.app.resolve_did(alias)
         except ResolutionError as err:
-            self._flush(err)
+            self.flush(err)
             return
         did = self._retrieve_resolved_did(alias)
-        self._flush(did)
+        self.flush(did)
 
-    def do_present(self, line):
-        pass
+    def do_issue(self, line):
+        dids = self.app.get_aliases(_Group.DID)
+        if not dids:
+            self.flush('No DIDs found. Must first create one.')
+            return
+        holder_did = self.launch_single_choice('Choose holder DID', dids)
+        issuer_did = self.launch_single_choice('Choose issuer DID', dids)
+        yes = self.launch_yes_no('A new credential will be issued. Proceed?')
+        if not yes:
+            self.flush('Issuance aborted')
+            return
+        # TODO: Issuer should here fill the following template by comparing the
+        # submitted payload against its database. Empty strings lead to the
+        # demo defaults of the walt library. 
+        vc_content = {
+            'holder_did': holder_did,
+            'person_identifier': '',
+            'person_family_name': '',
+            'person_given_name': '',
+            'person_date_of_birth': '',
+            'awarding_opportunity_id': '',
+            'awarding_opportunity_identifier': '',
+            'awarding_opportunity_location': '',
+            'awarding_opportunity_started_at': '',
+            'awarding_opportunity_ended_at': '',
+            'awarding_body_preferred_name': '',
+            'awarding_body_homepage': '',
+            'awarding_body_registraction': '',
+            'awarding_body_eidas_legal_identifier': '',
+            'grading_scheme_id': '',
+            'grading_scheme_title': '',
+            'grading_scheme_description': '',
+            'learning_achievement_id': '',
+            'learning_achievement_title': '',
+            'learning_achievement_description': '',
+            'learning_achievement_additional_note': '',
+            'learning_specification_id': '',
+            'learning_specification_ects_credit_points': '',
+            'learning_specification_eqf_level': '',
+            'learning_specification_iscedf_code': '',
+            'learning_specification_nqf_level': '',
+            'learning_specification_evidence_id': '',
+            'learning_specification_evidence_type': '',
+            'learning_specification_verifier': '',
+            'learning_specification_evidence_document': '',
+            'learning_specification_subject_presence': '',
+            'learning_specification_document_presence': '',
+        }
+        tmpfile = os.path.join(TMPDIR, 'credential.json')
+        res, code = run_cmd([
+            'issue-credential-ni',  # TODO
+            *vc_content.values(),   # TODO
+            issuer_did,             # TODO
+            tmpfile,                # TODO
+        ])
+        if code != 0:
+            err = 'Could not issue credential: %s' % res
+            raise IssuanceError(err)
+        with open(tmpfile, 'r') as f:
+            credential = json.load(f)
+        os.remove(tmpfile)
+        yes = self.launch_yes_no('Credential has been issued. Save?')
+        if not yes:
+            del credential
+            self.flush('Credential was lost forever')
+            return
+        self.app.store_credential(credential)
+        self.flush('The following credential was saved to disk:')
+        self.flush(credential['id'])
+
+    def do_verify(self, line):
+        choices = self.app.get_aliases(_Group.VC)
+        if not choices:
+            self.flush('No credentials found')
+            return
+        alias = self.launch_single_choice('Choose credential to verify:',
+                choices)
+        credential = self.app.get_entry(alias, _Group.VC)
+        self.flush('Verifying (takes seconds) ...')
+        # Verify                                        # TODO
+        tmpfile = self.dump(credential, 'credential.json')
+        res, code = run_cmd(['verify-credential', '-c', tmpfile,])
+        os.remove(tmpfile)
+        if code != 0:
+            err = 'Could not verify: %s' % res
+            raise VerificationError(err)
+        # Parse results
+        aux = res.split('Results: ', 1)[-1].replace(':', '').split(' ')
+        results = {}
+        for i in range(0, len(aux), 2):
+            results[aux[i]] = {'true': True, 'false': False}[aux[i + 1]]
+        # Flush results
+        verified = results['Verified']
+        message = 'Credential was %sverified:' % ('' if verified else 'NOT ')
+        self.flush(message)
+        self.flush(results)
 
     def do_request(self, line):
         action = self.launch_single_choice('Request', [
@@ -207,7 +324,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
             case _Action.ISSUE:
                 choices = self.app.get_aliases(_Group.DID)
                 if not choices:
-                    self._flush('No DIDs found. Must first create one.')
+                    self.flush('No DIDs found. Must first create one.')
                     return
                 did = self.launch_single_choice('Choose DID', choices)
                 # TODO: Choose from known registar of issuers?
@@ -226,16 +343,17 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 # known
                 resp = resp.json()
                 if 'message' in resp:           # TODO: Check code instead
-                    self._flush(resp['message'])# TODO
+                    self.flush(resp['message'])# TODO
                     return
                 credential = resp.json()        # TODO: Validate structure
+                # TODO: Ask before saving
                 self.app.store_credential(credential)
-                self._flush('The following credential was saved to disk:')
-                self._flush(credential['id'])
+                self.flush('The following credential was saved to disk:')
+                self.flush(credential['id'])
             case _Action.VERIFY:
                 # choices = self.app.get_aliases(_Group.VC)
                 # if not choices:
-                #     self._flush('No credentials found')
+                #     self.flush('No credentials found')
                 #     return
                 # alias = self.launch_single_choice('Choose credential', 
                 #     choices)
@@ -250,22 +368,22 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 # }
                 # resp = HttpClient(remote).post(endpoint, payload)
                 # # TODO
-                # self._flush(resp.json())
+                # self.flush(resp.json())
                 did_choices = self.app.get_aliases(_Group.DID)
                 if not did_choices:
-                    self._flush('No DIDs found. Must create at least one.')
+                    self.flush('No DIDs found. Must create at least one.')
                     return
                 did = self.launch_single_choice('Choose DID', did_choices)
                 vc_choices = self.app.get_credentials_by_did(did)
                 if not vc_choices:
-                    self._flush('No credentials found for the provided DID')
+                    self.flush('No credentials found for the provided DID')
                     return
                 selected = self.launch_multiple_choices(
                     'Select credentials to present', vc_choices)
                 credentials = [self.app.get_credential(alias) for alias in
                     selected]
                 if not credentials:
-                    self._flush('Aborted')
+                    self.flush('Aborted')  # TODO
                     return
                 vc_files = []
                 for c in credentials:
@@ -278,7 +396,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
                     vp = self.app.create_verifiable_presentation(vc_files, 
                             did)
                 except CreationError as err:
-                    self._flush(err)
+                    self.flush(err)
                     return
                 pass    # TODO
                 #
@@ -288,17 +406,17 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 for tmpfile in vc_files:
                     os.remove(tmpfile)
             case _Action.DISCARD:
-                self._flush('Aborted')
+                self.flush('Request aborted')
 
     def do_remove(self, line):
         try:
             group = self._resolve_group(line, prompt='Remove from')
         except BadInputError as err:
-            self._flush(err)
+            self.flush(err)
             return
         aliases = self.app.get_aliases(group)
         if not aliases:
-            self._flush('Nothing found')
+            self.flush('Nothing found')
             return
         chosen = self.launch_multiple_choices('Choose entries to remove',
             aliases)
@@ -307,23 +425,23 @@ class WalletShell(cmd.Cmd, MenuHandler):
         if yes:
             for alias in chosen:
                 self.app.remove(alias, group)
-                self._flush('Removed %s' % alias)
+                self.flush('Removed %s' % alias)
         else:
-            self._flush('Aborted')
+            self.flush('Removal aborted')
 
     def do_clear(self, line):
         try:
             group = self._resolve_group(line, prompt='Clear')
         except BadInputError as err:
-            self._flush(err)
+            self.flush(err)
             return
         warning = 'This cannot be undone. Are you sure?'
         yes = self.launch_yes_no(warning)
         if yes:
             self.app.clear(group)
-            self._flush(f'Cleared {group}s')
+            self.flush(f'Cleared {group}s')
         else:
-            self._flush('Aborted')
+            self.flush('Aborted')
 
     def do_EOF(self, line):
         return True
@@ -333,13 +451,13 @@ class WalletShell(cmd.Cmd, MenuHandler):
     do_q    = do_EOF
 
     def help_list(self):
-        self._flush_help(
+        self.flush_help(
             'list [key | did | credentials]',
             'List objects of provided type',
         )
 
     def help_count(self):
-        self._flush_help(
+        self.flush_help(
             'count [key | did | credentials]',
             'Count objects of provided type',
         )
@@ -348,49 +466,43 @@ class WalletShell(cmd.Cmd, MenuHandler):
         msg = '\n'.join([
             'TODO',
         ])
-        self._flush(msg)
+        self.flush(msg)
 
     def help_create(self):
         msg = '\n'.join([
             'TODO',
         ])
-        self._flush(msg)
+        self.flush(msg)
 
     def help_resolve(self):
         msg = '\n'.join([
             'TODO',
         ])
-        self._flush(msg)
-
-    def help_present(self):
-        msg = '\n'.join([
-            'TODO'
-        ])
-        self._flush(msg)
+        self.flush(msg)
 
     def help_request(self):
         msg = '\n'.join([
             'TODO'
         ])
-        self._flush(msg)
+        self.flush(msg)
 
     def help_remove(self):
         msg = '\n'.join([
             'TODO',
         ])
-        self._flush(msg)
+        self.flush(msg)
 
     def help_clear(self):
         msg = '\n'.join([
             'TODO',
         ])
-        self._flush(msg)
+        self.flush(msg)
 
     def help_EOF(self):
         msg = '\n'.join([
             'Quit current wallet session',
         ])
-        self._flush(msg)
+        self.flush(msg)
 
     help_exit   = help_EOF
     help_quit   = help_EOF

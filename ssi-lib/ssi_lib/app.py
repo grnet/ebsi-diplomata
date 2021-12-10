@@ -103,7 +103,7 @@ class SSIApp(WaltWrapper):
         alias = created['kid']  # TODO
         return alias
 
-    def create_did(self, key, token):
+    def create_did(self, key, token='', onboard=True):
         res, code = self._load_key(key)
         if code != 0:
             err = 'Could not load key: %s' % res
@@ -117,10 +117,14 @@ class SSIApp(WaltWrapper):
             created = json.load(f)
         os.remove(outfile)
         alias = created['id']       # TODO
-        res, code = self._register_did(alias, token)
-        if code != 0:
-            err = 'Could not register DID: %s' % res
-            raise SSICreationError(err)
+        if onboard:
+            if not token:
+                err = 'Could not register DID: No token provided'
+                raise SSICreationError(err)
+            res, code = self._register_did(alias, token)
+            if code != 0:
+                err = 'Could not register DID: %s' % res
+                raise SSICreationError(err)
         self._db.store(created, _Group.DID)
         return alias
 

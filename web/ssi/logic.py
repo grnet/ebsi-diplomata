@@ -109,8 +109,7 @@ class SSIParty(SSIApp):
         # TODO
         tmpfile = os.path.join(settings.TMPDIR, 'vc.json')
         res, code = run_cmd([
-            os.path.join(settings.APPDIR, 'ssi',
-                'issue-credential-ni.sh'), # TODO
+            os.path.join('issue-credential-ni'),    # TODO
             *vc_content.values(),   # TODO
             self.get_did(),         # TODO
             tmpfile,                # TODO
