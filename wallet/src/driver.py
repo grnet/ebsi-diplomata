@@ -4,8 +4,8 @@ import os
 from ui import MenuHandler
 from util import HttpClient
 from conf import STORAGE, TMPDIR, DBNAME, INTRO, PROMPT, INDENT, \
-    _Group, _Action, _UI, ED25519, SECP256
-from app import CreationError, ResolutionError
+    _Action, _UI, ED25519, SECP256
+from app import CreationError, ResolutionError, _Group
 
 _mapping = {
     _UI.KEY: _Group.KEY,

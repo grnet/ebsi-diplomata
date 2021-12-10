@@ -1,8 +1,8 @@
 import json
 import os
 import subprocess
-from conf import STORAGE, TMPDIR, RESOLVED, DBNAME, INDENT, \
-    _Group,  ED25519, SECP256, EBSI_PRFX
+from conf import TMPDIR, RESOLVED
+from ssi_conf import _Group, EBSI_PRFX
 from db import DbConnector
 
 
@@ -25,7 +25,7 @@ class WaltWrapper(object):
         outfile = os.path.join(TMPDIR, 'jwk.json')
         entry = self._db.get_entry(alias, _Group.KEY)
         with open(outfile, 'w+') as f:
-            json.dump(entry, f, indent=INDENT)
+            json.dump(entry, f)
         res, code = run_cmd(['load-key', '--file', outfile])
         os.remove(outfile)
         return res, code
@@ -66,12 +66,13 @@ class ResolutionError(BaseException):
 
 class App(WaltWrapper):
 
-    def __init__(self):
-        self._db = DbConnector(os.path.join(STORAGE, DBNAME))
+    def __init__(self, dbpath):
+        self._db = DbConnector(dbpath)
 
     @classmethod
-    def create(cls):
-        return cls()
+    def create(cls, config):
+        dbpath = config['db']
+        return cls(dbpath)
 
     def get_aliases(self, group):
         return self._db.get_aliases(group)

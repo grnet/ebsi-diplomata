@@ -7,11 +7,9 @@ WALTDIR     = os.getenv('WALTDIR')
 RESOLVED    = os.path.join(WALTDIR, 'data/did/resolved')
 
 DBNAME  = 'db.json'
-DBCONF  = {
-    'sort_keys': True,
-    'indent': 4,
-    'separators': [',', ': '],
-}
+
+ED25519 = 'Ed25519'
+SECP256 = 'Secp256k1'
 
 PROMPT  = "(wallet) "
 INTRO = """\
@@ -24,16 +22,6 @@ Type `help` or `?` for an overview
 Type `help <command>` for details
 """
 INDENT  = 4
-
-ED25519 = 'Ed25519'
-SECP256 = 'Secp256k1'
-
-EBSI_PRFX = "did:ebsi"
-
-class _Group:
-    KEY = 'key'
-    DID = 'did'
-    VC  = 'vc'
 
 class _Action:
     ISSUE   = 'ISSUE'
