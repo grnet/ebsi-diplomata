@@ -3,18 +3,18 @@ import subprocess
 import json
 import os
 
-from ssi_lib.walt import run_cmd
+from ssi_lib.walt import run_cmd                # TODO
 from ssi_lib import SSIApp, SSICreationError
 
-
-class IssuanceError(BaseException):     # TODO
-    pass
 
 class IdentityError(BaseException):     # TODO
     pass
 
+class IssuanceError(BaseException):     # TODO
+    pass
 
-class Issuer(SSIApp):
+
+class SSIParty(SSIApp):
 
     def __init__(self, dbpath, tmpdir, algo, token='',
             force_did=False):
@@ -44,9 +44,9 @@ class Issuer(SSIApp):
         out = {}
         dbpath = os.path.join(settings.STORAGE, 'db.json')      # TODO
         tmpdir = settings.TMPDIR
-        algo = os.environ.get('ISSUER_KEYGEN_ALGO', 'Ed25519')  # TODO
-        token = os.environ.get('ISSUER_EBSI_TOKEN', '')         # TODO
-        force_did = bool(int(os.environ.get('ISSUER_FORCE_DID',
+        algo = os.environ.get('KEYGEN_ALGO', 'Ed25519')         # TODO
+        token = os.environ.get('EBSI_TOKEN', '')                # TODO
+        force_did = bool(int(os.environ.get('FORCE_DID',
             default=0)))                                        # TODO
         out['dbpath'] = dbpath
         out['tmpdir'] = tmpdir
@@ -56,7 +56,7 @@ class Issuer(SSIApp):
         return out
 
     def get_info(self):
-        return {'TODO': 'Include here issuer info'}         # TODO
+        return {'TODO': 'Include here service info'}        # TODO
 
     def get_did(self, full=False):                          # TODO
         dids = self.get_dids()
@@ -109,7 +109,7 @@ class Issuer(SSIApp):
         # TODO
         tmpfile = os.path.join(settings.TMPDIR, 'vc.json')
         res, code = run_cmd([
-            os.path.join(settings.APPDIR, 'issuer',
+            os.path.join(settings.APPDIR, 'ssi',
                 'issue-credential-ni.sh'), # TODO
             *vc_content.values(),   # TODO
             self.get_did(),         # TODO

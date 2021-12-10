@@ -1,4 +1,4 @@
-# ebsi-diplomata
+# ebsi-diplomas
 
 ## Setup
 

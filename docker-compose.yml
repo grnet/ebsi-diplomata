@@ -14,30 +14,21 @@ services:
       - DEBUG=1
       - HTTP_PORT=7000
       - DATABASE=postgres
-      - SQL_DATABASE=issuer_db
-      - SQL_USER=issuer_db_user
-      - SQL_PASSWORD=issuer_db_password
+      - SQL_DATABASE=diplomas_db
+      - SQL_USER=diplomas_db_user
+      - SQL_PASSWORD=diplomas_db_password
       - SQL_ENGINE=django.db.backends.postgresql
-      - SQL_HOST=issuer-db
+      - SQL_HOST=diplomas-db
       - SQL_PORT=5432
-      - ISSUER_EBSI_TOKEN=${WEB_EBSI_TOKEN}
-      - ISSUER_KEYGEN_ALGO=${WEB_KEYGEN_ALGO}
-      - ISSUER_FORCE_DID=${WEB_FORCE_DID}
+      - EBSI_TOKEN=${WEB_EBSI_TOKEN}
+      - KEYGEN_ALGO=${WEB_KEYGEN_ALGO}
+      - FORCE_DID=${WEB_FORCE_DID}
     volumes:
       - ./web:/home/web/app
       - ./storage/issuer:/home/web/storage
       - ./commands:/usr/local/sbin
     depends_on:
-      - issuer_postgres
-  issuer_postgres:
-    container_name: issuer-db
-    image: postgres:14.0-alpine
-    volumes:
-      - issuer_postgres_data:/var/lib/postgresql/data/
-    environment:
-      - POSTGRES_DB=issuer_db
-      - POSTGRES_USER=issuer_db_user
-      - POSTGRES_PASSWORD=issuer_db_password
+      - diplomas_postgres
   verifier:
     container_name: verifier
     build:
@@ -51,30 +42,29 @@ services:
       - DEBUG=1
       - HTTP_PORT=7001
       - DATABASE=postgres
-      - SQL_DATABASE=verifier_db
-      - SQL_USER=verifier_db_user
-      - SQL_PASSWORD=verifier_db_password
+      - SQL_DATABASE=diplomas_db
+      - SQL_USER=diplomas_db_user
+      - SQL_PASSWORD=diplomas_db_password
       - SQL_ENGINE=django.db.backends.postgresql
-      - SQL_HOST=verifier-db
+      - SQL_HOST=diplomas-db
       - SQL_PORT=5432
-      - VERIFIER_EBSI_TOKEN=${WEB_EBSI_TOKEN}
-      - VERIFIER_KEYGEN_ALGO=${WEB_KEYGEN_ALGO}
-      - VERIFIER_FORCE_DID=${WEB_FORCE_DID}
+      - EBSI_TOKEN=${WEB_EBSI_TOKEN}
+      - KEYGEN_ALGO=${WEB_KEYGEN_ALGO}
+      - FORCE_DID=${WEB_FORCE_DID}
     volumes:
       - ./web:/home/web/app
       - ./storage/verifier:/home/web/storage
       - ./commands:/usr/local/sbin
     depends_on:
-      - verifier_postgres
-  verifier_postgres:
-    container_name: verifier-db
+      - diplomas_postgres
+  diplomas_postgres:
+    container_name: diplomas-db
     image: postgres:14.0-alpine
     volumes:
-      - verifier_postgres_data:/var/lib/postgresql/data/
+      - diplomas_postgres_data:/var/lib/postgresql/data/
     environment:
-      - POSTGRES_DB=verifier_db
-      - POSTGRES_USER=verifier_db_user
-      - POSTGRES_PASSWORD=verifier_db_password
+      - POSTGRES_DB=diplomas_db
+      - POSTGRES_USER=diplomas_db_user
+      - POSTGRES_PASSWORD=diplomas_db_password
 volumes:
-  issuer_postgres_data:
-  verifier_postgres_data:
+  diplomas_postgres_data:
