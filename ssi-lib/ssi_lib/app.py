@@ -1,8 +1,8 @@
 import json
 import os
 import subprocess
-from ssi_conf import _Group
-from db import DbConnector
+from .conf import _Group
+from .db import DbConnector
 
 
 def run_cmd(args):

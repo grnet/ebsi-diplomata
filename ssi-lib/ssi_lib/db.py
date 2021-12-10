@@ -1,6 +1,6 @@
 from tinydb import TinyDB, where
-from ssi_conf import _Group
 import json
+from .conf import _Group
 
 DBCONF  = {
     'sort_keys': True,

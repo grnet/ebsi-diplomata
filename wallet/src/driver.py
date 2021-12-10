@@ -5,7 +5,7 @@ from ui import MenuHandler
 from util import HttpClient
 from conf import TMPDIR, INTRO, PROMPT, INDENT, RESOLVED, \
     _Action, _UI, EBSI_PRFX, ED25519, SECP256
-from app import CreationError, ResolutionError, _Group
+from ssi_lib.app import CreationError, ResolutionError, _Group
 
 _mapping = {
     _UI.KEY: _Group.KEY,

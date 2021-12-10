@@ -1,7 +1,7 @@
 import os
 from driver import WalletShell
-from app import App
 from conf import STORAGE, DBNAME, TMPDIR
+from ssi_lib.app import App
 
 if __name__ == '__main__':
     app = App.create({
