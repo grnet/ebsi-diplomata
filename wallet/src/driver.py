@@ -4,7 +4,7 @@ import os
 from ui import MenuHandler
 from util import HttpClient
 from conf import TMPDIR, WALTDIR, INTRO, PROMPT, INDENT, RESOLVED, \
-    _Action, _UI, EBSI_PRFX, ED25519, SECP256
+    STORAGE, _Action, _UI, EBSI_PRFX, ED25519, SECP256
 from ssi_lib import SSICreationError as CreationError, \
         SSIResolutionError as ResolutionError
 from ssi_lib.conf import _Group   # TODO: Get rid of this?
@@ -452,6 +452,52 @@ class WalletShell(cmd.Cmd, MenuHandler):
             case _Action.DISCARD:
                 self.flush('Request aborted')
 
+    def do_export(self, line):
+        try:
+            group = self._resolve_group(line, prompt='Export from')
+        except BadInputError as err:
+            self.flush(err)
+            return
+        aliases = self.app.get_aliases(group)
+        if not aliases:
+            self.flush('Nothing found')
+            return
+        alias = self.launch_single_choice('Choose', aliases)
+        filename = ''
+        while filename in ('', None):
+            filename = self.launch_input('Give filename:')
+            if filename is not None:
+                filename = filename.strip()
+        outfile = os.path.join(STORAGE, filename)
+        if os.path.isfile(outfile):
+            if not self.launch_yes_no('File exists. Overwrite?'):
+                self.flush('Aborted')
+                return
+        with open(outfile, 'w+') as f:
+            entry = self.app.get_entry(alias, group)
+            json.dump(entry, f, indent=INDENT)
+        self.flush('Exported to: %s' % outfile)
+
+    def do_import(self, line):
+        infile = self.launch_input('Give absolute path to file:')
+        try:
+            with open(infile, 'r') as f:
+                obj = json.load(f)
+        except (FileNotFound, json.decoder.JSONDecodeError) as err:
+            self.flush('Could not import: %s' % str(err))
+            return
+        self.flush('Imported:')
+        self.flush(obj)
+        yes = self.launch_yes_no('Store in database?')
+        if not yes:
+            del obj
+            self.flush('Imported object deleted from memory')
+            return
+        group = self.launch_single_choice('Store as', [
+            _UI.KEY, _UI.DID, _UI.VC
+        ])
+        self.app.store(obj, group)
+
     def do_remove(self, line):
         try:
             group = self._resolve_group(line, prompt='Remove from')
@@ -464,14 +510,13 @@ class WalletShell(cmd.Cmd, MenuHandler):
             return
         chosen = self.launch_multiple_choices('Choose entries to remove',
             aliases)
-        warning = 'This cannot be undone. Are you sure?'
-        yes = self.launch_yes_no(warning)
-        if yes:
-            for alias in chosen:
-                self.app.remove(alias, group)
-                self.flush('Removed %s' % alias)
-        else:
+        yes = self.launch_yes_no('This cannot be undone. Are you sure?')
+        if not yes:
             self.flush('Removal aborted')
+            return
+        for alias in chosen:
+            self.app.remove(alias, group)
+            self.flush('Removed %s' % alias)
 
     def do_clear(self, line):
         try:
@@ -479,13 +524,12 @@ class WalletShell(cmd.Cmd, MenuHandler):
         except BadInputError as err:
             self.flush(err)
             return
-        warning = 'This cannot be undone. Are you sure?'
-        yes = self.launch_yes_no(warning)
-        if yes:
-            self.app.clear(group)
-            self.flush(f'Cleared {group}s')
-        else:
+        yes = self.launch_yes_no('This cannot be undone. Are you sure?')
+        if not yes:
             self.flush('Aborted')
+            return
+        self.app.clear(group)
+        self.flush(f'Cleared {group}s')
 
     def do_EOF(self, line):
         return True
