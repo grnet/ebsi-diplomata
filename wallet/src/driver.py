@@ -3,7 +3,7 @@ import json
 import os
 from ui import MenuHandler
 from util import HttpClient
-from conf import TMPDIR, INTRO, PROMPT, INDENT, RESOLVED, \
+from conf import TMPDIR, WALTDIR, INTRO, PROMPT, INDENT, RESOLVED, \
     _Action, _UI, EBSI_PRFX, ED25519, SECP256
 from ssi_lib import SSICreationError as CreationError, \
         SSIResolutionError as ResolutionError
@@ -28,6 +28,9 @@ class BadInputError(BaseException):
     pass
 
 class IssuanceError(BaseException):
+    pass
+
+class PresentationError(BaseException):
     pass
 
 class VerificationError(BaseException):
@@ -287,18 +290,59 @@ class WalletShell(cmd.Cmd, MenuHandler):
         self.flush('The following credential was saved to disk:')
         self.flush(credential['id'])
 
+    def create_verifiable_presentation(self, holder_did, vc_files):
+        args = ['present-credentials', '--holder-did', holder_did]
+        for tmpfile in vc_files:
+            args += ['-c', tmpfile,]
+        res, code = run_cmd(args)
+        if code != 0:
+            err = 'Could not create presentation: %s' % res
+            raise PresentationError(res)
+        sep = 'Verifiable presentation was saved to file: '
+        if not sep in res:
+            err = 'Could not create presentation: %s' % res
+            raise PresentationError(err)
+        outfile = os.path.join(WALTDIR, res.split(sep)[-1].replace('"', ''))
+        with open(outfile, 'r') as f:
+            out = json.load(f)
+        os.remove(outfile)
+        for tmpfile in vc_files:
+            os.remove(tmpfile)
+        return out
+
     def do_verify(self, line):
-        choices = self.app.get_aliases(_Group.VC)
-        if not choices:
-            self.flush('No credentials found')
+        did_choices = self.app.get_aliases(_Group.DID)
+        if not did_choices:
+            self.flush('No DIDs found. Must create at least one.')
             return
-        alias = self.launch_single_choice('Choose credential to verify:',
-                choices)
-        credential = self.app.get_entry(alias, _Group.VC)
-        self.flush('Verifying (takes seconds) ...')
-        # Verify                                        # TODO
-        tmpfile = self.dump(credential, 'credential.json')
-        res, code = run_cmd(['verify-credential', '-c', tmpfile,])
+        holder_did = self.launch_single_choice('Choose holder DID', did_choices)
+        vc_choices = self.app.get_credentials_by_did(holder_did)
+        if not vc_choices:
+            self.flush('No credentials found for the provided holder DID')
+            return
+        selected = self.launch_multiple_choices(
+            'Select credentials to verify', vc_choices)
+        credentials = [self.app.get_credential(alias) for alias in
+            selected]
+        if not credentials:
+            self.flush('Aborted')  # TODO
+            return
+        vc_files = []
+        for cred in credentials:
+            tmpfile = self.dump(cred, '%s.json' % cred['id'])
+            vc_files += [tmpfile,]
+        # Create verifiable presentation
+        try:
+            presentation = self.create_verifiable_presentation(holder_did,
+                    vc_files)
+        except PresentationError as err:
+            self.flush('Something went wrong: %s' % err)
+            return
+        # Verify presentation
+        self.flush('Verifying (takes seconds)...')
+        tmpfile = self.dump(presentation, 'presentation.json')
+        res, code = run_cmd([
+            'verify-credentials', '--presentation', tmpfile,])
         os.remove(tmpfile)
         if code != 0:
             err = 'Could not verify: %s' % res
@@ -310,7 +354,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
             results[aux[i]] = {'true': True, 'false': False}[aux[i + 1]]
         # Flush results
         verified = results['Verified']
-        message = 'Credential was %sverified:' % ('' if verified else 'NOT ')
+        message = 'Presentation was %sverified:' % ('' if verified else 'NOT ')
         self.flush(message)
         self.flush(results)
 
