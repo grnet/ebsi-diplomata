@@ -310,33 +310,40 @@ class WalletShell(cmd.Cmd, MenuHandler):
             os.remove(tmpfile)
         return out
 
-    def do_verify(self, line):
+    def present_crendetials(self, line):
         did_choices = self.app.get_aliases(_Group.DID)
         if not did_choices:
-            self.flush('No DIDs found. Must create at least one.')
-            return
+            err = 'No DIDs found. Must create at least one.'
+            raise PresentationError(err)
         holder_did = self.launch_single_choice('Choose holder DID', did_choices)
         vc_choices = self.app.get_credentials_by_did(holder_did)
         if not vc_choices:
-            self.flush('No credentials found for the provided holder DID')
-            return
+            err = 'No credentials found for the provided holder DID'
+            raise PresentationError(err)
         selected = self.launch_multiple_choices(
             'Select credentials to verify', vc_choices)
         credentials = [self.app.get_credential(alias) for alias in
             selected]
         if not credentials:
-            self.flush('Aborted')  # TODO
-            return
+            err = 'Presentation aborted'
+            raise PresentationError(err)
         vc_files = []
         for cred in credentials:
             tmpfile = self.dump(cred, '%s.json' % cred['id'])
             vc_files += [tmpfile,]
-        # Create verifiable presentation
         try:
-            presentation = self.create_verifiable_presentation(holder_did,
+            out = self.create_verifiable_presentation(holder_did,
                     vc_files)
+        except PresentationError as err:   # TODO: SSI exception?
+            raise PresentationError(err)
+        return out
+
+    def do_verify(self, line):
+        # Produce presentation
+        try:
+            presentation = self.present_crendetials(line)
         except PresentationError as err:
-            self.flush('Something went wrong: %s' % err)
+            self.flush('Could not present: %s' % err)
             return
         # Verify presentation
         self.flush('Verifying (takes seconds)...')
