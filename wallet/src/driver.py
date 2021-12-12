@@ -20,6 +20,8 @@ _mapping = {
     _UI.VPS: _Group.VP,
     _UI.ISSUE: _Action.ISSUE,
     _UI.VERIFY: _Action.VERIFY,
+    _UI.CHOOSE: _Action.CHOOSE,
+    _UI.IMPORT: _Action.IMPORT,
     _UI.DISCARD: _Action.DISCARD,
 }
 
@@ -35,6 +37,9 @@ class PresentationError(BaseException):
     pass
 
 class VerificationError(BaseException):
+    pass
+
+class WalletImportError(BaseException):
     pass
 
 class Abortion(BaseException):
@@ -127,7 +132,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
             os.remove(tmpfile)
         return out
 
-    def present_crendetials(self, line):
+    def present_credentials(self, line):
         did_choices = self.app.get_aliases(_Group.DID)
         if not did_choices:
             err = 'No DIDs found. Must create at least one.'
@@ -168,6 +173,16 @@ class WalletShell(cmd.Cmd, MenuHandler):
         with open(outfile, 'w+') as f:
             json.dump(entry, f, indent=INDENT)
         return outfile
+
+    def import_object(self):
+        infile = self.launch_input('Give absolute path to file:')
+        try:
+            with open(infile, 'r') as f:
+                out = json.load(f)
+        except (FileNotFoundError, json.decoder.JSONDecodeError) as err:
+            err = 'Could not import: %s' % str(err)
+            raise WalletImportError(err)
+        return out
 
     def run(self):
         super().cmdloop()
@@ -274,7 +289,17 @@ class WalletShell(cmd.Cmd, MenuHandler):
                     return
                 self.flush('Created DID: %s' % alias)
             case _Group.VP:
-                self.flush('TODO')
+                try:
+                    vp = self.present_credentials(line)
+                except PresentationError as err:
+                    self.flush('Could not present: %s' % err)
+                    return
+                if not self.launch_yes_no('Presentation has been created. ' +
+                        'Save to disk?'):
+                    del presentation
+                    self.flush('Presentation lost forever')
+                    return
+                self.app.store_presentation(vp)
 
     def do_resolve(self, line):
         alias = self.launch_input('Give DID:')
@@ -334,7 +359,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
             'learning_specification_subject_presence': '',
             'learning_specification_document_presence': '',
         }
-        tmpfile = os.path.join(TMPDIR, 'credential.json')
+        tmpfile = os.path.join(TMPDIR, 'vc.json')
         res, code = run_cmd([
             'issue-credential-ni',  # TODO
             *vc_content.values(),   # TODO
@@ -357,7 +382,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
 
     def do_present(self, line):
         try:
-            presentation = self.present_crendetials(line)
+            presentation = self.present_credentials(line)
         except PresentationError as err:
             self.flush('Could not present: %s' % err)
             return
@@ -375,15 +400,25 @@ class WalletShell(cmd.Cmd, MenuHandler):
             self.flush('Exported to: %s' % outfile)
 
     def do_verify(self, line):
-        # Produce presentation
-        try:
-            presentation = self.present_crendetials(line)
-        except PresentationError as err:
-            self.flush('Could not present: %s' % err)
-            return
+        # Select presentation
+        match self.launch_single_choice('Select presentation to verify', [
+            _UI.CHOOSE, _UI.IMPORT]):
+            case _UI.CHOOSE:
+                aliases = self.app.get_presentations()
+                if not aliases:
+                    self.flush('Nothing found')
+                    return
+                alias = self.launch_single_choice('', aliases)
+                vp = self.app.get_presentation(alias)
+            case _UI.IMPORT:
+                try:
+                    vp = self.import_object()
+                except WalletImportError as err:
+                    self.flush(err)
+                    return
         # Verify presentation
         self.flush('Verifying (takes seconds)...')
-        tmpfile = self.dump(presentation, 'presentation.json')
+        tmpfile = self.dump(vp, 'vp.json')
         res, code = run_cmd([
             'verify-credentials', '--presentation', tmpfile,])
         os.remove(tmpfile)
@@ -519,7 +554,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
         try:
             with open(infile, 'r') as f:
                 obj = json.load(f)
-        except (FileNotFound, json.decoder.JSONDecodeError) as err:
+        except (FileNotFoundError, json.decoder.JSONDecodeError) as err:
             self.flush('Could not import: %s' % str(err))
             return
         self.flush('Imported:')

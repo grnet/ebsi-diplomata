@@ -27,6 +27,8 @@ INDENT  = 4
 class _Action:
     ISSUE   = 'ISSUE'
     VERIFY  = 'VERIFY'
+    CHOOSE  = 'CHOOSE'
+    IMPORT  = 'IMPORT'
     DISCARD = 'DISCARD'
 
 class _UI:
@@ -40,5 +42,7 @@ class _UI:
     VPS     = 'presentations'
     ISSUE   = 'issuance'
     VERIFY  = 'verification'
+    CHOOSE  = 'Choose from database'
+    IMPORT  = 'Import from file'
     DISCARD = 'discard'
 
