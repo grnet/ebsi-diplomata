@@ -166,24 +166,13 @@ class WalletShell(cmd.Cmd, MenuHandler):
     def issue_credential(self):
         pass
 
-    def create_verifiable_presentation(self, holder_did, vc_files):
-        args = ['present-credentials', '--holder-did', holder_did]
-        for tmpfile in vc_files:
-            args += ['-c', tmpfile,]
-        res, code = run_cmd(args)
-        if code != 0:
-            err = 'Could not create presentation: %s' % res
-            raise PresentationError(res)
-        sep = 'Verifiable presentation was saved to file: '
-        if not sep in res:
-            err = 'Could not create presentation: %s' % res
-            raise PresentationError(err)
-        outfile = os.path.join(WALTDIR, res.split(sep)[-1].replace('"', ''))
-        with open(outfile, 'r') as f:
-            out = json.load(f)
-        os.remove(outfile)
-        for tmpfile in vc_files:
-            os.remove(tmpfile)
+    def create_presentation(self, holder_did, credentials):
+        try:
+            out = self.app.generate_presentation(holder_did, credentials,
+                WALTDIR)
+        except SSIGenerationError as err:
+            err = 'Could not generate presentation: %s' % err
+            raise CreationError(err)
         return out
 
     def present_credentials(self, line):
@@ -196,21 +185,19 @@ class WalletShell(cmd.Cmd, MenuHandler):
         if not vc_choices:
             err = 'No credentials found for the provided holder DID'
             raise PresentationError(err)
-        selected = self.launch_multiple_choices(
+        vc_selected = self.launch_multiple_choices(
             'Select credentials to verify', vc_choices)
-        credentials = [self.app.get_credential(alias) for alias in
-            selected]
-        if not credentials:
-            err = 'Presentation aborted'
+        if not vc_selected:
+            err = 'Presentation aborted: No credentials selected'
             raise PresentationError(err)
-        vc_files = []
-        for cred in credentials:
-            tmpfile = self.dump(cred, '%s.json' % cred['id'])
-            vc_files += [tmpfile,]
+        credentials = []
+        for alias in vc_selected:
+            credential = self.app.get_credential(alias)
+            vc_file = self.dump(credential, '%s.json' % alias)
+            credentials += [vc_file,]
         try:
-            out = self.create_verifiable_presentation(holder_did,
-                    vc_files)
-        except PresentationError as err:   # TODO: SSI exception?
+            out = self.create_presentation(holder_did, credentials)
+        except CreationError as err:
             raise PresentationError(err)
         return out
 
@@ -280,7 +267,6 @@ class WalletShell(cmd.Cmd, MenuHandler):
         ans = self.launch_single_choice('Create', [
             _UI.KEY, 
             _UI.DID,
-            _UI.VP,
         ])
         match _mapping[ans]:
             case _Group.KEY:
@@ -329,18 +315,6 @@ class WalletShell(cmd.Cmd, MenuHandler):
                     self.flush('Could not create DID: %s' % err)
                     return
                 self.flush('Created DID: %s' % alias)
-            case _Group.VP:
-                try:
-                    vp = self.present_credentials(line)
-                except PresentationError as err:
-                    self.flush('Could not present: %s' % err)
-                    return
-                if not self.launch_yes_no('Presentation has been created. ' +
-                        'Save to disk?'):
-                    del presentation
-                    self.flush('Presentation lost forever')
-                    return
-                self.app.store_presentation(vp)
 
     def do_resolve(self, line):
         alias = self.launch_input('Give DID:')

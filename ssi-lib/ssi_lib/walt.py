@@ -53,8 +53,12 @@ class WaltWrapper(object):
     def _issue_credential(self, *args):
         raise NotImplementedError('TODO')
 
-    def _present_credentials(self, *args):
-        raise NotImplementedError('TODO')
+    def _generate_presentation(self, holder_did, credentials):
+        args = ['present-credentials', '--holder-did', holder_did]
+        for credential in credentials:
+            args += ['-c', credential,]
+        res, code = run_cmd(args)
+        return res, code
 
     def _verify_credential(self, *args):
         raise NotImplementedError('TODO')

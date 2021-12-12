@@ -151,17 +151,21 @@ class SSIApp(WaltWrapper):
     def issue_credential(self, *args):
         raise NotImplementedError('TODO')
 
-    def create_verifiable_presentation(self, vc_files, did):
-        # self.load_did(did)    # TODO
-        # TODO: Trasfer part to walt-wrapper
-        args = ['present-crendetial', '--holder-did', did,]
-        for credential in vc_files:
-            args += ['--credential', credential,]
-        res, code = run_cmd(args)
+    def generate_presentation(self, holder_did, credentials, waltdir):
+        res, code = self._generate_presentation(holder_did, credentials)
         if code != 0:
-            err = 'Could not present: %s' % res
-            raise SSICreationError(err)
-        # TODO: Where was it saved?
+            raise SSIGenerationError(res)
+        sep = 'Verifiable presentation was saved to file: '
+        if not sep in res:
+            raise SSIGenerationError(res)
+        filename = res.split(sep)[-1].replace('"', '')
+        outfile = os.path.join(waltdir, filename)
+        with open(outfile, 'r') as f:
+            out = json.load(f)
+        os.remove(outfile)
+        for tmpfile in credentials:
+            os.remove(tmpfile)
+        return out
 
     def verify_credentials(self, *args):
         raise NotImplementedError('TODO')
