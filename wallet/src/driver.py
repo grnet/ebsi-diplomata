@@ -5,7 +5,8 @@ from ui import MenuHandler
 from util import HttpClient
 from conf import TMPDIR, WALTDIR, INTRO, PROMPT, INDENT, RESOLVED, \
     STORAGE, _Action, _UI, EBSI_PRFX, ED25519, SECP256
-from ssi_lib import SSIGenerationError, SSIResolutionError
+from ssi_lib import SSIGenerationError, SSIRegistrationError, \
+    SSIResolutionError
 from ssi_lib.conf import _Group   # TODO: Get rid of this?
 from ssi_lib.walt import run_cmd    # TODO: Get rid of this
 
@@ -33,6 +34,9 @@ class BadInputError(BaseException):
 class CreationError(BaseException):
     pass
 
+class RegistrationError(BaseException):
+    pass
+
 class IssuanceError(BaseException):
     pass
 
@@ -56,6 +60,9 @@ class WalletShell(cmd.Cmd, MenuHandler):
     def __init__(self, app):
         self.app = app
         super().__init__()
+
+    def get_keys(self):
+        return self.app.get_keys()
 
     def run(self):
         super().cmdloop()
@@ -120,15 +127,34 @@ class WalletShell(cmd.Cmd, MenuHandler):
     def create_key(self, algorithm):
         try:
             key = self.app.generate_key(algorithm)
-        except SSICreationError as err:
-            err = 'Could not create key: %s' % err
+        except SSIGenerationError as err:
+            err = 'Could not generate key: %s' % err
             raise CreationError(err)
         self.app.store_key(key)
         alias = key['kid']
         return alias
 
-    def create_did(self):
-        pass
+    def register_did(self, alias, token):
+        try:
+            self.app.register_did(alias, token)
+        except SSIRegistrationError as err:
+            raise RegistrationError(err)
+
+    def create_did(self, key, token, onboard=True):
+        try:
+            did = self.app.generate_did(key, token, onboard)
+        except SSIGenerationError as err:
+            err = 'Could not generate DID: %s' % err
+            raise CreationError(err)
+        alias = did['id']
+        if onboard:
+            try:
+                self.app.register_did(alias, token)
+            except SSIRegistrationError as err:
+                err = 'Could not register: %s' % err
+                raise CreationError(err)
+        self.app.store_did(did)
+        return alias
 
     def retrieve_resolved_did(self, alias):
         resolved = os.path.join(RESOLVED, 'did-ebsi-%s.json' % \
@@ -271,11 +297,11 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 try:
                     alias = self.create_key(algorithm)
                 except CreationError as err:
-                    self.flush(err)
+                    self.flush('Could not create key: %s' % err)
                     return
                 self.flush('Created key: %s' % alias)
             case _Group.DID:
-                keys = self.app.get_keys()
+                keys = self.get_keys()
                 if not keys:
                     self.flush('No keys found. Must first create one.')
                     return
@@ -285,8 +311,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
                     token = self.launch_input('Token:')
                 if not token and not self.launch_yes_no(
                     'WARNING: No token provided. The newly created DID will ' +
-                    'not be registered to the EBSI. Proceed?'
-                ):
+                    'not be registered to the EBSI. Proceed?'):
                     self.flush('DID creation aborted')
                     return
                 onboard = False
@@ -299,9 +324,9 @@ class WalletShell(cmd.Cmd, MenuHandler):
                     return
                 self.flush('Creating DID (takes seconds) ...')
                 try:
-                    alias = self.app.create_did(key, token, onboard)
-                except SSICreationError as err:
-                    self.flush(err)
+                    alias = self.create_did(key, token, onboard)
+                except CreationError as err:
+                    self.flush('Could not create DID: %s' % err)
                     return
                 self.flush('Created DID: %s' % alias)
             case _Group.VP:
@@ -323,7 +348,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
         try:
             self.app.resolve_did(alias)
         except SSIResolutionError as err:
-            self.flush(err)
+            self.flush('Could not resolve: %s' % err)
             return
         did = self.retrieve_resolved_did(alias)
         self.flush(did)

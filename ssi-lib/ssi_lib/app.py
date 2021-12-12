@@ -11,6 +11,9 @@ class SSIGenerationError(BaseException):
 class SSICreationError(BaseException):
     pass
 
+class SSIRegistrationError(BaseException):
+    pass
+
 class SSIResolutionError(BaseException):
     pass
 
@@ -112,43 +115,38 @@ class SSIApp(WaltWrapper):
         outfile = os.path.join(self.tmpdir, 'jwk.json')
         res, code = self._generate_key(algorithm, outfile)
         if code != 0:
-            err = 'Could not generate key: %s' % res
-            raise SSIGenerationError(err)
+            raise SSIGenerationError(res)
         with open(outfile, 'r') as f:
             out = json.load(f)
         os.remove(outfile)
         return out
 
-    def create_did(self, key, token='', onboard=True):
+    def generate_did(self, key, token, onboard=True):
         res, code = self._load_key(key)
         if code != 0:
             err = 'Could not load key: %s' % res
-            raise SSICreationError(err)
+            raise SSIGenerationError(err)
         outfile = os.path.join(self.tmpdir, 'did.json')
         res, code = self._generate_did(key, outfile)
         if code != 0:
-            err = 'Could not generate DID: %s' % res
-            raise SSICreationError(err)
+            raise SSIGenerationError(res)
         with open(outfile, 'r') as f:
-            created = json.load(f)
+            out = json.load(f)
         os.remove(outfile)
-        alias = created['id']       # TODO
-        if onboard:
-            if not token:
-                err = 'Could not register DID: No token provided'
-                raise SSICreationError(err)
-            res, code = self._register_did(alias, token)
-            if code != 0:
-                err = 'Could not register DID: %s' % res
-                raise SSICreationError(err)
-        self._db.store(created, _Group.DID)
-        return alias
+        return out
+
+    def register_did(self, alias, token):
+        if not token:
+            err = 'No token provided'
+            raise SSIRegistrationError(err)
+        res, code = self._register_did(alias, token)
+        if code != 0:
+            raise SSIRegistrationError(res)
 
     def resolve_did(self, alias):
         res, code = self._resolve_did(alias)
         if code != 0:
-            err = 'Could not resolve: %s' % res
-            raise SSIResolutionError(err)
+            raise SSIResolutionError(res)
 
     def issue_credential(self, *args):
         raise NotImplementedError('TODO')
