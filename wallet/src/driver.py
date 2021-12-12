@@ -17,6 +17,8 @@ _mapping = {
     _UI.DIDS: _Group.DID,
     _UI.VC: _Group.VC,
     _UI.VCS: _Group.VC,
+    _UI.VP: _Group.VP,
+    _UI.VPS: _Group.VP,
     _UI.ISSUE: _Action.ISSUE,
     _UI.VERIFY: _Action.VERIFY,
     _UI.DISCARD: _Action.DISCARD,
@@ -80,18 +82,21 @@ class WalletShell(cmd.Cmd, MenuHandler):
                     _UI.KEYS, 
                     _UI.DIDS, 
                     _UI.VCS,
+                    _UI.VPS,
                 ])
                 out = _mapping[ans]
             case (
                     _UI.KEY |
                     _UI.DID |
-                    _UI.VC
+                    _UI.VC  |
+                    _UI.VP
                 ):
                 out = _mapping[aux]
             case (
                     _Group.KEY |
                     _Group.DID |
-                    _Group.VC
+                    _Group.VC  |
+                    _Group.VP
                 ):
                 out = aux
             case _:
@@ -350,8 +355,8 @@ class WalletShell(cmd.Cmd, MenuHandler):
         self.flush('Created verifiable presentation from selected credentials.')
         if self.launch_yes_no('Inspect?'):
             self.flush(presentation)
-        if self.launch_yes_no('Store?'):
-            self.flush('Not yet implemented')   # TODO
+        if self.launch_yes_no('Save in disk?'):
+            self.app.store_presentation(presentation)
         if self.launch_yes_no('Export?'):
             try:
                 outfile = self.export(presentation)
@@ -416,7 +421,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 # known
                 resp = resp.json()
                 if 'message' in resp:           # TODO: Check code instead
-                    self.flush(resp['message'])# TODO
+                    self.flush(resp['message']) # TODO
                     return
                 credential = resp.json()        # TODO: Validate structure
                 # TODO: Ask before saving
@@ -524,15 +529,15 @@ class WalletShell(cmd.Cmd, MenuHandler):
             return
         self.flush('Imported:')
         self.flush(obj)
-        yes = self.launch_yes_no('Store in database?')
+        yes = self.launch_yes_no('Save in disk?')
         if not yes:
             del obj
             self.flush('Imported object deleted from memory')
             return
-        group = self.launch_single_choice('Store as', [
-            _UI.KEY, _UI.DID, _UI.VC
+        group = self.launch_single_choice('Saved as', [
+            _UI.KEY, _UI.DID, _UI.VC, _UI.VP,
         ])
-        self.app.store(obj, group)
+        self.app.store(obj, _mapping[group])
 
     def do_remove(self, line):
         try:

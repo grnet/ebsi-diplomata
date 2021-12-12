@@ -12,6 +12,7 @@ _pkey = {
     _Group.KEY: 'kid',
     _Group.DID: 'id',
     _Group.VC:  'id',
+    _Group.VP:  'id',
 }
 
 class DbConnector(object):
@@ -22,7 +23,7 @@ class DbConnector(object):
     @staticmethod
     def _init_db(path):
         db = TinyDB(path, **DBCONF)
-        for group in (_Group.KEY, _Group.DID, _Group.VC):
+        for group in (_Group.KEY, _Group.DID, _Group.VC, _Group.VP):
             db.table(group)
         return db
 

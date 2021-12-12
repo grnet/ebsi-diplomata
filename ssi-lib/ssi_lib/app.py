@@ -36,6 +36,9 @@ class SSIApp(WaltWrapper):
     def get_credentials(self):
         return self._db.get_aliases(_Group.VC)
 
+    def get_presentations(self):
+        return self._db.get_aliases(_Group.VP)
+
     def get_credentials_by_did(self, alias):
         return self._db.get_credentials_by_did(alias)
 
@@ -51,6 +54,9 @@ class SSIApp(WaltWrapper):
     def get_nr_credentials(self):
         return self._db.get_nr(_Group.VC)
 
+    def get_nr_presentations(self):
+        return self._db.get_nr(_Group.VP)
+
     def get_entry(self, alias, group):
         return self._db.get_entry(alias, group)
 
@@ -63,6 +69,9 @@ class SSIApp(WaltWrapper):
     def get_credential(self, alias):
         return self._db.get_entry(alias, _Group.VC)
 
+    def get_presentation(self, alias):
+        return self._db.get_entry(alias, _Group.VP)
+
     def store(self, obj, group):
         self._db.store(obj, group)
 
@@ -74,6 +83,9 @@ class SSIApp(WaltWrapper):
 
     def store_credential(self, obj):
         self._db.store(obj, _Group.VC)
+
+    def store_presentation(self, obj):
+        self._db.store(obj, _Group.VP)
 
     def remove(self, alias, group):
         self._db.remove(alias, group)
@@ -89,6 +101,9 @@ class SSIApp(WaltWrapper):
 
     def clear_credentials(self):
         self._db.clear(_Group.VC)
+
+    def clear_presentations(self):
+        self._db.clear(_Group.VP)
 
     def create_key(self, algorithm):
         outfile = os.path.join(self.tmpdir, 'jwk.json')

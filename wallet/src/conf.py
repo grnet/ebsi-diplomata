@@ -36,6 +36,8 @@ class _UI:
     DIDS    = 'DIDs'
     VC      = 'credential'
     VCS     = 'credentials'
+    VP      = 'presentation'
+    VPS     = 'presentations'
     ISSUE   = 'issuance'
     VERIFY  = 'verification'
     DISCARD = 'discard'
