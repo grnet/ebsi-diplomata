@@ -5,6 +5,9 @@ from .db import DbConnector
 from .walt import WaltWrapper
 
 
+class SSIGenerationError(BaseException):
+    pass
+
 class SSICreationError(BaseException):
     pass
 
@@ -105,18 +108,16 @@ class SSIApp(WaltWrapper):
     def clear_presentations(self):
         self._db.clear(_Group.VP)
 
-    def create_key(self, algorithm):
+    def generate_key(self, algorithm):
         outfile = os.path.join(self.tmpdir, 'jwk.json')
         res, code = self._generate_key(algorithm, outfile)
         if code != 0:
             err = 'Could not generate key: %s' % res
-            raise SSICreationError(err)
+            raise SSIGenerationError(err)
         with open(outfile, 'r') as f:
-            created = json.load(f)
-        self._db.store(created, _Group.KEY)
+            out = json.load(f)
         os.remove(outfile)
-        alias = created['kid']  # TODO
-        return alias
+        return out
 
     def create_did(self, key, token='', onboard=True):
         res, code = self._load_key(key)

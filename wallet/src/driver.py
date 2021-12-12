@@ -5,7 +5,7 @@ from ui import MenuHandler
 from util import HttpClient
 from conf import TMPDIR, WALTDIR, INTRO, PROMPT, INDENT, RESOLVED, \
     STORAGE, _Action, _UI, EBSI_PRFX, ED25519, SECP256
-from ssi_lib import SSICreationError, SSIResolutionError
+from ssi_lib import SSIGenerationError, SSIResolutionError
 from ssi_lib.conf import _Group   # TODO: Get rid of this?
 from ssi_lib.walt import run_cmd    # TODO: Get rid of this
 
@@ -117,18 +117,25 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 raise BadInputError(err)
         return out
 
+    def create_key(self, algorithm):
+        try:
+            key = self.app.generate_key(algorithm)
+        except SSICreationError as err:
+            err = 'Could not create key: %s' % err
+            raise CreationError(err)
+        self.app.store_key(key)
+        alias = key['kid']
+        return alias
+
+    def create_did(self):
+        pass
+
     def retrieve_resolved_did(self, alias):
         resolved = os.path.join(RESOLVED, 'did-ebsi-%s.json' % \
             alias.lstrip(EBSI_PRFX))
         with open(resolved, 'r') as f:
             out = json.load(f)
         return out
-
-    def create_key(self):
-        pass
-
-    def create_did(self):
-        pass
 
     def issue_credential(self):
         pass
@@ -251,25 +258,19 @@ class WalletShell(cmd.Cmd, MenuHandler):
         ])
         match _mapping[ans]:
             case _Group.KEY:
-                answers = self.launch_prompt({
-                    'single': {
-                        'prompt': 'Choose keygen algorithm: ',
-                        'choices': [
-                            ED25519,
-                            SECP256
-                        ],
-                    },
-                    'yes_no': 'A new key will be saved to disk. Proceed?',
-                })
-                algorithm, proceed = answers
-                if not proceed: 
-                    self.flush('Key generation aborted')
+                algorithm = self.launch_single_choice('Choose keygen algorithm',
+                    [
+                        ED25519,
+                        SECP256,
+                    ])
+                if not self.launch_yes_no('Key will be save to disk. Proceed?'):
+                    self.flush('Key creation aborted')
                     return
-                self.flush('Creating %s key (takes seconds) ...' \
+                self.flush('Generating %s key (takes seconds) ...' \
                     % algorithm)
                 try:
-                    alias = self.app.create_key(algorithm)
-                except SSICreationError as err:
+                    alias = self.create_key(algorithm)
+                except CreationError as err:
                     self.flush(err)
                     return
                 self.flush('Created key: %s' % alias)
