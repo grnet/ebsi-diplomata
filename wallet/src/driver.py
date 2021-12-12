@@ -36,6 +36,9 @@ class PresentationError(BaseException):
 class VerificationError(BaseException):
     pass
 
+class Abortion(BaseException):
+    pass
+
 
 class WalletShell(cmd.Cmd, MenuHandler):
     intro   = INTRO.format(__version__)
@@ -338,6 +341,25 @@ class WalletShell(cmd.Cmd, MenuHandler):
             raise PresentationError(err)
         return out
 
+    def do_present(self, line):
+        try:
+            presentation = self.present_crendetials(line)
+        except PresentationError as err:
+            self.flush('Could not present: %s' % err)
+            return
+        self.flush('Created verifiable presentation from selected credentials.')
+        if self.launch_yes_no('Inspect?'):
+            self.flush(presentation)
+        if self.launch_yes_no('Store?'):
+            self.flush('Not yet implemented')   # TODO
+        if self.launch_yes_no('Export?'):
+            try:
+                outfile = self.export(presentation)
+            except Abortion:
+                self.flush('Aborted export')
+                return
+            self.flush('Exported to: %s' % outfile)
+
     def do_verify(self, line):
         # Produce presentation
         try:
@@ -459,6 +481,20 @@ class WalletShell(cmd.Cmd, MenuHandler):
             case _Action.DISCARD:
                 self.flush('Request aborted')
 
+    def export(self, entry):
+        filename = ''
+        while filename in ('', None):
+            filename = self.launch_input('Give filename:')
+            if filename is not None:
+                filename = filename.strip()
+        outfile = os.path.join(STORAGE, filename)
+        if os.path.isfile(outfile):
+            if not self.launch_yes_no('File exists. Overwrite?'):
+                raise Abortion
+        with open(outfile, 'w+') as f:
+            json.dump(entry, f, indent=INDENT)
+        return outfile
+
     def do_export(self, line):
         try:
             group = self._resolve_group(line, prompt='Export from')
@@ -470,19 +506,12 @@ class WalletShell(cmd.Cmd, MenuHandler):
             self.flush('Nothing found')
             return
         alias = self.launch_single_choice('Choose', aliases)
-        filename = ''
-        while filename in ('', None):
-            filename = self.launch_input('Give filename:')
-            if filename is not None:
-                filename = filename.strip()
-        outfile = os.path.join(STORAGE, filename)
-        if os.path.isfile(outfile):
-            if not self.launch_yes_no('File exists. Overwrite?'):
-                self.flush('Aborted')
-                return
-        with open(outfile, 'w+') as f:
-            entry = self.app.get_entry(alias, group)
-            json.dump(entry, f, indent=INDENT)
+        entry = self.app.get_entry(alias, group)
+        try:
+            outfile = self.export(entry)
+        except Abortion:
+            self.flush('Export aborted')
+            return
         self.flush('Exported to: %s' % outfile)
 
     def do_import(self, line):
