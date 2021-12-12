@@ -5,8 +5,7 @@ from ui import MenuHandler
 from util import HttpClient
 from conf import TMPDIR, WALTDIR, INTRO, PROMPT, INDENT, RESOLVED, \
     STORAGE, _Action, _UI, EBSI_PRFX, ED25519, SECP256
-from ssi_lib import SSICreationError as CreationError, \
-        SSIResolutionError as ResolutionError
+from ssi_lib import SSICreationError, SSIResolutionError
 from ssi_lib.conf import _Group   # TODO: Get rid of this?
 from ssi_lib.walt import run_cmd    # TODO: Get rid of this
 
@@ -71,12 +70,9 @@ class WalletShell(cmd.Cmd, MenuHandler):
             json.dump(obj, f)
         return tmpfile
 
-    def _normalize_input(self, line):
-        return line.strip().lower().rstrip('s')
-
-    def _resolve_group(self, line, prompt):
-        aux = self._normalize_input(line)
-        match aux:
+    def resolve_group(self, line, prompt):
+        line = line.strip().lower().rstrip('s')
+        match line:
             case '':
                 ans = self.launch_single_choice(prompt, [
                     _UI.KEYS, 
@@ -91,25 +87,87 @@ class WalletShell(cmd.Cmd, MenuHandler):
                     _UI.VC  |
                     _UI.VP
                 ):
-                out = _mapping[aux]
+                out = _mapping[line]
             case (
                     _Group.KEY |
                     _Group.DID |
                     _Group.VC  |
                     _Group.VP
                 ):
-                out = aux
+                out = line
             case _:
                 err = 'Bad input: %s' % line
                 raise BadInputError(err)
         return out
 
-    def _retrieve_resolved_did(self, alias):
+    def retrieve_resolved_did(self, alias):
         resolved = os.path.join(RESOLVED, 'did-ebsi-%s.json' % \
             alias.lstrip(EBSI_PRFX))
         with open(resolved, 'r') as f:
             out = json.load(f)
         return out
+
+    def create_verifiable_presentation(self, holder_did, vc_files):
+        args = ['present-credentials', '--holder-did', holder_did]
+        for tmpfile in vc_files:
+            args += ['-c', tmpfile,]
+        res, code = run_cmd(args)
+        if code != 0:
+            err = 'Could not create presentation: %s' % res
+            raise PresentationError(res)
+        sep = 'Verifiable presentation was saved to file: '
+        if not sep in res:
+            err = 'Could not create presentation: %s' % res
+            raise PresentationError(err)
+        outfile = os.path.join(WALTDIR, res.split(sep)[-1].replace('"', ''))
+        with open(outfile, 'r') as f:
+            out = json.load(f)
+        os.remove(outfile)
+        for tmpfile in vc_files:
+            os.remove(tmpfile)
+        return out
+
+    def present_crendetials(self, line):
+        did_choices = self.app.get_aliases(_Group.DID)
+        if not did_choices:
+            err = 'No DIDs found. Must create at least one.'
+            raise PresentationError(err)
+        holder_did = self.launch_single_choice('Choose holder DID', did_choices)
+        vc_choices = self.app.get_credentials_by_did(holder_did)
+        if not vc_choices:
+            err = 'No credentials found for the provided holder DID'
+            raise PresentationError(err)
+        selected = self.launch_multiple_choices(
+            'Select credentials to verify', vc_choices)
+        credentials = [self.app.get_credential(alias) for alias in
+            selected]
+        if not credentials:
+            err = 'Presentation aborted'
+            raise PresentationError(err)
+        vc_files = []
+        for cred in credentials:
+            tmpfile = self.dump(cred, '%s.json' % cred['id'])
+            vc_files += [tmpfile,]
+        try:
+            out = self.create_verifiable_presentation(holder_did,
+                    vc_files)
+        except PresentationError as err:   # TODO: SSI exception?
+            raise PresentationError(err)
+        return out
+
+    def export(self, entry):
+        filename = ''
+        while filename in ('', None):
+            filename = self.launch_input('Give filename:')
+            if filename is not None:
+                filename = filename.strip()
+        outfile = os.path.join(STORAGE, filename)
+        if os.path.isfile(outfile):
+            if not self.launch_yes_no('File exists. Overwrite?'):
+                raise Abortion
+        with open(outfile, 'w+') as f:
+            json.dump(entry, f, indent=INDENT)
+        return outfile
 
     def run(self):
         super().cmdloop()
@@ -122,7 +180,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
 
     def do_list(self, line):
         try:
-            group = self._resolve_group(line, prompt='Show list of')
+            group = self.resolve_group(line, prompt='Show list of')
         except BadInputError as err:
             self.flush(err)
             return
@@ -134,7 +192,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
 
     def do_count(self, line):
         try:
-            group = self._resolve_group(line, prompt='Show number of')
+            group = self.resolve_group(line, prompt='Show number of')
         except BadInputError as err:
             self.flush(err)
             return
@@ -143,7 +201,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
 
     def do_inspect(self, line):
         try:
-            group = self._resolve_group(line, prompt='Inspect from')
+            group = self.resolve_group(line, prompt='Inspect from')
         except BadInputError as err:
             self.flush(err)
             return
@@ -159,6 +217,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
         ans = self.launch_single_choice('Create', [
             _UI.KEY, 
             _UI.DID,
+            _UI.VP,
         ])
         match _mapping[ans]:
             case _Group.KEY:
@@ -180,7 +239,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
                     % algorithm)
                 try:
                     alias = self.app.create_key(algorithm)
-                except CreationError as err:
+                except SSICreationError as err:
                     self.flush(err)
                     return
                 self.flush('Created key: %s' % alias)
@@ -190,42 +249,42 @@ class WalletShell(cmd.Cmd, MenuHandler):
                     self.flush('No keys found. Must first create one.')
                     return
                 key = self.launch_single_choice('Choose key:', keys)
-                yes = self.launch_yes_no('Do you want to provide a token?')
-                token = self.launch_input('Token:') if yes else ''
-                if not token:
-                    yes = self.launch_yes_no(
-                        'WARNING: No token provided. The newly created DID will' +
-                        ' not be registered to the EBSI. Proceed?'
-                    )
-                    if not yes:
-                        self.flush('DID creation aborted')
-                        return
+                token = ''
+                if self.launch_yes_no('Do you want to provide an EBSI token?'):
+                    token = self.launch_input('Token:')
+                if not token and not self.launch_yes_no(
+                    'WARNING: No token provided. The newly created DID will ' +
+                    'not be registered to the EBSI. Proceed?'
+                ):
+                    self.flush('DID creation aborted')
+                    return
                 onboard = False
                 if token:
                     onboard = self.launch_yes_no(
                         'Register the newly created DID to EBSI?')
-                yes = self.launch_yes_no(
-                    'A new DID will be saved to disk. Proceed?')
-                if not yes: 
+                if not self.launch_yes_no(
+                        'A new DID will be saved to disk. Proceed?'):
                     self.flush('DID creation aborted')
                     return
                 self.flush('Creating DID (takes seconds) ...')
                 try:
                     alias = self.app.create_did(key, token, onboard)
-                except CreationError as err:
+                except SSICreationError as err:
                     self.flush(err)
                     return
                 self.flush('Created DID: %s' % alias)
+            case _Group.VP:
+                self.flush('TODO')
 
     def do_resolve(self, line):
         alias = self.launch_input('Give DID:')
         self.flush('Resolving ...')
         try:
             self.app.resolve_did(alias)
-        except ResolutionError as err:
+        except SSIResolutionError as err:
             self.flush(err)
             return
-        did = self._retrieve_resolved_did(alias)
+        did = self.retrieve_resolved_did(alias)
         self.flush(did)
 
     def do_issue(self, line):
@@ -235,8 +294,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
             return
         holder_did = self.launch_single_choice('Choose holder DID', dids)
         issuer_did = self.launch_single_choice('Choose issuer DID', dids)
-        yes = self.launch_yes_no('A new credential will be issued. Proceed?')
-        if not yes:
+        if not self.launch_yes_no('New credential will be issued. Proceed?'):
             self.flush('Issuance aborted')
             return
         # TODO: Issuer should here fill the following template by comparing the
@@ -289,62 +347,13 @@ class WalletShell(cmd.Cmd, MenuHandler):
         with open(tmpfile, 'r') as f:
             credential = json.load(f)
         os.remove(tmpfile)
-        yes = self.launch_yes_no('Credential has been issued. Save?')
-        if not yes:
+        if not self.launch_yes_no('Credential has been issued. Save?'):
             del credential
             self.flush('Credential was lost forever')
             return
         self.app.store_credential(credential)
         self.flush('The following credential was saved to disk:')
         self.flush(credential['id'])
-
-    def create_verifiable_presentation(self, holder_did, vc_files):
-        args = ['present-credentials', '--holder-did', holder_did]
-        for tmpfile in vc_files:
-            args += ['-c', tmpfile,]
-        res, code = run_cmd(args)
-        if code != 0:
-            err = 'Could not create presentation: %s' % res
-            raise PresentationError(res)
-        sep = 'Verifiable presentation was saved to file: '
-        if not sep in res:
-            err = 'Could not create presentation: %s' % res
-            raise PresentationError(err)
-        outfile = os.path.join(WALTDIR, res.split(sep)[-1].replace('"', ''))
-        with open(outfile, 'r') as f:
-            out = json.load(f)
-        os.remove(outfile)
-        for tmpfile in vc_files:
-            os.remove(tmpfile)
-        return out
-
-    def present_crendetials(self, line):
-        did_choices = self.app.get_aliases(_Group.DID)
-        if not did_choices:
-            err = 'No DIDs found. Must create at least one.'
-            raise PresentationError(err)
-        holder_did = self.launch_single_choice('Choose holder DID', did_choices)
-        vc_choices = self.app.get_credentials_by_did(holder_did)
-        if not vc_choices:
-            err = 'No credentials found for the provided holder DID'
-            raise PresentationError(err)
-        selected = self.launch_multiple_choices(
-            'Select credentials to verify', vc_choices)
-        credentials = [self.app.get_credential(alias) for alias in
-            selected]
-        if not credentials:
-            err = 'Presentation aborted'
-            raise PresentationError(err)
-        vc_files = []
-        for cred in credentials:
-            tmpfile = self.dump(cred, '%s.json' % cred['id'])
-            vc_files += [tmpfile,]
-        try:
-            out = self.create_verifiable_presentation(holder_did,
-                    vc_files)
-        except PresentationError as err:   # TODO: SSI exception?
-            raise PresentationError(err)
-        return out
 
     def do_present(self, line):
         try:
@@ -473,7 +482,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 try:
                     vp = self.app.create_verifiable_presentation(vc_files, 
                             did)
-                except CreationError as err:
+                except SSICreationError as err:
                     self.flush(err)
                     return
                 pass    # TODO
@@ -486,23 +495,9 @@ class WalletShell(cmd.Cmd, MenuHandler):
             case _Action.DISCARD:
                 self.flush('Request aborted')
 
-    def export(self, entry):
-        filename = ''
-        while filename in ('', None):
-            filename = self.launch_input('Give filename:')
-            if filename is not None:
-                filename = filename.strip()
-        outfile = os.path.join(STORAGE, filename)
-        if os.path.isfile(outfile):
-            if not self.launch_yes_no('File exists. Overwrite?'):
-                raise Abortion
-        with open(outfile, 'w+') as f:
-            json.dump(entry, f, indent=INDENT)
-        return outfile
-
     def do_export(self, line):
         try:
-            group = self._resolve_group(line, prompt='Export from')
+            group = self.resolve_group(line, prompt='Export from')
         except BadInputError as err:
             self.flush(err)
             return
@@ -529,8 +524,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
             return
         self.flush('Imported:')
         self.flush(obj)
-        yes = self.launch_yes_no('Save in disk?')
-        if not yes:
+        if not self.launch_yes_no('Save to disk?'):
             del obj
             self.flush('Imported object deleted from memory')
             return
@@ -541,7 +535,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
 
     def do_remove(self, line):
         try:
-            group = self._resolve_group(line, prompt='Remove from')
+            group = self.resolve_group(line, prompt='Remove from')
         except BadInputError as err:
             self.flush(err)
             return
@@ -551,8 +545,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
             return
         chosen = self.launch_multiple_choices('Choose entries to remove',
             aliases)
-        yes = self.launch_yes_no('This cannot be undone. Are you sure?')
-        if not yes:
+        if not self.launch_yes_no('This cannot be undone. Proceed?'):
             self.flush('Removal aborted')
             return
         for alias in chosen:
@@ -561,12 +554,11 @@ class WalletShell(cmd.Cmd, MenuHandler):
 
     def do_clear(self, line):
         try:
-            group = self._resolve_group(line, prompt='Clear')
+            group = self.resolve_group(line, prompt='Clear')
         except BadInputError as err:
             self.flush(err)
             return
-        yes = self.launch_yes_no('This cannot be undone. Are you sure?')
-        if not yes:
+        if not self.launch_yes_no('This cannot be undone. Proceed?'):
             self.flush('Aborted')
             return
         self.app.clear(group)
