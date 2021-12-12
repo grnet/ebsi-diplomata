@@ -30,6 +30,9 @@ __version__ = '0.0.1'
 class BadInputError(BaseException):
     pass
 
+class CreationError(BaseException):
+    pass
+
 class IssuanceError(BaseException):
     pass
 
@@ -53,6 +56,15 @@ class WalletShell(cmd.Cmd, MenuHandler):
     def __init__(self, app):
         self.app = app
         super().__init__()
+
+    def run(self):
+        super().cmdloop()
+
+    def preloop(self):
+        pass
+
+    def postloop(self):
+        pass
 
     def flush(self, buff):
         if type(buff) in (dict, list,):
@@ -112,6 +124,15 @@ class WalletShell(cmd.Cmd, MenuHandler):
             out = json.load(f)
         return out
 
+    def create_key(self):
+        pass
+
+    def create_did(self):
+        pass
+
+    def issue_credential(self):
+        pass
+
     def create_verifiable_presentation(self, holder_did, vc_files):
         args = ['present-credentials', '--holder-did', holder_did]
         for tmpfile in vc_files:
@@ -160,7 +181,10 @@ class WalletShell(cmd.Cmd, MenuHandler):
             raise PresentationError(err)
         return out
 
-    def export(self, entry):
+    def verify_presentation(self):
+        pass
+
+    def export_object(self, entry):
         filename = ''
         while filename in ('', None):
             filename = self.launch_input('Give filename:')
@@ -183,15 +207,6 @@ class WalletShell(cmd.Cmd, MenuHandler):
             err = 'Could not import: %s' % str(err)
             raise WalletImportError(err)
         return out
-
-    def run(self):
-        super().cmdloop()
-
-    def preloop(self):
-        pass
-
-    def postloop(self):
-        pass
 
     def do_list(self, line):
         try:
@@ -393,7 +408,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
             self.app.store_presentation(presentation)
         if self.launch_yes_no('Export?'):
             try:
-                outfile = self.export(presentation)
+                outfile = self.export_object(presentation)
             except Abortion:
                 self.flush('Aborted export')
                 return
@@ -543,7 +558,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
         alias = self.launch_single_choice('Choose', aliases)
         entry = self.app.get_entry(alias, group)
         try:
-            outfile = self.export(entry)
+            outfile = self.export_object(entry)
         except Abortion:
             self.flush('Export aborted')
             return
@@ -618,49 +633,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
             'Count objects of provided type',
         )
 
-    def help_inspect(self):
-        msg = '\n'.join([
-            'TODO',
-        ])
-        self.flush(msg)
-
-    def help_create(self):
-        msg = '\n'.join([
-            'TODO',
-        ])
-        self.flush(msg)
-
-    def help_resolve(self):
-        msg = '\n'.join([
-            'TODO',
-        ])
-        self.flush(msg)
-
-    def help_request(self):
-        msg = '\n'.join([
-            'TODO'
-        ])
-        self.flush(msg)
-
-    def help_remove(self):
-        msg = '\n'.join([
-            'TODO',
-        ])
-        self.flush(msg)
-
-    def help_clear(self):
-        msg = '\n'.join([
-            'TODO',
-        ])
-        self.flush(msg)
-
-    def help_EOF(self):
-        msg = '\n'.join([
-            'Quit current wallet session',
-        ])
-        self.flush(msg)
-
-    help_exit   = help_EOF
-    help_quit   = help_EOF
-    help_q      = help_EOF
+    # help_exit   = help_EOF
+    # help_quit   = help_EOF
+    # help_q      = help_EOF
 
