@@ -6,9 +6,8 @@ from util import HttpClient
 from conf import TMPDIR, WALTDIR, INTRO, PROMPT, INDENT, RESOLVED, \
     STORAGE, _Action, _UI, EBSI_PRFX, ED25519, SECP256
 from ssi_lib import SSIGenerationError, SSIRegistrationError, \
-    SSIResolutionError, SSIIssuanceError
+    SSIResolutionError, SSIIssuanceError, SSIVerificationError
 from ssi_lib.conf import _Group   # TODO: Get rid of this?
-from ssi_lib.walt import run_cmd    # TODO: Get rid of this
 from ssi_lib.conf import _Vc # TODO
 
 _mapping = {
@@ -234,8 +233,29 @@ class WalletShell(cmd.Cmd, MenuHandler):
             raise PresentationError(err)
         return out
 
-    def verify_presentation(self):
-        pass
+    def select_presentation(self):
+        match self.launch_single_choice('Select presentation to verify', [
+            _UI.CHOOSE, _UI.IMPORT]):
+            case _UI.CHOOSE:
+                aliases = self.app.get_presentations()
+                if not aliases:
+                    err = 'Nothing found'
+                    raise Abortion(err)
+                alias = self.launch_single_choice('', aliases)
+                out = self.app.get_presentation(alias)
+            case _UI.IMPORT:
+                try:
+                    out = self.import_object()
+                except WalletImportError:
+                    raise
+        return out
+
+    def verify_presentation(self, vp):
+        try:
+            results = self.app.verify_presentation(vp)
+        except SSIVerificationError as err:
+            raise VerificationError(err)
+        return results
 
     def export_object(self, entry):
         filename = ''
@@ -403,36 +423,17 @@ class WalletShell(cmd.Cmd, MenuHandler):
             self.flush('Exported to: %s' % outfile)
 
     def do_verify(self, line):
-        # Select presentation
-        match self.launch_single_choice('Select presentation to verify', [
-            _UI.CHOOSE, _UI.IMPORT]):
-            case _UI.CHOOSE:
-                aliases = self.app.get_presentations()
-                if not aliases:
-                    self.flush('Nothing found')
-                    return
-                alias = self.launch_single_choice('', aliases)
-                vp = self.app.get_presentation(alias)
-            case _UI.IMPORT:
-                try:
-                    vp = self.import_object()
-                except WalletImportError as err:
-                    self.flush(err)
-                    return
-        # Verify presentation
+        try:
+            vp = self.select_presentation()
+        except (Abortion, WalletImportError,) as err:
+            self.flush('Verification aborted: %s' % err)
+            return
         self.flush('Verifying (takes seconds)...')
-        tmpfile = self.dump(vp, 'vp.json')
-        res, code = run_cmd([
-            'verify-credentials', '--presentation', tmpfile,])
-        os.remove(tmpfile)
-        if code != 0:
-            err = 'Could not verify: %s' % res
-            raise VerificationError(err)
-        # Parse results
-        aux = res.split('Results: ', 1)[-1].replace(':', '').split(' ')
-        results = {}
-        for i in range(0, len(aux), 2):
-            results[aux[i]] = {'true': True, 'false': False}[aux[i + 1]]
+        try:
+            results = self.verify_presentation(vp)
+        except VerificationError as err:
+            self.flush('Could not verify: %s' % err)
+            return
         # Flush results
         verified = results['Verified']
         message = 'Presentation was %sverified:' % ('' if verified else 'NOT ')

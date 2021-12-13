@@ -68,5 +68,11 @@ class WaltWrapper(object):
         res, code = run_cmd(args)
         return res, code
 
-    def _verify_credential(self, *args):
-        raise NotImplementedError('TODO')
+    def _verify_presentation(self, presentation):
+        tmpfile = os.path.join(self.tmpdir, 'vp.json')
+        with open(tmpfile, 'w+') as f:
+            json.dump(presentation, f)
+        res, code = run_cmd([
+            'verify-credentials', '--presentation', tmpfile,])
+        os.remove(tmpfile)
+        return res, code

@@ -8,9 +8,6 @@ from .conf import _Group, _Vc
 class SSIGenerationError(BaseException):
     pass
 
-class SSICreationError(BaseException):
-    pass
-
 class SSIRegistrationError(BaseException):
     pass
 
@@ -18,6 +15,9 @@ class SSIResolutionError(BaseException):
     pass
 
 class SSIIssuanceError(BaseException):
+    pass
+
+class SSIVerificationError(BaseException):
     pass
 
 _commands = {
@@ -230,5 +230,13 @@ class SSIApp(WaltWrapper):
             os.remove(tmpfile)
         return out
 
-    def verify_credentials(self, *args):
-        raise NotImplementedError('TODO')
+    def verify_presentation(self, presentation):
+        res, code = self._verify_presentation(presentation)
+        if code != 0:
+            raise SSIVerificationError(res)
+        # Parse results
+        aux = res.split('Results: ', 1)[-1].replace(':', '').split(' ')
+        results = {}
+        for i in range(0, len(aux), 2):
+            results[aux[i]] = {'true': True, 'false': False}[aux[i + 1]]
+        return results
