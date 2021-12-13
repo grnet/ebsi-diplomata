@@ -1,8 +1,8 @@
 import json
 import os
-from .conf import _Group
 from .db import DbConnector
 from .walt import WaltWrapper
+from .conf import _Group, _Vc
 
 
 class SSIGenerationError(BaseException):
@@ -17,11 +17,19 @@ class SSIRegistrationError(BaseException):
 class SSIResolutionError(BaseException):
     pass
 
+class SSIIssuanceError(BaseException):
+    pass
+
+_commands = {
+    _Vc.DIPLOMA: 'issue-diploma',
+    # TODO: Add here more options
+}
+
 class SSIApp(WaltWrapper):
 
     def __init__(self, dbpath, tmpdir):
         self._db = DbConnector(dbpath)
-        self.tmpdir = tmpdir
+        self.tmpdir = tmpdir    # TODO: Maybe pass it as argument to methods
         super().__init__(tmpdir)
 
     @classmethod
@@ -148,8 +156,63 @@ class SSIApp(WaltWrapper):
         if code != 0:
             raise SSIResolutionError(res)
 
-    def issue_credential(self, *args):
-        raise NotImplementedError('TODO')
+    def _complete_credentials_form(self, template, content):
+        match template:
+            case _Vc.DIPLOMA:
+                # TODO: Issuer should here complete the following form by
+                # comparing the submitted content against its database. Empty 
+                # strings lead to the demo defaults of the walt-ssi library. 
+                # IMPORTANT: Order of key-value pairs matters!!!
+                form = {
+                    'person_identifier': content['person_id'],
+                    'person_family_name': content['name'],
+                    'person_given_name': content['surname'],
+                    'person_date_of_birth': '',
+                    'awarding_opportunity_id': '',
+                    'awarding_opportunity_identifier': content['subject'],
+                    'awarding_opportunity_location': '',
+                    'awarding_opportunity_started_at': '',
+                    'awarding_opportunity_ended_at': '',
+                    'awarding_body_preferred_name': '',
+                    'awarding_body_homepage': '',
+                    'awarding_body_registraction': '',
+                    'awarding_body_eidas_legal_identifier': '',
+                    'grading_scheme_id': '',
+                    'grading_scheme_title': '',
+                    'grading_scheme_description': '',
+                    'learning_achievement_id': '',
+                    'learning_achievement_title': '',
+                    'learning_achievement_description': '',
+                    'learning_achievement_additional_note': '',
+                    'learning_specification_id': '',
+                    'learning_specification_ects_credit_points': '',
+                    'learning_specification_eqf_level': '',
+                    'learning_specification_iscedf_code': '',
+                    'learning_specification_nqf_level': '',
+                    'learning_specification_evidence_id': '',
+                    'learning_specification_evidence_type': '',
+                    'learning_specification_verifier': '',
+                    'learning_specification_evidence_document': '',
+                    'learning_specification_subject_presence': '',
+                    'learning_specification_document_presence': '',
+                }
+            case _:
+                raise NotImplementedError('TODO')
+        arguments = form.values()
+        return arguments
+
+    def issue_credential(self, holder_did, issuer_did, template, content):
+        command = _commands[template]
+        arguments = self._complete_credentials_form(template, content)
+        outfile = os.path.join(self.tmpdir, 'vc.json')
+        res, code = self._issue_credential(holder_did, issuer_did,
+                command, arguments, outfile)
+        if code != 0:
+            raise SSIIssuanceError(res)
+        with open(outfile, 'r') as f:
+            out = json.load(f)
+        os.remove(outfile)
+        return out
 
     def generate_presentation(self, holder_did, credentials, waltdir):
         res, code = self._generate_presentation(holder_did, credentials)

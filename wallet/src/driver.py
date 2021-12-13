@@ -6,9 +6,10 @@ from util import HttpClient
 from conf import TMPDIR, WALTDIR, INTRO, PROMPT, INDENT, RESOLVED, \
     STORAGE, _Action, _UI, EBSI_PRFX, ED25519, SECP256
 from ssi_lib import SSIGenerationError, SSIRegistrationError, \
-    SSIResolutionError
+    SSIResolutionError, SSIIssuanceError
 from ssi_lib.conf import _Group   # TODO: Get rid of this?
 from ssi_lib.walt import run_cmd    # TODO: Get rid of this
+from ssi_lib.conf import _Vc # TODO
 
 _mapping = {
     _UI.KEY: _Group.KEY,
@@ -163,8 +164,40 @@ class WalletShell(cmd.Cmd, MenuHandler):
             out = json.load(f)
         return out
 
-    def issue_credential(self):
-        pass
+    def issue_credential(self, line):
+        aliases = self.app.get_dids()
+        if not aliases:
+            self.flush('No DIDs found. Must first create one.')
+            return
+        holder_did = self.launch_single_choice('Choose holder DID', aliases)
+        issuer_did = self.launch_single_choice('Choose issuer DID', aliases)
+        # TODO: Construct payload via user input
+        payload = {
+            'header': {
+                'holder': holder_did,
+                'issuer': issuer_did,
+                'template': _Vc.DIPLOMA,
+            },
+            'content': {
+                'person_id': '0x666',
+                'name': 'Lucrezia',
+                'surname': 'Borgia',
+                'subject': 'POISONING',
+            },
+        }
+        if not self.launch_yes_no('New credential will be issued. Proceed?'):
+            raise Abortion('Issuance aborted')
+        try:
+            # TODO: Define payload extraction
+            holder_did = payload['header']['holder']
+            issuer_did = payload['header']['issuer']
+            template = payload['header']['template']
+            content = payload['content']
+            out = self.app.issue_credential(holder_did, issuer_did, template,
+                    content)
+        except SSIIssuanceError as err:
+            raise IssuanceError(err)
+        return out
 
     def create_presentation(self, holder_did, credentials):
         try:
@@ -316,6 +349,9 @@ class WalletShell(cmd.Cmd, MenuHandler):
                     return
                 self.flush('Created DID: %s' % alias)
 
+    def do_register(self, line):
+        pass
+
     def do_resolve(self, line):
         alias = self.launch_input('Give DID:')
         self.flush('Resolving ...')
@@ -328,69 +364,21 @@ class WalletShell(cmd.Cmd, MenuHandler):
         self.flush(did)
 
     def do_issue(self, line):
-        dids = self.app.get_aliases(_Group.DID)
-        if not dids:
-            self.flush('No DIDs found. Must first create one.')
+        try:
+            credential = self.issue_credential(line)
+        except IssuanceError as err:
+            self.flush('Could not issue: %s' % err)
             return
-        holder_did = self.launch_single_choice('Choose holder DID', dids)
-        issuer_did = self.launch_single_choice('Choose issuer DID', dids)
-        if not self.launch_yes_no('New credential will be issued. Proceed?'):
-            self.flush('Issuance aborted')
+        except Abortion as msg:
+            self.flush(msg)
             return
-        # TODO: Issuer should here fill the following template by comparing the
-        # submitted payload against its database. Empty strings lead to the
-        # demo defaults of the walt library. 
-        vc_content = {
-            'holder_did': holder_did,
-            'person_identifier': '',
-            'person_family_name': '',
-            'person_given_name': '',
-            'person_date_of_birth': '',
-            'awarding_opportunity_id': '',
-            'awarding_opportunity_identifier': '',
-            'awarding_opportunity_location': '',
-            'awarding_opportunity_started_at': '',
-            'awarding_opportunity_ended_at': '',
-            'awarding_body_preferred_name': '',
-            'awarding_body_homepage': '',
-            'awarding_body_registraction': '',
-            'awarding_body_eidas_legal_identifier': '',
-            'grading_scheme_id': '',
-            'grading_scheme_title': '',
-            'grading_scheme_description': '',
-            'learning_achievement_id': '',
-            'learning_achievement_title': '',
-            'learning_achievement_description': '',
-            'learning_achievement_additional_note': '',
-            'learning_specification_id': '',
-            'learning_specification_ects_credit_points': '',
-            'learning_specification_eqf_level': '',
-            'learning_specification_iscedf_code': '',
-            'learning_specification_nqf_level': '',
-            'learning_specification_evidence_id': '',
-            'learning_specification_evidence_type': '',
-            'learning_specification_verifier': '',
-            'learning_specification_evidence_document': '',
-            'learning_specification_subject_presence': '',
-            'learning_specification_document_presence': '',
-        }
-        tmpfile = os.path.join(TMPDIR, 'vc.json')
-        res, code = run_cmd([
-            'issue-credential-ni',  # TODO
-            *vc_content.values(),   # TODO
-            issuer_did,             # TODO
-            tmpfile,                # TODO
-        ])
-        if code != 0:
-            err = 'Could not issue credential: %s' % res
-            raise IssuanceError(err)
-        with open(tmpfile, 'r') as f:
-            credential = json.load(f)
-        os.remove(tmpfile)
-        if not self.launch_yes_no('Credential has been issued. Save?'):
-            del credential
-            self.flush('Credential was lost forever')
-            return
+        self.flush('Issued credential')
+        if self.launch_yes_no('Inspect?'):
+            self.flush(credential)
+        if not self.launch_yes_no('Save to disk?'):
+            if self.launch_yes_no('Credential will be lost. Are you sure?'):
+                del credential
+                return
         self.app.store_credential(credential)
         self.flush('The following credential was saved to disk:')
         self.flush(credential['id'])

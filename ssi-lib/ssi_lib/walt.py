@@ -50,8 +50,16 @@ class WaltWrapper(object):
         res, code = run_cmd(['resolve-did', '--did', alias,])
         return res, code
 
-    def _issue_credential(self, *args):
-        raise NotImplementedError('TODO')
+    def _issue_credential(self, holder_did, issuer_did, command, arguments,
+            outfile):
+        res, code = run_cmd([
+            command,
+            '--holder-did', holder_did,
+            '--issuer-did', issuer_did,
+            '--export', outfile,
+            *arguments,
+        ])
+        return res, code
 
     def _generate_presentation(self, holder_did, credentials):
         args = ['present-credentials', '--holder-did', holder_did]
