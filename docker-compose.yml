@@ -20,9 +20,6 @@ services:
       - SQL_ENGINE=django.db.backends.postgresql
       - SQL_HOST=diplomas-db
       - SQL_PORT=5432
-      - EBSI_TOKEN=${WEB_EBSI_TOKEN}
-      - KEYGEN_ALGO=${WEB_KEYGEN_ALGO}
-      - FORCE_DID=${WEB_FORCE_DID}
     volumes:
       - ./web:/home/web/app
       - ./storage/issuer:/home/web/storage
@@ -48,9 +45,6 @@ services:
       - SQL_ENGINE=django.db.backends.postgresql
       - SQL_HOST=diplomas-db
       - SQL_PORT=5432
-      - EBSI_TOKEN=${WEB_EBSI_TOKEN}
-      - KEYGEN_ALGO=${WEB_KEYGEN_ALGO}
-      - FORCE_DID=${WEB_FORCE_DID}
     volumes:
       - ./web:/home/web/app
       - ./storage/verifier:/home/web/storage

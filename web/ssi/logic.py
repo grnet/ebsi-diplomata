@@ -21,11 +21,7 @@ class IssuanceError(BaseException):     # TODO
 
 class SSIParty(SSIApp):
 
-    def __init__(self, dbpath, tmpdir, 
-            algo,                       # TODO: Remove?
-            token='',                   # TODO: Remove?
-            force_did=False             # TODO: Remove?
-        ):
+    def __init__(self, dbpath, tmpdir):
         super().__init__(dbpath, tmpdir)
 
     @classmethod
@@ -37,25 +33,15 @@ class SSIParty(SSIApp):
     def create(cls, config):
         dbpath = config['dbpath']
         tmpdir = config['tmpdir']
-        algo = config['algo']
-        token = config.get('token', '')
-        force_did = config.get('force_did', False)
-        return cls(dbpath, tmpdir, algo, token, force_did)
+        return cls(dbpath, tmpdir)
 
     @classmethod
     def derive_config(cls, settings):
         out = {}
         dbpath = os.path.join(settings.STORAGE, 'db.json')      # TODO
         tmpdir = settings.TMPDIR
-        algo = os.environ.get('KEYGEN_ALGO', 'Ed25519')         # TODO
-        token = os.environ.get('EBSI_TOKEN', '')                # TODO
-        force_did = bool(int(os.environ.get('FORCE_DID',
-            default=0)))                                        # TODO
         out['dbpath'] = dbpath
         out['tmpdir'] = tmpdir
-        out['algo'] = algo
-        out['token'] = token
-        out['force_did'] = force_did
         return out
 
     def _create_key(self, algo):
