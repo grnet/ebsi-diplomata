@@ -54,7 +54,10 @@ def issue_credential(request):
 @require_http_methods(['POST',])
 def verify_credentials(request):
     payload = json.loads(request.body)
-    ssi_party.verify_credentials(payload)               # TODO
-    out = {'message': 'OK'}                             # TODO
-    status = 200                                        # TODO
+    try:
+        out = ssi_party.verify_presentation(payload)    # TODO
+        status = 200
+    except VerificationError as err:
+        out = {'message': '%s' % err}                   # TODO
+        status = 512
     return JsonResponse(out, safe=False, status=status)

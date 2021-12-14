@@ -447,7 +447,8 @@ class WalletShell(cmd.Cmd, MenuHandler):
             return
         # Flush results
         verified = results['Verified']
-        message = 'Presentation was %sverified:' % ('' if verified else 'NOT ')
+        message = 'Presentation was %sverified:' % (
+            '' if verified else 'NOT ')
         self.flush(message)
         self.flush(results)
 
@@ -491,60 +492,33 @@ class WalletShell(cmd.Cmd, MenuHandler):
                         self.flush('Could not issue:')
                         self.flush(resp.json())             # TODO: Capture message
             case _Action.VERIFY:
-                # choices = self.app.get_aliases(_Group.VC)
-                # if not choices:
-                #     self.flush('No credentials found')
-                #     return
-                # alias = self.launch_choice('Choose credential', 
-                #     choices)
-                # credential = self.app.get_entry(alias, _Group.VC)
-                # # TODO: Choose from known registar of verifiers?
-                # remote = 'http://localhost:7001'
-                # endpoint = 'api/v1/credentials/verify/'
-                # # TODO: Construction of payload presupposes that an API
-                # # spec is known on behalf of the verifier
-                # payload = {
-                #     'credential': credential,
-                # }
-                # resp = HttpClient(remote).post(endpoint, payload)
-                # # TODO
-                # self.flush(resp.json())
-                did_choices = self.app.get_aliases(_Group.DID)
-                if not did_choices:
-                    self.flush('No DIDs found. Must create at least one.')
-                    return
-                did = self.launch_choice('Choose DID', did_choices)
-                vc_choices = self.app.get_credentials_by_did(did)
-                if not vc_choices:
-                    self.flush('No credentials found for the provided DID')
-                    return
-                selected = self.launch_selection(
-                    'Select credentials to present', vc_choices)
-                credentials = [self.app.get_credential(alias) for alias in
-                    selected]
-                if not credentials:
-                    self.flush('Aborted')  # TODO
-                    return
-                vc_files = []
-                for c in credentials:
-                    tmpfile = os.path.join(TMPDIR, '%s.json' \
-                        % c['id'])
-                    with open(tmpfile, 'w+') as f:
-                        json.dump(c, f, indent=INDENT)
-                    vc_files += [tmpfile,]
                 try:
-                    vp = self.app.create_verifiable_presentation(vc_files, 
-                            did)
-                except SSICreationError as err:
-                    self.flush(err)
+                    payload = self.select_presentation()
+                except (Abortion, WalletImportError,) as err:
+                    self.flush('Could not select: %s' % err)
                     return
-                pass    # TODO
-                #
-                #
-                #
-                import pdb; pdb.set_trace()
-                for tmpfile in vc_files:
-                    os.remove(tmpfile)
+                # TODO: Choose from known registar of verifiers?
+                # TODO: Handle connection errors and timeouts
+                remote = 'http://localhost:7001'
+                endpoint = 'api/v1/credentials/verify/'
+                resp = HttpClient(remote).post(endpoint, payload)
+                # TODO: This handling assumes that an API spect has been
+                # aedvertized on behalf of the verifier
+                match resp.status_code:
+                    case 200:
+                        resutlts = resp.json()
+                        verified = results['Verified']
+                        message = 'Presentation was %sverified:' % (
+                            '' if verified else 'NOT ')
+                        self.flush(message)
+                        self.flush(results)
+                    case 512:
+                        message = resp.json()['message']
+                        self.flush('Could not verify: %s' % message)
+                    case _:
+                        self.flush('Could not verify:')
+                        self.flush(resp.json())             # TODO: Capture message
+                pass
             case _Action.DISCARD:
                 self.flush('Request aborted')
 

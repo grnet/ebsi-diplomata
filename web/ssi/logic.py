@@ -18,6 +18,9 @@ class CreationError(BaseException):     # TODO
 class IssuanceError(BaseException):     # TODO
     pass
 
+class VerificationError(BaseException): # TODO
+    pass
+
 
 class SSIParty(SSIApp):
 
@@ -90,6 +93,11 @@ class SSIParty(SSIApp):
         content = payload['content']
         return holder_did, template, content
 
+    def _extract_verification_payload(self, payload):
+        # TODO: Implement
+        vp = payload
+        return vp
+
     def get_info(self):
         return {'TODO': 'Include here service info'}        # TODO
 
@@ -122,7 +130,6 @@ class SSIParty(SSIApp):
         logging.info('Created DID %s' % alias)
         return alias
 
-
     def issue_credential(self, payload):
         holder_did, template, content = self._extract_issuance_payload(
             payload)
@@ -135,4 +142,12 @@ class SSIParty(SSIApp):
                     content)
         except SSIIssuanceError as err:
             raise IssuanceError(err)
+        return out
+
+    def verify_presentation(self, payload):
+        vp = self._extract_verification_payload(payload)
+        try:
+            out = super().verify_presentation(vp)
+        except SSIVerificationError as err:
+            raise VerificationError(err)
         return out
