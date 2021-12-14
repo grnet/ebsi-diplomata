@@ -7,6 +7,7 @@ api_endpoint = 'api/v1/'
 ssi_urls = [
     path('', show_info),
     path('did/', show_did),
+    path('did/create/', create_did),
     path('credentials/issue/', issue_credential),
     path('credentials/verify/', verify_credentials),
 ]

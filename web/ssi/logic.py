@@ -21,26 +21,12 @@ class IssuanceError(BaseException):     # TODO
 
 class SSIParty(SSIApp):
 
-    def __init__(self, dbpath, tmpdir, algo, token='',
-            force_did=False):
+    def __init__(self, dbpath, tmpdir, 
+            algo,                       # TODO: Remove?
+            token='',                   # TODO: Remove?
+            force_did=False             # TODO: Remove?
+        ):
         super().__init__(dbpath, tmpdir)
-        if self.get_nr_dids() == 0 or force_did:
-            logging.info('\nCLEARING\n')
-            self.clear_keys()
-            self.clear_dids()
-            try:
-                key = self.create_key(algo)
-            except CreationError as err:
-                logging.error('Could not create key: %s' % err)
-                return
-            logging.info('Created key %s' % key)
-            try:
-                onboard = False                                 # TODO
-                alias = self.create_did(key, token, onboard)
-            except CreationError as err:
-                logging.error('Could not create DID: %s' % err)
-                return
-            logging.info('Created DID %s' % alias)
 
     @classmethod
     def init_from_app(cls, settings):
@@ -72,7 +58,7 @@ class SSIParty(SSIApp):
         out['force_did'] = force_did
         return out
 
-    def create_key(self, algo):
+    def _create_key(self, algo):
         logging.info('Generating %s key (takes seconds) ...' % algo)
         try:
             key = self.generate_key(algo)
@@ -82,7 +68,7 @@ class SSIParty(SSIApp):
         alias = self.store_key(key)
         return alias
 
-    def create_did(self, key, token, onboard=True):
+    def _create_did(self, key, token, onboard=True):
         logging.info('Generating DID (takes seconds) ...')
         try:
             did = self.generate_did(key, token, onboard)
@@ -100,8 +86,19 @@ class SSIParty(SSIApp):
         alias = self.store_did(did)
         return alias
 
+    def _get_did(self):
+        dids = self.get_dids()
+        return dids[-1] if dids else None
+
+    def _extract_did_creation_payload(self, payload):
+        # TODO: Validate
+        token = payload.get('token', '')                    # TODO
+        algo = payload.get('algo', 'Ed25519')               # TODO
+        onboard = payload.get('onboard', True)              # TODO
+        return token, algo, onboard
+
     def _extract_issuance_payload(self, payload):
-        # TODO: Validate structure
+        # TODO: Validate
         holder_did = payload['holder']
         template = payload['template']
         content = payload['content']
@@ -109,10 +106,6 @@ class SSIParty(SSIApp):
 
     def get_info(self):
         return {'TODO': 'Include here service info'}        # TODO
-
-    def _get_did(self):
-        dids = self.get_dids()
-        return dids[-1] if dids else None
 
     def get_did(self, full=False):                          # TODO
         dids = self.get_dids()
@@ -123,6 +116,26 @@ class SSIParty(SSIApp):
         if not full:
             return alias
         return super().get_did(alias)
+
+    def create_did(self, payload):
+        token, algo, onboard = self._extract_did_creation_payload(
+            payload)
+        self.clear_keys()
+        self.clear_dids()
+        try:
+            key = self._create_key(algo)
+        except CreationError as err:
+            err = 'Could not create key: %s' % err
+            raise CreationError(err)
+        logging.info('Created key %s' % key)
+        try:
+            alias = self._create_did(key, token, onboard)
+        except CreationError as err:
+            err = 'Could not create DID: %s' % err
+            raise CreationError(err)
+        logging.info('Created DID %s' % alias)
+        return alias
+
 
     def issue_credential(self, payload):
         holder_did, template, content = self._extract_issuance_payload(

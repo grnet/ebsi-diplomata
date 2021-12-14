@@ -3,7 +3,7 @@ from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
-from ssi.logic import IssuanceError, IdentityError
+from ssi.logic import IssuanceError, CreationError, IdentityError
 from common import load_ssi_party
 
 
@@ -23,6 +23,19 @@ def show_did(request):
     except IdentityError as err:
         out = {'message': '%s' % err}                   # TODO
         status = 200                                    # TODO
+    return JsonResponse(out, safe=False, status=status)
+
+@csrf_exempt
+@require_http_methods(['PUT',])
+def create_did(request):
+    payload = json.loads(request.body)
+    try:
+        alias = ssi_party.create_did(payload)
+        out = {'did': alias}
+        status = 201
+    except CreationError as err:
+        out = {'message': '%s' % err}                   # TODO
+        status = 512                                    # TODO
     return JsonResponse(out, safe=False, status=status)
 
 @csrf_exempt
