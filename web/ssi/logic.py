@@ -25,6 +25,7 @@ class SSIParty(SSIApp):
             force_did=False):
         super().__init__(dbpath, tmpdir)
         if self.get_nr_dids() == 0 or force_did:
+            logging.info('\nCLEARING\n')
             self.clear_keys()
             self.clear_dids()
             try:
@@ -78,8 +79,7 @@ class SSIParty(SSIApp):
         except SSIGenerationError as err:
             err = 'Could not generate key: %s' % err
             raise CreationError(err)
-        self.store_key(key)
-        alias = key['kid']
+        alias = self.store_key(key)
         return alias
 
     def create_did(self, key, token, onboard=True):
@@ -89,16 +89,15 @@ class SSIParty(SSIApp):
         except SSIGenerationError as err:
             err = 'Could not generate DID: %s' % err
             raise CreationError(err)
-        alias = did['id']
         if onboard:
             logging.info('Registering DID to EBSI (takes seconds)...')
             try:
-                self.register_did(alias, token)
+                self.register_did(did['id'], token)
             except SSIRegistrationError as err:
                 err = 'Could not register: %s' % err
                 raise CreationError(err)
             logging.info('DID registered to EBSI')
-        self.store_did(did)
+        alias = self.store_did(did)
         return alias
 
     def _extract_issuance_payload(self, payload):

@@ -130,8 +130,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
         except SSIGenerationError as err:
             err = 'Could not generate key: %s' % err
             raise CreationError(err)
-        self.app.store_key(key)
-        alias = key['kid']
+        alias = self.app.store_key(key)
         return alias
 
     def register_did(self, alias, token):
@@ -146,14 +145,13 @@ class WalletShell(cmd.Cmd, MenuHandler):
         except SSIGenerationError as err:
             err = 'Could not generate DID: %s' % err
             raise CreationError(err)
-        alias = did['id']
         if onboard:
             try:
-                self.app.register_did(alias, token)
+                self.app.register_did(did['id'], token)
             except SSIRegistrationError as err:
                 err = 'Could not register: %s' % err
                 raise CreationError(err)
-        self.app.store_did(did)
+        alias = self.app.store_did(did)
         return alias
 
     def retrieve_resolved_did(self, alias):
@@ -410,9 +408,9 @@ class WalletShell(cmd.Cmd, MenuHandler):
             if self.launch_yes_no('Credential will be lost. Are you sure?'):
                 del credential
                 return
-        self.app.store_credential(credential)
-        self.flush('The following credential was saved to disk:')
-        self.flush(credential['id'])
+        alias = self.app.store_credential(credential)
+        self.flush('Credential was saved to disk:')
+        self.flush(alias)
 
     def do_present(self, line):
         try:
@@ -424,7 +422,9 @@ class WalletShell(cmd.Cmd, MenuHandler):
         if self.launch_yes_no('Inspect?'):
             self.flush(presentation)
         if self.launch_yes_no('Save in disk?'):
-            self.app.store_presentation(presentation)
+            alias = self.app.store_presentation(presentation)
+            self.flush('Credential was saved to disk:')
+            self.flush(alias)
         if self.launch_yes_no('Export?'):
             try:
                 outfile = self.export_object(presentation)
@@ -455,7 +455,6 @@ class WalletShell(cmd.Cmd, MenuHandler):
         action = self.launch_choice('Request', [
             _UI.ISSUE, 
             _UI.VERIFY, 
-            _UI.DISCARD,
         ])
         match _mapping[action]:
             case _Action.ISSUE:
@@ -465,19 +464,26 @@ class WalletShell(cmd.Cmd, MenuHandler):
                     self.flush('Request aborted: %s' % err)
                     return
                 # TODO: Choose from known registar of issuers?
+                # TODO: Handle connection errors and timeouts
                 remote = 'http://localhost:7000'
                 endpoint = 'api/v1/credentials/issue/'
-                # TODO: Handle connection errors and timeouts
                 resp = HttpClient(remote).post(endpoint, payload)
+                # TODO: This handling assumes that an API spect has been
+                # aedvertized on behalf of the issuer
                 match resp.status_code:
-                    # TODO: This handling assumes that an API spect has been
-                    # aedvertized on behalf of the issuer
                     case 200:
+                        self.flush('Credential received from issuer')
                         credential = resp.json()
-                        # TODO: Ask before saving?
-                        self.app.store_credential(credential)   # TODO
-                        self.flush('The following credential was saved to disk:')
-                        self.flush(credential['id'])
+                        if self.launch_yes_no('Inspect?'):
+                            self.flush(credential)
+                        if not self.launch_yes_no('Save to disk?'):
+                            if self.launch_yes_no('Credential will be lost. '
+                            + 'Are you sure?'):
+                                del credential
+                                return
+                        alias = self.app.store_credential(credential)
+                        self.flush('Credential was saved to disk:')
+                        self.flush(alias)
                     case 512:
                         message = resp.json()['message']
                         self.flush('Could not issue: %s' % message)

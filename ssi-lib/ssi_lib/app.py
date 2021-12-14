@@ -1,3 +1,7 @@
+import json
+import os
+from .db import DbConnector
+from .walt import WaltWrapper
 from .conf import _Group, _Vc
 
 
@@ -83,19 +87,19 @@ class SSIApp(WaltWrapper):
         return self._db.get_entry(alias, _Group.VP)
 
     def store(self, obj, group):
-        self._db.store(obj, group)
+        return self._db.store(obj, group)
 
     def store_key(self, obj):
-        self._db.store(obj, _Group.KEY)
+        return self._db.store(obj, _Group.KEY)
 
     def store_did(self, obj):
-        self._db.store(obj, _Group.DID)
+        return self._db.store(obj, _Group.DID)
 
     def store_credential(self, obj):
-        self._db.store(obj, _Group.VC)
+        return self._db.store(obj, _Group.VC)
 
     def store_presentation(self, obj):
-        self._db.store(obj, _Group.VP)
+        return self._db.store(obj, _Group.VP)
 
     def remove(self, alias, group):
         self._db.remove(alias, group)

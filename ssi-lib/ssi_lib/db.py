@@ -2,12 +2,6 @@ from tinydb import TinyDB, where
 import json
 from .conf import _Group
 
-DBCONF  = {
-    'sort_keys': True,
-    'indent': 4,
-    'separators': [',', ': '],
-}
-
 _pkey = {
     _Group.KEY: 'kid',
     _Group.DID: 'id',
@@ -22,7 +16,11 @@ class DbConnector(object):
 
     @staticmethod
     def _init_db(path):
-        db = TinyDB(path, **DBCONF)
+        db = TinyDB(path, **{
+            'sort_keys': True,
+            'indent': 4,
+            'separators': [',', ': '],
+        })
         for group in (_Group.KEY, _Group.DID, _Group.VC, _Group.VP):
             db.table(group)
         return db
@@ -60,7 +58,7 @@ class DbConnector(object):
         did = self._get(alias, _Group.DID)
         if did:
             return did['verificationMethod'][0]['publicKeyJwk']['kid']
- 
+
     def _store(self, obj, group):
         self.db.table(group).insert(obj)
 
@@ -90,7 +88,9 @@ class DbConnector(object):
         return self._get_key_from_did(alias)
 
     def store(self, obj, group):
+        alias = obj[_pkey[group]]
         self._store(obj, group)
+        return alias
 
     def remove(self, alias, group):
         self._remove(alias, group)
