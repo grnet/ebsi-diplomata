@@ -97,4 +97,5 @@ export WEB_KEYGEN_ALGO=$KEYGEN_ALGO
 export WEB_FORCE_DID=$FORCE_DID
 echo
 
-docker-compose -f $COMPOSE_FILE up
+docker-compose -f $COMPOSE_FILE up \
+    --remove-orphans

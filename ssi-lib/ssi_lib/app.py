@@ -1,7 +1,3 @@
-import json
-import os
-from .db import DbConnector
-from .walt import WaltWrapper
 from .conf import _Group, _Vc
 
 
@@ -119,9 +115,9 @@ class SSIApp(WaltWrapper):
     def clear_presentations(self):
         self._db.clear(_Group.VP)
 
-    def generate_key(self, algorithm):
+    def generate_key(self, algo):
         outfile = os.path.join(self.tmpdir, 'jwk.json')
-        res, code = self._generate_key(algorithm, outfile)
+        res, code = self._generate_key(algo, outfile)
         if code != 0:
             raise SSIGenerationError(res)
         with open(outfile, 'r') as f:

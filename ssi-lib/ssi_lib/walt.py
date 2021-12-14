@@ -15,9 +15,9 @@ class WaltWrapper(object):
     def __init__(self, tmpdir):
         self.tmpdir = tmpdir
 
-    def _generate_key(self, algorithm, outfile):
+    def _generate_key(self, algo, outfile):
         res, code = run_cmd([
-            'generate-key', '--algo', algorithm, '--export', outfile,
+            'generate-key', '--algo', algo, '--export', outfile,
         ])
         return res, code
 

@@ -5,6 +5,7 @@ usage_string="usage: ./$(basename "$0") [OPTIONS]
 Wallet driver script. TODO
 
 Options:
+  --name        Container name. Defaults to holder.
   --build       Build image before running the app 
   --only-build  Build image without running app
   -h, --help    Display help message and exit
@@ -15,7 +16,7 @@ Examples:
 usage() { echo -n "$usage_string" 1>&2; }
 
 IMAGE=wallet
-CONTAINER=wallet
+CONTAINER=holder
 WORKDIR=/home/wallet/app
 
 DO_BUILD=false
@@ -25,6 +26,11 @@ while [[ $# -gt 0 ]]
 do
     arg="$1"
     case $arg in
+        --name)
+            CONTAINER="$2"
+            shift
+            shift
+            ;;
         --build)
             DO_BUILD=true
             shift
@@ -54,7 +60,7 @@ if [ ${DO_BUILD} == true ]; then
 fi
 
 if [ ${DO_RUN} == true ]; then
-    docker container rm "${CONTAINER}"
+    docker container rm "${CONTAINER}" >/dev/null
     docker run \
         --name ${CONTAINER} \
         --volume ${PWD}/wallet:/${WORKDIR} \

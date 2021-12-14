@@ -98,7 +98,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
         line = line.strip().lower().rstrip('s')
         match line:
             case '':
-                ans = self.launch_single_choice(prompt, [
+                ans = self.launch_choice(prompt, [
                     _UI.KEYS, 
                     _UI.DIDS, 
                     _UI.VCS,
@@ -124,9 +124,9 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 raise BadInputError(err)
         return out
 
-    def create_key(self, algorithm):
+    def create_key(self, algo):
         try:
-            key = self.app.generate_key(algorithm)
+            key = self.app.generate_key(algo)
         except SSIGenerationError as err:
             err = 'Could not generate key: %s' % err
             raise CreationError(err)
@@ -163,20 +163,18 @@ class WalletShell(cmd.Cmd, MenuHandler):
             out = json.load(f)
         return out
 
-    def issue_credential(self, line):
+    def prepare_issuance_payload(self):
         aliases = self.app.get_dids()
         if not aliases:
-            self.flush('No DIDs found. Must first create one.')
-            return
-        holder_did = self.launch_single_choice('Choose holder DID', aliases)
-        issuer_did = self.launch_single_choice('Choose issuer DID', aliases)
-        # TODO: Construct payload via user input
+            err = 'No DIDs found. Must first create one.'
+            raise Abortion(err)
+        holder_did = self.launch_choice('Choose holder DID', aliases)
+        # TODO: Select values via user input
+        # TODO: This construction assumes than an API spec has been advertized
+        # on behalf of the issuer
         payload = {
-            'header': {
-                'holder': holder_did,
-                'issuer': issuer_did,
-                'template': _Vc.DIPLOMA,
-            },
+            'holder': holder_did,
+            'template': _Vc.DIPLOMA,
             'content': {
                 'person_id': '0x666',
                 'name': 'Lucrezia',
@@ -184,14 +182,28 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 'subject': 'POISONING',
             },
         }
+        return payload
+
+    def extract_issuance_payload(self, payload):
+        # TODO: Validate structure?
+        holder_did = payload['holder']
+        template = payload['template']
+        content = payload['content']
+        return holder_did, template, content
+
+    def issue_credential(self, line):
+        try:
+            payload = self.prepare_issuance_payload()
+        except Abortion as err:
+            self.flush('Request aborted: %s' % err)
+            return
+        aliases = self.app.get_dids()
+        issuer_did = self.launch_choice('Choose issuer DID', aliases)
         if not self.launch_yes_no('New credential will be issued. Proceed?'):
             raise Abortion('Issuance aborted')
         try:
-            # TODO: Define payload extraction
-            holder_did = payload['header']['holder']
-            issuer_did = payload['header']['issuer']
-            template = payload['header']['template']
-            content = payload['content']
+            holder_did, template, content = self.extract_issuance_payload(
+                payload)
             out = self.app.issue_credential(holder_did, issuer_did, template,
                     content)
         except SSIIssuanceError as err:
@@ -212,12 +224,12 @@ class WalletShell(cmd.Cmd, MenuHandler):
         if not did_choices:
             err = 'No DIDs found. Must create at least one.'
             raise PresentationError(err)
-        holder_did = self.launch_single_choice('Choose holder DID', did_choices)
+        holder_did = self.launch_choice('Choose holder DID', did_choices)
         vc_choices = self.app.get_credentials_by_did(holder_did)
         if not vc_choices:
             err = 'No credentials found for the provided holder DID'
             raise PresentationError(err)
-        vc_selected = self.launch_multiple_choices(
+        vc_selected = self.launch_selection(
             'Select credentials to verify', vc_choices)
         if not vc_selected:
             err = 'Presentation aborted: No credentials selected'
@@ -234,14 +246,14 @@ class WalletShell(cmd.Cmd, MenuHandler):
         return out
 
     def select_presentation(self):
-        match self.launch_single_choice('Select presentation to verify', [
+        match self.launch_choice('Select presentation to verify', [
             _UI.CHOOSE, _UI.IMPORT]):
             case _UI.CHOOSE:
                 aliases = self.app.get_presentations()
                 if not aliases:
                     err = 'Nothing found'
                     raise Abortion(err)
-                alias = self.launch_single_choice('', aliases)
+                alias = self.launch_choice('', aliases)
                 out = self.app.get_presentation(alias)
             case _UI.IMPORT:
                 try:
@@ -312,18 +324,18 @@ class WalletShell(cmd.Cmd, MenuHandler):
         if not aliases:
             self.flush('Nothing found')
             return
-        alias = self.launch_single_choice('Choose', aliases)
+        alias = self.launch_choice('Choose', aliases)
         entry = self.app.get_entry(alias, group)
         self.flush(entry)
 
     def do_create(self, line):
-        ans = self.launch_single_choice('Create', [
+        ans = self.launch_choice('Create', [
             _UI.KEY, 
             _UI.DID,
         ])
         match _mapping[ans]:
             case _Group.KEY:
-                algorithm = self.launch_single_choice('Choose keygen algorithm',
+                algo = self.launch_choice('Choose keygen algorithm',
                     [
                         ED25519,
                         SECP256,
@@ -331,10 +343,9 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 if not self.launch_yes_no('Key will be save to disk. Proceed?'):
                     self.flush('Key creation aborted')
                     return
-                self.flush('Generating %s key (takes seconds) ...' \
-                    % algorithm)
+                self.flush('Generating %s key (takes seconds) ...' % algo)
                 try:
-                    alias = self.create_key(algorithm)
+                    alias = self.create_key(algo)
                 except CreationError as err:
                     self.flush('Could not create key: %s' % err)
                     return
@@ -344,7 +355,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 if not keys:
                     self.flush('No keys found. Must first create one.')
                     return
-                key = self.launch_single_choice('Choose key:', keys)
+                key = self.launch_choice('Choose key:', keys)
                 token = ''
                 if self.launch_yes_no('Do you want to provide an EBSI token?'):
                     token = self.launch_input('Token:')
@@ -441,47 +452,44 @@ class WalletShell(cmd.Cmd, MenuHandler):
         self.flush(results)
 
     def do_request(self, line):
-        action = self.launch_single_choice('Request', [
+        action = self.launch_choice('Request', [
             _UI.ISSUE, 
             _UI.VERIFY, 
             _UI.DISCARD,
         ])
         match _mapping[action]:
             case _Action.ISSUE:
-                choices = self.app.get_aliases(_Group.DID)
-                if not choices:
-                    self.flush('No DIDs found. Must first create one.')
+                try:
+                    payload = self.prepare_issuance_payload()
+                except Abortion as err:
+                    self.flush('Request aborted: %s' % err)
                     return
-                did = self.launch_single_choice('Choose DID', choices)
                 # TODO: Choose from known registar of issuers?
                 remote = 'http://localhost:7000'
                 endpoint = 'api/v1/credentials/issue/'
-                # TODO: Construction of payload presupposes that an API
-                # spec is known on behalf of the issuer
-                payload = {
-                    'did': did,
-                    # TODO: Provide more info, e.g. name, diploma etc.
-                }
                 # TODO: Handle connection errors and timeouts
                 resp = HttpClient(remote).post(endpoint, payload)
-                # TODO: Check that a credential is indeed returned. This
-                # presupposes that an API spec on behalf of the issuer is
-                # known
-                resp = resp.json()
-                if 'message' in resp:           # TODO: Check code instead
-                    self.flush(resp['message']) # TODO
-                    return
-                credential = resp.json()        # TODO: Validate structure
-                # TODO: Ask before saving
-                self.app.store_credential(credential)
-                self.flush('The following credential was saved to disk:')
-                self.flush(credential['id'])
+                match resp.status_code:
+                    # TODO: This handling assumes that an API spect has been
+                    # aedvertized on behalf of the issuer
+                    case 200:
+                        credential = resp.json()
+                        # TODO: Ask before saving?
+                        self.app.store_credential(credential)   # TODO
+                        self.flush('The following credential was saved to disk:')
+                        self.flush(credential['id'])
+                    case 512:
+                        message = resp.json()['message']
+                        self.flush('Could not issue: %s' % message)
+                    case _:
+                        self.flush('Could not issue:')
+                        self.flush(resp.json())             # TODO: Capture message
             case _Action.VERIFY:
                 # choices = self.app.get_aliases(_Group.VC)
                 # if not choices:
                 #     self.flush('No credentials found')
                 #     return
-                # alias = self.launch_single_choice('Choose credential', 
+                # alias = self.launch_choice('Choose credential', 
                 #     choices)
                 # credential = self.app.get_entry(alias, _Group.VC)
                 # # TODO: Choose from known registar of verifiers?
@@ -499,12 +507,12 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 if not did_choices:
                     self.flush('No DIDs found. Must create at least one.')
                     return
-                did = self.launch_single_choice('Choose DID', did_choices)
+                did = self.launch_choice('Choose DID', did_choices)
                 vc_choices = self.app.get_credentials_by_did(did)
                 if not vc_choices:
                     self.flush('No credentials found for the provided DID')
                     return
-                selected = self.launch_multiple_choices(
+                selected = self.launch_selection(
                     'Select credentials to present', vc_choices)
                 credentials = [self.app.get_credential(alias) for alias in
                     selected]
@@ -544,7 +552,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
         if not aliases:
             self.flush('Nothing found')
             return
-        alias = self.launch_single_choice('Choose', aliases)
+        alias = self.launch_choice('Choose', aliases)
         entry = self.app.get_entry(alias, group)
         try:
             outfile = self.export_object(entry)
@@ -567,7 +575,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
             del obj
             self.flush('Imported object deleted from memory')
             return
-        group = self.launch_single_choice('Saved as', [
+        group = self.launch_choice('Saved as', [
             _UI.KEY, _UI.DID, _UI.VC, _UI.VP,
         ])
         self.app.store(obj, _mapping[group])
@@ -582,7 +590,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
         if not aliases:
             self.flush('Nothing found')
             return
-        chosen = self.launch_multiple_choices('Choose entries to remove',
+        chosen = self.launch_selection('Choose entries to remove',
             aliases)
         if not self.launch_yes_no('This cannot be undone. Proceed?'):
             self.flush('Removal aborted')

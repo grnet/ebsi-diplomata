@@ -1,13 +1,18 @@
-from django.conf import settings
-import subprocess
-import json
 import os
-
-from ssi_lib.walt import run_cmd                # TODO
-from ssi_lib import SSIApp, SSICreationError
+import json
+import logging
+from django.conf import settings
+from ssi_lib import SSIApp
+from ssi_lib import SSIGenerationError, SSIRegistrationError, \
+    SSIResolutionError, SSIIssuanceError, SSIVerificationError
+from ssi_lib.conf import _Group   # TODO: Get rid of this?
+from ssi_lib.conf import _Vc # TODO
 
 
 class IdentityError(BaseException):     # TODO
+    pass
+
+class CreationError(BaseException):     # TODO
     pass
 
 class IssuanceError(BaseException):     # TODO
@@ -22,8 +27,19 @@ class SSIParty(SSIApp):
         if self.get_nr_dids() == 0 or force_did:
             self.clear_keys()
             self.clear_dids()
-            key = self.create_key(algo)
-            self.create_did(key, token)
+            try:
+                key = self.create_key(algo)
+            except CreationError as err:
+                logging.error('Could not create key: %s' % err)
+                return
+            logging.info('Created key %s' % key)
+            try:
+                onboard = False                                 # TODO
+                alias = self.create_did(key, token, onboard)
+            except CreationError as err:
+                logging.error('Could not create DID: %s' % err)
+                return
+            logging.info('Created DID %s' % alias)
 
     @classmethod
     def init_from_app(cls, settings):
@@ -55,8 +71,49 @@ class SSIParty(SSIApp):
         out['force_did'] = force_did
         return out
 
+    def create_key(self, algo):
+        logging.info('Generating %s key (takes seconds) ...' % algo)
+        try:
+            key = self.generate_key(algo)
+        except SSIGenerationError as err:
+            err = 'Could not generate key: %s' % err
+            raise CreationError(err)
+        self.store_key(key)
+        alias = key['kid']
+        return alias
+
+    def create_did(self, key, token, onboard=True):
+        logging.info('Generating DID (takes seconds) ...')
+        try:
+            did = self.generate_did(key, token, onboard)
+        except SSIGenerationError as err:
+            err = 'Could not generate DID: %s' % err
+            raise CreationError(err)
+        alias = did['id']
+        if onboard:
+            logging.info('Registering DID to EBSI (takes seconds)...')
+            try:
+                self.register_did(alias, token)
+            except SSIRegistrationError as err:
+                err = 'Could not register: %s' % err
+                raise CreationError(err)
+            logging.info('DID registered to EBSI')
+        self.store_did(did)
+        return alias
+
+    def _extract_issuance_payload(self, payload):
+        # TODO: Validate structure
+        holder_did = payload['holder']
+        template = payload['template']
+        content = payload['content']
+        return holder_did, template, content
+
     def get_info(self):
         return {'TODO': 'Include here service info'}        # TODO
+
+    def _get_did(self):
+        dids = self.get_dids()
+        return dids[-1] if dids else None
 
     def get_did(self, full=False):                          # TODO
         dids = self.get_dids()
@@ -69,56 +126,15 @@ class SSIParty(SSIApp):
         return super().get_did(alias)
 
     def issue_credential(self, payload):
-        # TODO: Issuer should here fill the following template by comparing the
-        # submitted payload against its database. Empty strings lead to the
-        # demo defaults of the walt library. 
-        vc_content = {
-            'holder_did': payload['did'],
-            'person_identifier': '',
-            'person_family_name': '',
-            'person_given_name': '',
-            'person_date_of_birth': '',
-            'awarding_opportunity_id': '',
-            'awarding_opportunity_identifier': '',
-            'awarding_opportunity_location': '',
-            'awarding_opportunity_started_at': '',
-            'awarding_opportunity_ended_at': '',
-            'awarding_body_preferred_name': '',
-            'awarding_body_homepage': '',
-            'awarding_body_registraction': '',
-            'awarding_body_eidas_legal_identifier': '',
-            'grading_scheme_id': '',
-            'grading_scheme_title': '',
-            'grading_scheme_description': '',
-            'learning_achievement_id': '',
-            'learning_achievement_title': '',
-            'learning_achievement_description': '',
-            'learning_achievement_additional_note': '',
-            'learning_specification_id': '',
-            'learning_specification_ects_credit_points': '',
-            'learning_specification_eqf_level': '',
-            'learning_specification_iscedf_code': '',
-            'learning_specification_nqf_level': '',
-            'learning_specification_evidence_id': '',
-            'learning_specification_evidence_type': '',
-            'learning_specification_verifier': '',
-            'learning_specification_evidence_document': '',
-            'learning_specification_subject_presence': '',
-            'learning_specification_document_presence': '',
-        }
-        # TODO
-        tmpfile = os.path.join(settings.TMPDIR, 'vc.json')
-        res, code = run_cmd([
-            os.path.join('issue-credential-ni'),    # TODO
-            *vc_content.values(),   # TODO
-            self.get_did(),         # TODO
-            tmpfile,                # TODO
-        ])
-        if code != 0:
-            err = 'Could not issue credential: %s' % res
+        holder_did, template, content = self._extract_issuance_payload(
+            payload)
+        issuer_did = self._get_did()
+        if not issuer_did:
+            err = 'No issuer DID found'
             raise IssuanceError(err)
-        with open(tmpfile, 'r') as f:
-            out = json.load(f)
-        os.remove(tmpfile)
+        try:
+            out = super().issue_credential(holder_did, issuer_did, template,
+                    content)
+        except SSIIssuanceError as err:
+            raise IssuanceError(err)
         return out
-
