@@ -197,7 +197,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
             return
         aliases = self.app.get_dids()
         issuer_did = self.launch_choice('Choose issuer DID', aliases)
-        if not self.launch_yes_no('New credential will be issued. Proceed?'):
+        if not self.launch_yn('New credential will be issued. Proceed?'):
             raise Abortion('Issuance aborted')
         try:
             holder_did, template, content = self.extract_issuance_payload(
@@ -275,7 +275,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 filename = filename.strip()
         outfile = os.path.join(STORAGE, filename)
         if os.path.isfile(outfile):
-            if not self.launch_yes_no('File exists. Overwrite?'):
+            if not self.launch_yn('File exists. Overwrite?'):
                 raise Abortion
         with open(outfile, 'w+') as f:
             json.dump(entry, f, indent=INDENT)
@@ -333,13 +333,12 @@ class WalletShell(cmd.Cmd, MenuHandler):
         ])
         match _mapping[ans]:
             case _Group.KEY:
-                algo = self.launch_choice('Choose keygen algorithm',
-                    [
+                algo = self.launch_choice('Choose keygen algorithm', [
                         Ed25519,
                         Secp256k1,
                         RSA,
                     ])
-                if not self.launch_yes_no('Key will be save to disk. Proceed?'):
+                if not self.launch_yn('Key will be save to disk. Proceed?'):
                     self.flush('Key creation aborted')
                     return
                 self.flush('Generating %s key (takes seconds) ...' % algo)
@@ -356,18 +355,18 @@ class WalletShell(cmd.Cmd, MenuHandler):
                     return
                 key = self.launch_choice('Choose key:', keys)
                 token = ''
-                if self.launch_yes_no('Do you want to provide an EBSI token?'):
+                if self.launch_yn('Do you want to provide an EBSI token?'):
                     token = self.launch_input('Token:')
-                if not token and not self.launch_yes_no(
+                if not token and not self.launch_yn(
                     'WARNING: No token provided. The newly created DID will ' +
                     'not be registered to the EBSI. Proceed?'):
                     self.flush('DID creation aborted')
                     return
                 onboard = False
                 if token:
-                    onboard = self.launch_yes_no(
+                    onboard = self.launch_yn(
                         'Register the newly created DID to EBSI?')
-                if not self.launch_yes_no(
+                if not self.launch_yn(
                         'A new DID will be saved to disk. Proceed?'):
                     self.flush('DID creation aborted')
                     return
@@ -416,10 +415,10 @@ class WalletShell(cmd.Cmd, MenuHandler):
             self.flush(msg)
             return
         self.flush('Issued credential')
-        if self.launch_yes_no('Inspect?'):
+        if self.launch_yn('Inspect?'):
             self.flush(credential)
-        if not self.launch_yes_no('Save to disk?'):
-            if self.launch_yes_no('Credential will be lost. Are you sure?'):
+        if not self.launch_yn('Save to disk?'):
+            if self.launch_yn('Credential will be lost. Are you sure?'):
                 del credential
                 return
         alias = self.app.store_credential(credential)
@@ -433,13 +432,13 @@ class WalletShell(cmd.Cmd, MenuHandler):
             self.flush('Could not present: %s' % err)
             return
         self.flush('Created verifiable presentation from selected credentials.')
-        if self.launch_yes_no('Inspect?'):
+        if self.launch_yn('Inspect?'):
             self.flush(presentation)
-        if self.launch_yes_no('Save in disk?'):
+        if self.launch_yn('Save in disk?'):
             alias = self.app.store_presentation(presentation)
             self.flush('Credential was saved to disk:')
             self.flush(alias)
-        if self.launch_yes_no('Export?'):
+        if self.launch_yn('Export?'):
             try:
                 outfile = self.export_object(presentation)
             except Abortion:
@@ -489,10 +488,10 @@ class WalletShell(cmd.Cmd, MenuHandler):
                     case 200:
                         self.flush('Credential received from issuer')
                         credential = resp.json()
-                        if self.launch_yes_no('Inspect?'):
+                        if self.launch_yn('Inspect?'):
                             self.flush(credential)
-                        if not self.launch_yes_no('Save to disk?'):
-                            if self.launch_yes_no('Credential will be lost. '
+                        if not self.launch_yn('Save to disk?'):
+                            if self.launch_yn('Credential will be lost. '
                             + 'Are you sure?'):
                                 del credential
                                 return
@@ -565,7 +564,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
             return
         self.flush('Imported:')
         self.flush(obj)
-        if not self.launch_yes_no('Save to disk?'):
+        if not self.launch_yn('Save to disk?'):
             del obj
             self.flush('Imported object deleted from memory')
             return
@@ -586,7 +585,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
             return
         chosen = self.launch_selection('Choose entries to remove',
             aliases)
-        if not self.launch_yes_no('This cannot be undone. Proceed?'):
+        if not self.launch_yn('This cannot be undone. Proceed?'):
             self.flush('Removal aborted')
             return
         for alias in chosen:
@@ -599,7 +598,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
         except BadInputError as err:
             self.flush(err)
             return
-        if not self.launch_yes_no('This cannot be undone. Proceed?'):
+        if not self.launch_yn('This cannot be undone. Proceed?'):
             self.flush('Aborted')
             return
         self.app.clear(group)

@@ -11,7 +11,7 @@ _base_style = {
 }
 
 _style = {
-    'yes_no': {},
+    'yn': {},
     'input': {},
     'number': {
         'type': int
@@ -32,7 +32,7 @@ class MenuHandler(object):
         return prompt + (' ' if not prompt.endswith(' ') \
             else '')
 
-    def _mk_yes_no(self, prompt):
+    def _mk_yn(self, prompt):
         prompt = self._normalize_prompt(prompt)
         return YesNo(prompt)
 
@@ -54,8 +54,8 @@ class MenuHandler(object):
         return Check(prompt=prompt, choices=choices,
             **_style['check'],)
 
-    def launch_yes_no(self, prompt):
-        return self._mk_yes_no(prompt).launch()
+    def launch_yn(self, prompt):
+        return self._mk_yn(prompt).launch()
 
     def launch_input(self, prompt):
         return self._mk_input(prompt).launch()
@@ -79,8 +79,8 @@ class MenuHandler(object):
         steps = []
         for key, params in config.items():
             match key:
-                case 'yes_no':
-                    steps += [self._mk_yes_no(params),]
+                case 'yn':
+                    steps += [self._mk_yn(params),]
                 case 'input':
                     steps += [self._mk_input(params),]
                 case 'number':
@@ -93,7 +93,7 @@ class MenuHandler(object):
         out = []
         for cur, key in zip(res, config.keys()):
             match key:
-                case 'yes_no':
+                case 'yn':
                     out += [cur[1]]
                 case 'input':
                     out += [cur[1]]

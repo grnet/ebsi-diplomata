@@ -28,7 +28,7 @@ Options:
 
 usage() { echo -n "$usage_string" 1>&2; }
 
-parse_yes_no() {
+parse_yn() {
     read yn
     if [[ "$yn" != "${yn#[Yy]}" ]]; then
         echo true
@@ -39,7 +39,7 @@ parse_yes_no() {
 
 parse_token() {
     echo -ne "\nDo you want to provide an EBSI Token? (y/n) "
-    yes=$(parse_yes_no)
+    yes=$(parse_yn)
     if [ ${yes} == true ]; then
         read -p "Give token: " token
         EBSI_TOKEN=$token
@@ -102,7 +102,7 @@ if [ ${ONBOARD} == true ] && [ -z ${EBSI_TOKEN} ]; then
     echo -ne "\nWARNING: You have provided no EBSI token. This means that"
     echo -ne "\nnewly created DIDs will not be registred to the EBSI."
     echo -ne "\nProceed? (y/n) "
-    yes=$(parse_yes_no)
+    yes=$(parse_yn)
     if [ ${yes} == false ]; then
         echo -ne "\nAborted\n"
         exit 1
