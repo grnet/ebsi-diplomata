@@ -79,25 +79,6 @@ class SSIParty(SSIApp):
         dids = self.get_dids()
         return dids[-1] if dids else None
 
-    def _extract_did_creation_payload(self, payload):
-        # TODO: Validate
-        token = payload.get('token', '')                    # TODO
-        algo = payload.get('algo', 'Ed25519')               # TODO
-        onboard = payload.get('onboard', True)              # TODO
-        return token, algo, onboard
-
-    def _extract_issuance_payload(self, payload):
-        # TODO: Validate
-        holder = payload['holder']
-        template = payload['template']
-        content = payload['content']
-        return holder, template, content
-
-    def _extract_verification_payload(self, payload):
-        # TODO: Implement
-        vp = payload
-        return vp
-
     def get_info(self):
         return {'TODO': 'Include here service info'}        # TODO
 
@@ -111,9 +92,7 @@ class SSIParty(SSIApp):
             return alias
         return super().get_did(alias)
 
-    def create_did(self, payload):
-        token, algo, onboard = self._extract_did_creation_payload(
-            payload)
+    def create_did(self, token, algo, onboard):
         self.clear_keys()
         self.clear_dids()
         try:
@@ -130,9 +109,7 @@ class SSIParty(SSIApp):
         logging.info('Created DID %s' % alias)
         return alias
 
-    def issue_credential(self, payload):
-        holder, template, content = self._extract_issuance_payload(
-            payload)
+    def issue_credential(self, holder, template, content):
         issuer = self._get_did()
         if not issuer:
             err = 'No issuer DID found'
@@ -144,8 +121,7 @@ class SSIParty(SSIApp):
             raise IssuanceError(err)
         return out
 
-    def verify_presentation(self, payload):
-        vp = self._extract_verification_payload(payload)
+    def verify_presentation(self, vp):
         try:
             out = super().verify_presentation(vp)
         except SSIVerificationError as err:

@@ -3,13 +3,16 @@ from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
-from ssi.logic import IssuanceError, CreationError, IdentityError
+from json.decoder import JSONDecodeError
 from ssi.logic import IdentityError, IssuanceError, CreationError, \
         VerificationError
 from common import load_ssi_party
 
 
 ssi_party = load_ssi_party()
+
+def extract_payload(request):
+    return json.loads(request.body)
 
 @require_http_methods(['GET',])
 def show_info(request):
@@ -23,49 +26,74 @@ def show_did(request):
     try:
         alias = ssi_party.get_did()
         out['did'] = alias
+        status = 200
     except IdentityError as err:
-        out['err'] = '%s' % err
-    status = 200
+        out['msg'] = '%s' % err
+        status = 204
     return JsonResponse(out, safe=False, status=status)
 
 @csrf_exempt
 @require_http_methods(['PUT',])
 def create_did(request):
-    payload = json.loads(request.body)
     out = {}
     try:
-        alias = ssi_party.create_did(payload)
+        payload = extract_payload(request)
+        algo = payload['algo']
+        token = payload['token']
+        onboard = payload.get('onboard', True)
+    except (JSONDecodeError, KeyError,) as err:
+        out['err'] = 'Bad request'
+        status = 400                                            # TODO
+        return JsonResponse(out, safe=False, status=status)
+    try:
+        alias = ssi_party.create_did(token, algo, onboard)
         out['did'] = alias
         status = 201
     except CreationError as err:
         out['err'] = '%s' % err
-        status = 512                                    # TODO
-    return JsonResponse(out, safe=False, status=status)
+        status = 512                                            # TODO
+        return JsonResponse(out, safe=False, status=status)
+    return JsonResponse(out, safe=True, status=status)
 
 @csrf_exempt
 @require_http_methods(['POST',])
 def issue_credential(request):
-    payload = json.loads(request.body)                  # TODO
     out = {}
     try:
-        vc = ssi_party.issue_credential(payload)        # TODO
+        payload = extract_payload(request)
+        holder = payload['holder']
+        template = payload['template']
+        content = payload['content']
+    except (JSONDecodeError, KeyError,) as err:
+        out['err'] = 'Bad request'
+        status = 400                                            # TODO
+        return JsonResponse(out, safe=False, status=status)
+    try:
+        vc = ssi_party.issue_credential(holder, template,
+                content)
         out['vc'] = vc
         status = 200
     except IssuanceError as err:
         out['err'] = '%s' % err
-        status = 512
+        status = 512                                            # TODO
     return JsonResponse(out, safe=False, status=status)
 
 @csrf_exempt
 @require_http_methods(['POST',])
 def verify_credentials(request):
-    payload = json.loads(request.body)
     out = {}
     try:
-        reslt = ssi_party.verify_presentation(payload)  # TODO
-        out['results'] = reslt
+        payload = extract_payload(request)
+        vp = payload['vp']
+    except (JSONDecodeError, KeyError,) as err:
+        out['err'] = 'Bad request'
+        status = 400                                            # TODO
+        return JsonResponse(out, safe=False, status=status)
+    try:
+        rslts = ssi_party.verify_presentation(vp)
+        out['results'] = rslts
         status = 200
     except VerificationError as err:
         out['err'] = '%s' % err
-        status = 512
+        status = 512                                            # TODO
     return JsonResponse(out, safe=False, status=status)

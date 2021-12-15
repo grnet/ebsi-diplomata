@@ -15,7 +15,7 @@ is either invalid or expired.
 Use the --no-register option if you want to have newly created DIDs stored but
 not registered.
 
-WARNING: a non-registered DID fails to be resolved by interested parties and
+WARNING: non-registered DIDs fail to be resolved by interested parties and
 thus be effectively involved in protocol operations.
 
 Options:

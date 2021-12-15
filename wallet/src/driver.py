@@ -436,7 +436,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
 
     def do_issue(self, line):
         try:
-            credential = self.issue_credential(line)
+            vc = self.issue_credential(line)
         except IssuanceError as err:
             self.flush('Could not issue: %s' % err)
             return
@@ -445,12 +445,12 @@ class WalletShell(cmd.Cmd, MenuHandler):
             return
         self.flush('Issued credential')
         if self.launch_yn('Inspect?'):
-            self.flush(credential)
+            self.flush(vc)
         if not self.launch_yn('Save to disk?'):
             if self.launch_yn('Credential will be lost. Are you sure?'):
-                del credential
+                del vc
                 return
-        alias = self.app.store_credential(credential)
+        alias = self.app.store_credential(vc)
         self.flush('Credential was saved to disk:\n%s' % alias)
 
     def do_present(self, line):
@@ -523,11 +523,14 @@ class WalletShell(cmd.Cmd, MenuHandler):
                         if not self.launch_yn('Save to disk?'):
                             if self.launch_yn('Credential will be lost. '
                             + 'Are you sure?'):
-                                del credential
+                                del vc
                                 return
                         alias = self.app.store_credential(vc)
                         self.flush('Credential was saved to disk:\n%s' % alias)
                     case 512:
+                        err = resp.json()['err']
+                        self.flush('Could not issue: %s' % err)
+                    case 400:
                         err = resp.json()['err']
                         self.flush('Could not issue: %s' % err)
                     case _:
@@ -535,7 +538,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
                         self.flush(resp.json())             # TODO: Capture error
             case _Action.VERIFY:
                 try:
-                    payload = self.select_presentation()
+                    vp = self.select_presentation()
                 except (Abortion, WalletImportError,) as err:
                     self.flush('Could not select: %s' % err)
                     return
@@ -545,7 +548,9 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 endpoint = 'api/v1/credentials/verify/'
                 try:
                     self.flush('Waiting for response (takes seconds)...')
-                    resp = HttpClient(address).post(endpoint, payload)
+                    resp = HttpClient(address).post(endpoint, {
+                        'vp': vp,
+                    })
                 except HttpConnectionError as err:
                     self.flush('Could not connect to issuer: %s' % err)
                     return
@@ -558,6 +563,9 @@ class WalletShell(cmd.Cmd, MenuHandler):
                             results['Verified'] else 'NOT '))
                         self.flush(results)
                     case 512:
+                        err = resp.json()['err']
+                        self.flush('Could not verify: %s' % err)
+                    case 400:
                         err = resp.json()['err']
                         self.flush('Could not verify: %s' % err)
                     case _:
