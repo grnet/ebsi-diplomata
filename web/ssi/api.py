@@ -1,10 +1,10 @@
+import json
+from json.decoder import JSONDecodeError
 from django.conf import settings
 from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-import json
-from json.decoder import JSONDecodeError
-from ssi.logic import IdentityError, IssuanceError, CreationError, \
+from ssi.logic import IdentityError, CreationError, IssuanceError, \
         VerificationError
 from common import load_ssi_party
 
@@ -52,7 +52,6 @@ def create_did(request):
     except CreationError as err:
         out['err'] = '%s' % err
         status = 512                                            # TODO
-        return JsonResponse(out, safe=False, status=status)
     return JsonResponse(out, safe=True, status=status)
 
 @csrf_exempt

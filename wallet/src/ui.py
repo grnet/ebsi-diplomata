@@ -1,11 +1,11 @@
 from bullet import Bullet, Check, YesNo, Input, Password, Numbers, \
     VerticalPrompt, SlidePrompt, ScrollBar, styles
 
-_base_style = {
-    'indent': 0,
-    'align': 3,
-    'margin': 2,
+_formatting = {
+    'indent': 1,
     'shift': 0,
+    'align': 4,
+    'margin': 0,
     'pad_right': 5,
     'return_index': True,
 }
@@ -17,11 +17,11 @@ _style = {
         'type': int
     },
     'bullet': {
-        **_base_style,
+        **_formatting,
         'bullet': '',
     },
     'check': {
-        **_base_style,
+        **_formatting,
         # TODO
     },
 }

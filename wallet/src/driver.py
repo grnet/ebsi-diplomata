@@ -29,6 +29,9 @@ _mapping = {
 
 __version__ = '0.0.1'
 
+class Abortion(BaseException):
+    pass
+
 class BadInputError(BaseException):
     pass
 
@@ -48,9 +51,6 @@ class VerificationError(BaseException):
     pass
 
 class WalletImportError(BaseException):
-    pass
-
-class Abortion(BaseException):
     pass
 
 class HttpConnectionError(BaseException):
@@ -191,11 +191,11 @@ class WalletShell(cmd.Cmd, MenuHandler):
         return out
 
     def prepare_issuance_payload(self):
-        aliases = self.app.get_dids()
-        if not aliases:
+        dids = self.app.get_dids()
+        if not dids:
             err = 'No DIDs found. Must first create one.'
             raise Abortion(err)
-        holder = self.launch_choice('Choose holder DID', aliases)
+        holder = self.launch_choice('Choose holder DID', dids)
         # TODO: Select values via user input
         # TODO: This construction assumes than an API spec has been advertized
         # on behalf of the issuer
@@ -211,25 +211,23 @@ class WalletShell(cmd.Cmd, MenuHandler):
         }
         return payload
 
-    def extract_issuance_payload(self, payload):
-        # TODO: Validate structure?
-        holder = payload['holder']
-        template = payload['template']
-        content = payload['content']
-        return holder, template, content
-
     def issue_credential(self, line):
         try:
             payload = self.prepare_issuance_payload()
         except Abortion as err:
-            self.flush('Request aborted: %s' % err)
-            return
-        aliases = self.app.get_dids()
-        issuer = self.launch_choice('Choose issuer DID', aliases)
+            raise
+        dids = self.app.get_dids()
+        issuer = self.launch_choice('Choose issuer DID', dids)
         if not self.launch_yn('New credential will be issued. Proceed?'):
             raise Abortion('Issuance aborted')
         try:
-            holder, template, content = self.extract_issuance_payload(
+            holder = payload['holder']
+            template = payload['template']
+            content = payload['content']
+        except KeyError as err:
+            raise IssuanceError(err)
+        try:
+            holder, template, content = self.prepare_issuance_payload(
                 payload)
             out = self.app.issue_credential(holder, issuer, template,
                     content)
@@ -247,11 +245,11 @@ class WalletShell(cmd.Cmd, MenuHandler):
         return out
 
     def present_credentials(self, line):
-        did_choices = self.app.get_aliases(_Group.DID)
-        if not did_choices:
+        dids = self.app.get_aliases(_Group.DID)
+        if not dids:
             err = 'No DIDs found. Must create at least one.'
             raise PresentationError(err)
-        holder = self.launch_choice('Choose holder DID', did_choices)
+        holder = self.launch_choice('Choose holder DID', dids)
         vc_choices = self.app.get_credentials_by_did(holder)
         if not vc_choices:
             err = 'No credentials found for the provided holder DID'
@@ -276,11 +274,11 @@ class WalletShell(cmd.Cmd, MenuHandler):
         match self.launch_choice('Select presentation to verify', [
             _UI.CHOOSE, _UI.IMPORT]):
             case _UI.CHOOSE:
-                aliases = self.app.get_presentations()
-                if not aliases:
+                vps = self.app.get_presentations()
+                if not vps:
                     err = 'Nothing found'
                     raise Abortion(err)
-                alias = self.launch_choice('', aliases)
+                alias = self.launch_choice('', vps)
                 out = self.app.get_presentation(alias)
             case _UI.IMPORT:
                 try:
@@ -440,8 +438,8 @@ class WalletShell(cmd.Cmd, MenuHandler):
         except IssuanceError as err:
             self.flush('Could not issue: %s' % err)
             return
-        except Abortion as msg:
-            self.flush(msg)
+        except Abortion as err:
+            self.flush('Request aborted: %s' % err)
             return
         self.flush('Issued credential')
         if self.launch_yn('Inspect?'):
