@@ -1,8 +1,9 @@
 import cmd, sys
 import json
 import os
+from urllib.parse import urljoin
+import requests
 from ui import MenuHandler
-from util import HttpClient
 from conf import TMPDIR, WALTDIR, INTRO, PROMPT, INDENT, RESOLVED, \
     STORAGE, _Action, _UI, EBSI_PRFX, Ed25519, Secp256k1, RSA
 from ssi_lib import SSIGenerationError, SSIRegistrationError, \
@@ -51,6 +52,28 @@ class WalletImportError(BaseException):
 
 class Abortion(BaseException):
     pass
+
+
+
+class HttpClient(object):
+
+    def __init__(self, remote):
+        self.remote = remote
+
+    def _create_url(self, endpoint):
+        return urljoin(self.remote, endpoint.lstrip('/'))
+
+    def _do_request(self, method, url, **kw):
+        return getattr(requests, method)(url, **kw)
+
+    def get(self, endpoint):
+        resp = self._do_request('get', self._create_url(endpoint))
+        return resp
+
+    def post(self, endpoint, payload):
+        resp = self._do_request('post', self._create_url(endpoint),
+                json=payload)
+        return resp
 
 
 class WalletShell(cmd.Cmd, MenuHandler):
