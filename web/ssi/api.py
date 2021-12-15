@@ -4,6 +4,8 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 from ssi.logic import IssuanceError, CreationError, IdentityError
+from ssi.logic import IdentityError, IssuanceError, CreationError, \
+        VerificationError
 from common import load_ssi_party
 
 
@@ -43,12 +45,14 @@ def create_did(request):
 @csrf_exempt
 @require_http_methods(['POST',])
 def issue_credential(request):
-    payload = json.loads(request.body)
+    payload = json.loads(request.body)                  # TODO
+    out = {}
     try:
-        out = ssi_party.issue_credential(payload)       # TODO
+        vc = ssi_party.issue_credential(payload)        # TODO
+        out['vc'] = vc
         status = 200
     except IssuanceError as err:
-        out = {'err': '%s' % err}                     # TODO
+        out['err'] = '%s' % err
         status = 512
     return JsonResponse(out, safe=False, status=status)
 
@@ -56,10 +60,12 @@ def issue_credential(request):
 @require_http_methods(['POST',])
 def verify_credentials(request):
     payload = json.loads(request.body)
+    out = {}
     try:
-        out = ssi_party.verify_presentation(payload)    # TODO
+        reslt = ssi_party.verify_presentation(payload)  # TODO
+        out['results'] = reslt
         status = 200
     except VerificationError as err:
-        out = {'err': '%s' % err}                     # TODO
+        out['err'] = '%s' % err
         status = 512
     return JsonResponse(out, safe=False, status=status)

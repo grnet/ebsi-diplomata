@@ -457,9 +457,8 @@ class WalletShell(cmd.Cmd, MenuHandler):
             self.flush('Could not verify: %s' % err)
             return
         # Flush results
-        verified = results['Verified']
-        self.flush('Presentation was %sverified:' % (
-            '' if verified else 'NOT '))
+        self.flush('Presentation was %sverified:' % ('' if \
+            results['Verified'] else 'NOT '))
         self.flush(results)
 
     def do_request(self, line):
@@ -478,21 +477,22 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 # TODO: Handle connection errors and timeouts
                 remote = 'http://localhost:7000'
                 endpoint = 'api/v1/credentials/issue/'
+                self.flush('Waiting for response (takes seconds)...')
                 resp = HttpClient(remote).post(endpoint, payload)
                 # TODO: This handling assumes that an API spect has been
                 # aedvertized on behalf of the issuer
                 match resp.status_code:
                     case 200:
-                        credential = resp.json()
+                        vc = resp.json()['vc']
                         self.flush('Credential received.')
                         if self.launch_yn('Inspect?'):
-                            self.flush(credential)
+                            self.flush(vc)
                         if not self.launch_yn('Save to disk?'):
                             if self.launch_yn('Credential will be lost. '
                             + 'Are you sure?'):
                                 del credential
                                 return
-                        alias = self.app.store_credential(credential)
+                        alias = self.app.store_credential(vc)
                         self.flush('Credential was saved to disk:\n%s' % alias)
                     case 512:
                         err = resp.json()['err']
@@ -510,15 +510,15 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 # TODO: Handle connection errors and timeouts
                 remote = 'http://localhost:7001'
                 endpoint = 'api/v1/credentials/verify/'
+                self.flush('Waiting for response (takes seconds)...')
                 resp = HttpClient(remote).post(endpoint, payload)
                 # TODO: This handling assumes that an API spect has been
                 # aedvertized on behalf of the verifier
                 match resp.status_code:
                     case 200:
-                        results = resp.json()
-                        verified = results['Verified']
-                        self.flush('Presentation was %sverified:' % (
-                            '' if verified else 'NOT '))
+                        results = resp.json()['results']
+                        self.flush('Presentation was %sverified:' % ('' if \
+                            results['Verified'] else 'NOT '))
                         self.flush(results)
                     case 512:
                         err = resp.json()['err']
@@ -578,12 +578,12 @@ class WalletShell(cmd.Cmd, MenuHandler):
         if not aliases:
             self.flush('Nothing found')
             return
-        chosen = self.launch_selection('Choose entries to remove',
+        selected = self.launch_selection('Select entries to remove',
             aliases)
         if not self.launch_yn('This cannot be undone. Proceed?'):
             self.flush('Removal aborted')
             return
-        for alias in chosen:
+        for alias in selected:
             self.app.remove(alias, group)
             self.flush('Removed %s' % alias)
 
