@@ -358,7 +358,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 if self.launch_yn('Do you want to provide an EBSI token?'):
                     token = self.launch_input('Token:')
                 if not token and not self.launch_yn(
-                    'WARNING: No token provided. The newly created DID will ' +
+                    'WARNING: No token provided. The newly created DID will\n' +
                     'not be registered to the EBSI. Proceed?'):
                     self.flush('DID creation aborted')
                     return
@@ -422,8 +422,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 del credential
                 return
         alias = self.app.store_credential(credential)
-        self.flush('Credential was saved to disk:')
-        self.flush(alias)
+        self.flush('Credential was saved to disk:\n%s' % alias)
 
     def do_present(self, line):
         try:
@@ -431,13 +430,12 @@ class WalletShell(cmd.Cmd, MenuHandler):
         except PresentationError as err:
             self.flush('Could not present: %s' % err)
             return
-        self.flush('Created verifiable presentation from selected credentials.')
+        self.flush('Created presentation from selected credentials.')
         if self.launch_yn('Inspect?'):
             self.flush(presentation)
         if self.launch_yn('Save in disk?'):
             alias = self.app.store_presentation(presentation)
-            self.flush('Credential was saved to disk:')
-            self.flush(alias)
+            self.flush('Presentation was saved to disk:\n%s' % alias)
         if self.launch_yn('Export?'):
             try:
                 outfile = self.export_object(presentation)
@@ -460,9 +458,8 @@ class WalletShell(cmd.Cmd, MenuHandler):
             return
         # Flush results
         verified = results['Verified']
-        message = 'Presentation was %sverified:' % (
-            '' if verified else 'NOT ')
-        self.flush(message)
+        self.flush('Presentation was %sverified:' % (
+            '' if verified else 'NOT '))
         self.flush(results)
 
     def do_request(self, line):
@@ -486,8 +483,8 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 # aedvertized on behalf of the issuer
                 match resp.status_code:
                     case 200:
-                        self.flush('Credential received from issuer')
                         credential = resp.json()
+                        self.flush('Credential received.')
                         if self.launch_yn('Inspect?'):
                             self.flush(credential)
                         if not self.launch_yn('Save to disk?'):
@@ -496,14 +493,13 @@ class WalletShell(cmd.Cmd, MenuHandler):
                                 del credential
                                 return
                         alias = self.app.store_credential(credential)
-                        self.flush('Credential was saved to disk:')
-                        self.flush(alias)
+                        self.flush('Credential was saved to disk:\n%s' % alias)
                     case 512:
-                        message = resp.json()['message']
-                        self.flush('Could not issue: %s' % message)
+                        err = resp.json()['err']
+                        self.flush('Could not issue: %s' % err)
                     case _:
                         self.flush('Could not issue:')
-                        self.flush(resp.json())             # TODO: Capture message
+                        self.flush(resp.json())             # TODO: Capture error
             case _Action.VERIFY:
                 try:
                     payload = self.select_presentation()
@@ -519,18 +515,17 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 # aedvertized on behalf of the verifier
                 match resp.status_code:
                     case 200:
-                        resutlts = resp.json()
+                        results = resp.json()
                         verified = results['Verified']
-                        message = 'Presentation was %sverified:' % (
-                            '' if verified else 'NOT ')
-                        self.flush(message)
+                        self.flush('Presentation was %sverified:' % (
+                            '' if verified else 'NOT '))
                         self.flush(results)
                     case 512:
-                        message = resp.json()['message']
-                        self.flush('Could not verify: %s' % message)
+                        err = resp.json()['err']
+                        self.flush('Could not verify: %s' % err)
                     case _:
                         self.flush('Could not verify:')
-                        self.flush(resp.json())             # TODO: Capture message
+                        self.flush(resp.json())             # TODO: Capture error
                 pass
             case _Action.DISCARD:
                 self.flush('Request aborted')

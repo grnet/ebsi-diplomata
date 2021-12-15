@@ -17,24 +17,26 @@ def show_info(request):
 
 @require_http_methods(['GET',])
 def show_did(request):
+    out = {}
     try:
-        out = ssi_party.get_did()
-        status = 200
+        alias = ssi_party.get_did()
+        out['did'] = alias
     except IdentityError as err:
-        out = {'message': '%s' % err}                   # TODO
-        status = 200                                    # TODO
+        out['err'] = '%s' % err
+    status = 200
     return JsonResponse(out, safe=False, status=status)
 
 @csrf_exempt
 @require_http_methods(['PUT',])
 def create_did(request):
     payload = json.loads(request.body)
+    out = {}
     try:
         alias = ssi_party.create_did(payload)
-        out = {'did': alias}
+        out['did'] = alias
         status = 201
     except CreationError as err:
-        out = {'message': '%s' % err}                   # TODO
+        out['err'] = '%s' % err
         status = 512                                    # TODO
     return JsonResponse(out, safe=False, status=status)
 
@@ -46,7 +48,7 @@ def issue_credential(request):
         out = ssi_party.issue_credential(payload)       # TODO
         status = 200
     except IssuanceError as err:
-        out = {'message': '%s' % err}                   # TODO
+        out = {'err': '%s' % err}                     # TODO
         status = 512
     return JsonResponse(out, safe=False, status=status)
 
@@ -58,6 +60,6 @@ def verify_credentials(request):
         out = ssi_party.verify_presentation(payload)    # TODO
         status = 200
     except VerificationError as err:
-        out = {'message': '%s' % err}                   # TODO
+        out = {'err': '%s' % err}                     # TODO
         status = 512
     return JsonResponse(out, safe=False, status=status)
