@@ -53,6 +53,8 @@ class WalletImportError(BaseException):
 class Abortion(BaseException):
     pass
 
+class HttpConnectionError(BaseException):
+    pass
 
 
 class HttpClient(object):
@@ -64,7 +66,11 @@ class HttpClient(object):
         return urljoin(self.remote, endpoint.lstrip('/'))
 
     def _do_request(self, method, url, **kw):
-        return getattr(requests, method)(url, **kw)
+        try:
+            resp = getattr(requests, method)(url, **kw)
+        except requests.exceptions.ConnectionError as err:
+            raise HttpConnectionError(err)
+        return resp
 
     def get(self, endpoint):
         resp = self._do_request('get', self._create_url(endpoint))
@@ -496,13 +502,17 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 except Abortion as err:
                     self.flush('Request aborted: %s' % err)
                     return
-                # TODO: Choose from known registar of issuers?
-                # TODO: Handle connection errors and timeouts
-                remote = 'http://localhost:7000'
+                # TODO: Choose from known registrar of issuers or reveive from
+                # user input
+                address = 'http://localhost:7000'
                 endpoint = 'api/v1/credentials/issue/'
-                self.flush('Waiting for response (takes seconds)...')
-                resp = HttpClient(remote).post(endpoint, payload)
-                # TODO: This handling assumes that an API spect has been
+                try:
+                    self.flush('Waiting for response (takes seconds)...')
+                    resp = HttpClient(address).post(endpoint, payload)
+                except HttpConnectionError as err:
+                    self.flush('Could not connect to issuer: %s' % err)
+                    return
+                # TODO: This handling assumes that an API spec has been
                 # aedvertized on behalf of the issuer
                 match resp.status_code:
                     case 200:
@@ -529,13 +539,17 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 except (Abortion, WalletImportError,) as err:
                     self.flush('Could not select: %s' % err)
                     return
-                # TODO: Choose from known registar of verifiers?
-                # TODO: Handle connection errors and timeouts
-                remote = 'http://localhost:7001'
+                # TODO: Choose from known registrar of verifiers or reveive
+                # from user input
+                address = 'http://localhost:7001'
                 endpoint = 'api/v1/credentials/verify/'
-                self.flush('Waiting for response (takes seconds)...')
-                resp = HttpClient(remote).post(endpoint, payload)
-                # TODO: This handling assumes that an API spect has been
+                try:
+                    self.flush('Waiting for response (takes seconds)...')
+                    resp = HttpClient(address).post(endpoint, payload)
+                except HttpConnectionError as err:
+                    self.flush('Could not connect to issuer: %s' % err)
+                    return
+                # TODO: This handling assumes that an API spec has been
                 # aedvertized on behalf of the verifier
                 match resp.status_code:
                     case 200:
