@@ -380,7 +380,20 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 self.flush('Created DID: %s' % alias)
 
     def do_register(self, line):
-        pass
+        dids = self.app.get_dids()
+        if not dids:
+            self.flush('No DIDs found')
+            return
+        alias = self.launch_choice('Choose DID:', dids)
+        token = self.launch_input('Token:')
+        self.flush('Registering (takes seconds) ...')
+        try:
+            self.app.register_did(alias, token)
+        except SSIRegistrationError as err:
+            err = 'Could not register: %s' % err
+            self.flush(err)
+            return
+        self.flush('Registered %s to the EBSI')
 
     def do_resolve(self, line):
         alias = self.launch_input('Give DID:')

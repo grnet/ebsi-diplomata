@@ -57,7 +57,7 @@ fi
 cd ${WALTDIR}
 
 ./ssikit.sh did create \
-    --did-method ebsi \     # TODO: Fix did-method in case of RSA key
+    --did-method ebsi \
     --key ${KEY} \
     ${OUTFILE}
     > /dev/null 2>&1
