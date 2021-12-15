@@ -166,12 +166,12 @@ class WalletShell(cmd.Cmd, MenuHandler):
         if not aliases:
             err = 'No DIDs found. Must first create one.'
             raise Abortion(err)
-        holder_did = self.launch_choice('Choose holder DID', aliases)
+        holder = self.launch_choice('Choose holder DID', aliases)
         # TODO: Select values via user input
         # TODO: This construction assumes than an API spec has been advertized
         # on behalf of the issuer
         payload = {
-            'holder': holder_did,
+            'holder': holder,
             'template': _Vc.DIPLOMA,
             'content': {
                 'person_id': '0x666',
@@ -184,10 +184,10 @@ class WalletShell(cmd.Cmd, MenuHandler):
 
     def extract_issuance_payload(self, payload):
         # TODO: Validate structure?
-        holder_did = payload['holder']
+        holder = payload['holder']
         template = payload['template']
         content = payload['content']
-        return holder_did, template, content
+        return holder, template, content
 
     def issue_credential(self, line):
         try:
@@ -196,21 +196,21 @@ class WalletShell(cmd.Cmd, MenuHandler):
             self.flush('Request aborted: %s' % err)
             return
         aliases = self.app.get_dids()
-        issuer_did = self.launch_choice('Choose issuer DID', aliases)
+        issuer = self.launch_choice('Choose issuer DID', aliases)
         if not self.launch_yn('New credential will be issued. Proceed?'):
             raise Abortion('Issuance aborted')
         try:
-            holder_did, template, content = self.extract_issuance_payload(
+            holder, template, content = self.extract_issuance_payload(
                 payload)
-            out = self.app.issue_credential(holder_did, issuer_did, template,
+            out = self.app.issue_credential(holder, issuer, template,
                     content)
         except SSIIssuanceError as err:
             raise IssuanceError(err)
         return out
 
-    def create_presentation(self, holder_did, credentials):
+    def create_presentation(self, holder, credentials):
         try:
-            out = self.app.generate_presentation(holder_did, credentials,
+            out = self.app.generate_presentation(holder, credentials,
                 WALTDIR)
         except SSIGenerationError as err:
             err = 'Could not generate presentation: %s' % err
@@ -222,8 +222,8 @@ class WalletShell(cmd.Cmd, MenuHandler):
         if not did_choices:
             err = 'No DIDs found. Must create at least one.'
             raise PresentationError(err)
-        holder_did = self.launch_choice('Choose holder DID', did_choices)
-        vc_choices = self.app.get_credentials_by_did(holder_did)
+        holder = self.launch_choice('Choose holder DID', did_choices)
+        vc_choices = self.app.get_credentials_by_did(holder)
         if not vc_choices:
             err = 'No credentials found for the provided holder DID'
             raise PresentationError(err)
@@ -238,7 +238,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
             vc_file = self.dump(credential, '%s.json' % alias)
             credentials += [vc_file,]
         try:
-            out = self.create_presentation(holder_did, credentials)
+            out = self.create_presentation(holder, credentials)
         except CreationError as err:
             raise PresentationError(err)
         return out

@@ -1,6 +1,8 @@
 #!/bin/bash
 
-usage_string="usage: ./$(basename "$0") [OPTIONS]
+usage_string="usage: 
+
+$ $(basename "$0") --key ALIAS --export OUTFILE
 
 Generate DID and export to file.
 

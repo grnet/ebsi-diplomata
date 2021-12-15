@@ -1,8 +1,8 @@
 #!/bin/bash
 
-usage_string="usage: ./$(basename "$0") [ARGS]
+usage_string="usage:
 
-$ $(basename "$0") --holder-did [DID] --issuer-did [DID] --export [FILE] ...
+$ $(basename "$0") --holder DID --issuer DID --export FILE [OPTIONS]
 
 Issue verifiable diploma and dump to file.
 
@@ -15,8 +15,8 @@ NOTE: If you want to interactively generate a verifiable diploma, run directly t
 issue-credential command.
 
 Named arguments:
-  --holder-did DID  DID of VC holder
-  --issuer-did DID  DID of VC issuer
+  --holder DID      DID of VC holder
+  --issuer DID      DID of VC issuer
   --export OUTFILE  File to export credential after issuance
 
 Order of rest arguments:
@@ -57,8 +57,8 @@ usage() { echo -ne "$usage_string" 1>&2; }
 
 set -e
 
-HOLDER_DID=
-ISSUER_DID=
+HOLDER=
+ISSUER=
 OUTFILE=
 args=
 
@@ -66,13 +66,13 @@ while [[ $# -gt 0 ]]
 do
     arg="$1"
     case $arg in
-        --holder-did)
-            HOLDER_DID="$2"
+        --holder)
+            HOLDER="$2"
             shift
             shift
             ;;
-        --issuer-did)
-            ISSUER_DID="$2"
+        --issuer)
+            ISSUER="$2"
             shift
             shift
             ;;
@@ -92,12 +92,12 @@ do
     esac
 done
 
-if [ -z ${HOLDER_DID} ]; then
+if [ -z ${HOLDER} ]; then
     echo "[-] No holder DID provided"
     usage && exit 1
 fi
 
-if [ -z ${ISSUER_DID} ]; then
+if [ -z ${ISSUER} ]; then
     echo "[-] No issuer DID provided"
     usage && exit 1
 fi
@@ -110,8 +110,8 @@ fi
 printf $args | issue-credential \
     --template VerifiableDiploma \
     --proof-type LD_PROOF \
-    --holder-did ${HOLDER_DID} \
-    --issuer-did ${ISSUER_DID} \
+    --holder ${HOLDER} \
+    --issuer ${ISSUER} \
     --export ${OUTFILE}
 
 exit 0

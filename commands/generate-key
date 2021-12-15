@@ -1,6 +1,8 @@
 #!/bin/bash
 
-usage_string="usage: ./$(basename "$0") [OPTIONS]
+usage_string="usage: 
+
+$ $(basename "$0") --export OUTFILE [OPTIONS]
 
 Generate key and export to file.
 
@@ -11,7 +13,6 @@ Options:
   -a, --algo [Ed25519|Secp256k1|RSA]  Keygen algorithm. Default: Ed25519
 
 Examples
-  $ $(basename "$0") --export tmp.json
   $ $(basename "$0") --algo Secp256k1 --export tmp.json
 "
 

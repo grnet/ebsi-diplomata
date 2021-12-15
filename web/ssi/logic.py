@@ -88,10 +88,10 @@ class SSIParty(SSIApp):
 
     def _extract_issuance_payload(self, payload):
         # TODO: Validate
-        holder_did = payload['holder']
+        holder = payload['holder']
         template = payload['template']
         content = payload['content']
-        return holder_did, template, content
+        return holder, template, content
 
     def _extract_verification_payload(self, payload):
         # TODO: Implement
@@ -131,14 +131,14 @@ class SSIParty(SSIApp):
         return alias
 
     def issue_credential(self, payload):
-        holder_did, template, content = self._extract_issuance_payload(
+        holder, template, content = self._extract_issuance_payload(
             payload)
-        issuer_did = self._get_did()
-        if not issuer_did:
+        issuer = self._get_did()
+        if not issuer:
             err = 'No issuer DID found'
             raise IssuanceError(err)
         try:
-            out = super().issue_credential(holder_did, issuer_did, template,
+            out = super().issue_credential(holder, issuer, template,
                     content)
         except SSIIssuanceError as err:
             raise IssuanceError(err)

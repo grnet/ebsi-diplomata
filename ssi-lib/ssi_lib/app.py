@@ -201,11 +201,11 @@ class SSIApp(WaltWrapper):
         arguments = form.values()
         return arguments
 
-    def issue_credential(self, holder_did, issuer_did, template, content):
+    def issue_credential(self, holder, issuer, template, content):
         command = _commands[template]
         arguments = self._complete_credentials_form(template, content)
         outfile = os.path.join(self.tmpdir, 'vc.json')
-        res, code = self._issue_credential(holder_did, issuer_did,
+        res, code = self._issue_credential(holder, issuer,
                 command, arguments, outfile)
         if code != 0:
             raise SSIIssuanceError(res)
@@ -214,8 +214,8 @@ class SSIApp(WaltWrapper):
         os.remove(outfile)
         return out
 
-    def generate_presentation(self, holder_did, credentials, waltdir):
-        res, code = self._generate_presentation(holder_did, credentials)
+    def generate_presentation(self, holder, credentials, waltdir):
+        res, code = self._generate_presentation(holder, credentials)
         if code != 0:
             raise SSIGenerationError(res)
         sep = 'Verifiable presentation was saved to file: '

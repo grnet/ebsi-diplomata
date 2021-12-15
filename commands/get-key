@@ -1,6 +1,8 @@
 #!/bin/bash
 
-usage_string="usage: ./$(basename "$0") [OPTIONS]
+usage_string="usage: 
+
+$ $(basename "$0") [OPTIONS]
 
 Get the last created key. Exit with 2 if no created key exists. See below for
 more options.

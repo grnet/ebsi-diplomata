@@ -1,14 +1,13 @@
 #!/bin/bash
 
-usage_string="usage: ./$(basename "$0") [OPTIONS]
+usage_string="usage: 
+
+$ $(basename "$0") --file FILE
 
 Load key to memory
 
 Arguments:
   --file FILE       File containing the key in JWK format
-
-Examples
-  $ $(basename "$0") --file key.json
 "
 
 usage() { echo -n "$usage_string" 1>&2; }

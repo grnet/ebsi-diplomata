@@ -1,6 +1,8 @@
 #!/bin/bash
 
-usage_string="usage: ./$(basename "$0") --did <DID> [--token <TOKEN>]
+usage_string="usage: 
+
+$ $(basename "$0") --did DID --token FILE [OPTIONS]
 
 DID onboarding and registration to EBSI.
 
