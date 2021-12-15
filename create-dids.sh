@@ -19,10 +19,11 @@ WARNING: a non-registered DID fails to be resolved by interested parties and
 thus be effectively involved in protocol operations.
 
 Options:
-  --algo [Ed25519|Secp256k1]    Keygen algorithm. Default: Ed25519
-  --no-register                 Force creation of DIDs without registering them
-                                to the EBSI. See WARNING above.
-  -h, --help                    Display help message and exit
+  -a, --algo [Ed25519|Secp256k1|RSA]  Keygen algorithm. Default: Ed25519
+  --no-register                       Force creation of DIDs without
+                                      registering them to the EBIS. See WARNING
+                                      above.
+  -h, --help                          Display help message and exit
 "
 
 usage() { echo -n "$usage_string" 1>&2; }
@@ -64,15 +65,17 @@ while [[ $# -gt 0 ]]
 do
     arg="$1"
     case $arg in
-        --algo)
-            if [ "$2" == "Ed25519" ] || [ "$2" == "Secp256k1" ]; then
-                ALGO="$2"
-            else
-                echo "[-] Unrecongized keygen algorithm: ${2}"
-                usage
-                exit 1
-            fi
-            shift
+        -a|--algo)
+            case "$2" in
+                Ed25519|Secp256k1|RSA)
+                    ALGO="$2"
+                    shift
+                    ;;
+                *)
+                    echo "[-] Unknown keygen algorithm: ${2}"
+                    usage
+                    exit 1
+            esac
             shift
             ;;
         --no-register)

@@ -5,10 +5,10 @@ usage_string="usage: ./$(basename "$0") [OPTIONS]
 Generate key and export to file.
 
 Arguments:
-  --export OUTFILE                File to export key after generation
+  --export OUTFILE                    File to export key after generation
 
 Options:
-  -a, --algo [Ed25519|Secp256k1]  Keygen algorithm. Default: Ed255519
+  -a, --algo [Ed25519|Secp256k1|RSA]  Keygen algorithm. Default: Ed25519
 
 Examples
   $ $(basename "$0") --export tmp.json
@@ -27,14 +27,16 @@ do
     arg="$1"
     case $arg in
         -a|--algo)
-            if [ "$2" == "Ed25519" ] || [ "$2" == "Secp256k1" ]; then
-                ALGO="$2"
-            else
-                echo "[-] Unrecongized keygen algorithm: ${2}"
-                usage
-                exit 1
-            fi
-            shift
+            case "$2" in
+                Ed25519|Secp256k1|RSA)
+                    ALGO="$2"
+                    shift
+                    ;;
+                *)
+                    echo "[-] Unknown keygen algorithm: ${2}"
+                    usage
+                    exit 1
+            esac
             shift
             ;;
         --export)

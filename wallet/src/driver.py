@@ -4,7 +4,7 @@ import os
 from ui import MenuHandler
 from util import HttpClient
 from conf import TMPDIR, WALTDIR, INTRO, PROMPT, INDENT, RESOLVED, \
-    STORAGE, _Action, _UI, EBSI_PRFX, ED25519, SECP256
+    STORAGE, _Action, _UI, EBSI_PRFX, Ed25519, Secp256k1, RSA
 from ssi_lib import SSIGenerationError, SSIRegistrationError, \
     SSIResolutionError, SSIIssuanceError, SSIVerificationError
 from ssi_lib.conf import _Group   # TODO: Get rid of this?
@@ -335,8 +335,9 @@ class WalletShell(cmd.Cmd, MenuHandler):
             case _Group.KEY:
                 algo = self.launch_choice('Choose keygen algorithm',
                     [
-                        ED25519,
-                        SECP256,
+                        Ed25519,
+                        Secp256k1,
+                        RSA,
                     ])
                 if not self.launch_yes_no('Key will be save to disk. Proceed?'):
                     self.flush('Key creation aborted')

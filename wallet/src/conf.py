@@ -8,9 +8,11 @@ RESOLVED    = os.path.join(WALTDIR, 'data/did/resolved')
 
 DBNAME  = 'db.json'
 
-EBSI_PRFX = "did:ebsi"
-ED25519 = 'Ed25519'
-SECP256 = 'Secp256k1'
+EBSI_PRFX   = 'did:ebsi'
+
+Ed25519     = 'Ed25519'
+Secp256k1   = 'Secp256k1'
+RSA         = 'RSA'
 
 PROMPT  = "(wallet) "
 INTRO = """\
