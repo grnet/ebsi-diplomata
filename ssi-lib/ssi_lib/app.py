@@ -1,7 +1,7 @@
 import os
 import json
 import subprocess
-from .db import DbConnector
+from abc import ABCMeta, abstractmethod
 from .conf import _Group, _Vc
 
 
@@ -32,17 +32,10 @@ def run_cmd(args):
     return (resp, code)
 
 
-class SSIApp(object):
+class SSIApp(metaclass=ABCMeta):
 
-    def __init__(self, dbpath, tmpdir):
-        self._db = DbConnector(dbpath)
+    def __init__(self, tmpdir):
         self.tmpdir = tmpdir
-
-    @classmethod
-    def create(cls, config):
-        dbpath = config['db']
-        tmpdir = config['tmp']
-        return cls(dbpath, tmpdir)
 
     def _generate_key(self, algo, outfile):
         res, code = run_cmd([
@@ -52,7 +45,7 @@ class SSIApp(object):
 
     def _load_key(self, alias):
         outfile = os.path.join(self.tmpdir, 'jwk.json')
-        entry = self._db.get_entry(alias, _Group.KEY)
+        entry = self.get_entry(alias, _Group.KEY)
         with open(outfile, 'w+') as f:
             json.dump(entry, f)
         res, code = run_cmd(['load-key', '--file', outfile])
@@ -69,7 +62,7 @@ class SSIApp(object):
         token_file = os.path.join(self.tmpdir, 'bearer-token.txt')
         with open(token_file, 'w+') as f:
             f.write(token)
-        res, code = run_cmd(['register-did', '--did', alias, 
+        res, code = run_cmd(['register-did', '--did', alias,
             '--token', token_file, '--resolve',
         ])
         os.remove(token_file)
@@ -106,86 +99,140 @@ class SSIApp(object):
         os.remove(tmpfile)
         return res, code
 
+    @abstractmethod
     def get_aliases(self, group):
-        return self._db.get_aliases(group)
+        """
+        """
 
+    @abstractmethod
     def get_keys(self):
-        return self._db.get_aliases(_Group.KEY)
+        """
+        """
 
+    @abstractmethod
     def get_dids(self):
-        return self._db.get_aliases(_Group.DID)
+        """
+        """
 
+    @abstractmethod
     def get_credentials(self):
-        return self._db.get_aliases(_Group.VC)
+        """
+        """
 
+    @abstractmethod
     def get_presentations(self):
-        return self._db.get_aliases(_Group.VP)
+        """
+        """
 
+    @abstractmethod
     def get_credentials_by_did(self, alias):
-        return self._db.get_credentials_by_did(alias)
+        """
+        """
 
+    @abstractmethod
     def get_nr(self, group):
-        return self._db.get_nr(group)
+        """
+        """
 
+    @abstractmethod
     def get_nr_keys(self):
-        return self._db.get_nr(_Group.KEY)
+        """
+        """
 
+    @abstractmethod
     def get_nr_dids(self):
-        return self._db.get_nr(_Group.DID)
+        """
+        """
 
+    @abstractmethod
     def get_nr_credentials(self):
-        return self._db.get_nr(_Group.VC)
+        """
+        """
 
+    @abstractmethod
     def get_nr_presentations(self):
-        return self._db.get_nr(_Group.VP)
+        """
+        """
 
+    @abstractmethod
     def get_entry(self, alias, group):
-        return self._db.get_entry(alias, group)
+        """
+        """
 
+    @abstractmethod
     def get_key(self, alias):
-        return self._db.get_entry(alias, _Group.KEY)
+        """
+        """
 
+    @abstractmethod
     def get_did(self, alias):
-        return self._db.get_entry(alias, _Group.DID)
+        """
+        """
 
+    @abstractmethod
     def get_credential(self, alias):
-        return self._db.get_entry(alias, _Group.VC)
+        """
+        """
 
+    @abstractmethod
     def get_presentation(self, alias):
-        return self._db.get_entry(alias, _Group.VP)
+        """
+        """
 
+    @abstractmethod
     def store(self, obj, group):
-        return self._db.store(obj, group)
+        """
+        """
 
+    @abstractmethod
     def store_key(self, obj):
-        return self._db.store(obj, _Group.KEY)
+        """
+        """
 
+    @abstractmethod
     def store_did(self, obj):
-        return self._db.store(obj, _Group.DID)
+        """
+        """
 
+    @abstractmethod
     def store_credential(self, obj):
-        return self._db.store(obj, _Group.VC)
+        """
+        """
 
+    @abstractmethod
     def store_presentation(self, obj):
-        return self._db.store(obj, _Group.VP)
+        """
+        """
 
+    @abstractmethod
     def remove(self, alias, group):
-        self._db.remove(alias, group)
+        """
+        """
 
+    @abstractmethod
     def clear(self, group):
-        self._db.clear(group)
+        """
+        """
 
+    @abstractmethod
     def clear_keys(self):
-        self._db.clear(_Group.KEY)
+        """
+        """
 
+    @abstractmethod
     def clear_dids(self):
-        self._db.clear(_Group.DID)
+        """
+        """
 
+    @abstractmethod
     def clear_credentials(self):
-        self._db.clear(_Group.VC)
+        """
+        """
 
+    @abstractmethod
     def clear_presentations(self):
-        self._db.clear(_Group.VP)
+        """
+        """
 
     def generate_key(self, algo):
         outfile = os.path.join(self.tmpdir, 'jwk.json')
@@ -228,8 +275,8 @@ class SSIApp(object):
         match template:
             case _Vc.DIPLOMA:
                 # TODO: Issuer should here complete the following form by
-                # comparing the submitted content against its database. Empty 
-                # strings lead to the demo defaults of the walt-ssi library. 
+                # comparing the submitted content against its database. Empty
+                # strings lead to the demo defaults of the walt-ssi library.
                 # IMPORTANT: Order of key-value pairs matters!!!
                 form = {
                     'person_identifier': content['person_id'],

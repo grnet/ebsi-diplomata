@@ -1,6 +1,6 @@
+from ssi_lib.conf import _Group
 from tinydb import TinyDB, where
 import json
-from .conf import _Group
 
 _pkey = {
     _Group.KEY: 'kid',
