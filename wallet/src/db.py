@@ -101,7 +101,29 @@ class DbConnector(object):
         self.db.table(group).truncate()
 
     def get_entry(self, alias, group):
-        return self._get_entry(alias, group)
+        _out = self._get_entry(alias, group)
+        # SQL
+        con = self._create_connection()
+        cur = con.cursor()
+        try:
+            cur.execute(f'''
+                SELECT
+                    body
+                FROM
+                    '{group}'
+                WHERE
+                    alias = '{alias}'
+            ''')
+        except sqlite3.DatabaseError as err:
+            raise WalletDbQueryError(err)
+
+        # TODO: Load and sort method
+        body = cur.fetchone()[0]
+        aux1 = json.loads(body)
+        aux2 = json.dumps(aux1, sort_keys=True) # TODO
+
+        out = json.loads(aux2)
+        return out
  
     def get_nr(self, group):
         return self._get_nr(group)

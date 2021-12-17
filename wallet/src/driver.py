@@ -227,8 +227,6 @@ class WalletShell(cmd.Cmd, MenuHandler):
         except KeyError as err:
             raise IssuanceError(err)
         try:
-            holder, template, content = self.prepare_issuance_payload(
-                payload)
             out = self.app.issue_credential(holder, issuer, template,
                     content)
         except SSIIssuanceError as err:
@@ -255,7 +253,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
             err = 'No credentials found for the provided holder DID'
             raise PresentationError(err)
         vc_selected = self.launch_selection(
-            'Select credentials to verify', vc_choices)
+            'Select credentials to present', vc_choices)
         if not vc_selected:
             err = 'Presentation aborted: No credentials selected'
             raise PresentationError(err)
