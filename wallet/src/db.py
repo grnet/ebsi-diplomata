@@ -16,6 +16,9 @@ _pkey = {
 class WalletDbConnectionError(BaseException):
     pass
 
+class WalletDbQueryError(BaseException):
+    pass
+
 def _get_init_script():
     rootdir = dirname(dirname(os.path.abspath(__file__)))   # TODO
     return os.path.join(rootdir, 'init-db.sql')
@@ -25,19 +28,19 @@ class DbConnector(object):
 
     def __init__(self, path):
         self.db = self._init_db(path)   # TODO: Get gradually rid of this
-        # SQL initialization
+        # SQL
         script = _get_init_script()
         with open(script, 'r') as f:
             content = f.read()
-        con = self._create_connection(SQL_DBNAME)
+        con = self._create_connection()
         cur = con.cursor()
         cur.executescript(content)
         con.close()
 
     @staticmethod 
-    def _create_connection(db):
+    def _create_connection():
         try:
-            con = sqlite3.connect(db)
+            con = sqlite3.connect(SQL_DBNAME)   # TODO
         except sqlite3.DatabaseError as err:
             raise WalletDbConectionError(err)
         return con
@@ -115,9 +118,23 @@ class DbConnector(object):
     def get_key_from_did(self, alias):
         return self._get_key_from_did(alias)
 
-    def store(self, obj, group):
-        alias = obj[_pkey[group]]
-        self._store(obj, group)
+    def store(self, entry, group):
+        alias = entry[_pkey[group]]
+        self._store(entry, group)
+        # SQL
+        body = json.dumps(entry)
+        con = self._create_connection()
+        cur = con.cursor()
+        try:
+            cur.execute(f'''
+                INSERT INTO
+                    '{group}'(alias, body)
+                VALUES
+                    ('{alias}', '{body}')
+            ''')
+        except sqlite3.DatabaseError as err:
+            raise WalletDbQueryError(err)
+        con.commit()
         return alias
 
     def remove(self, alias, group):
