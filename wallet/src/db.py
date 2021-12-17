@@ -155,3 +155,14 @@ class DbConnector(object):
 
     def clear(self, group):
         self._clear(group)
+        # SQL
+        con = self._create_connection()
+        cur = con.cursor()
+        try:
+            cur.execute(f'''
+                DELETE FROM
+                    '{group}'
+            ''')
+        except sqlite3.DatabaseError as err:
+            raise WalletDbQueryError(err)
+        con.commit()
