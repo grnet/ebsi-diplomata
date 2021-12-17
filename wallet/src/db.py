@@ -121,12 +121,26 @@ class DbConnector(object):
         body = cur.fetchone()[0]
         aux1 = json.loads(body)
         aux2 = json.dumps(aux1, sort_keys=True) # TODO
-
         out = json.loads(aux2)
+
         return out
  
     def get_nr(self, group):
-        return self._get_nr(group)
+        _out = self._get_nr(group)
+        # SQL
+        con = self._create_connection()
+        cur = con.cursor()
+        try:
+            cur.execute(f'''
+                SELECT
+                    COUNT(*)
+                FROM
+                    '{group}'
+            ''')
+        except sqlite3.DatabaseError as err:
+            raise WalletDbQueryError(err)
+        out = cur.fetchone()[0]
+        return out
 
     def get_all(self, group):
         return self._get_all(group)
