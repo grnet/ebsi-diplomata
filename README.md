@@ -52,4 +52,14 @@ git submodule update --remote
 
 **Upon any such update, make sure to rebuild wallet and services.**
 
+## Wallet
+
+Wallet data are persistently stored under `storage/wallet`. Assuming `sqlite3` 
+is installed and the wallet runs at a container called `holder`, the database 
+can be accessed with
+
+```commandline
+sqlite3 storage/wallet/holder.db
+```
+
 ### Tests

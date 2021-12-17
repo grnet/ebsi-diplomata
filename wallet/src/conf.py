@@ -6,7 +6,8 @@ TMPDIR      = os.getenv('TMPDIR')
 WALTDIR     = os.getenv('WALTDIR')
 RESOLVED    = os.path.join(WALTDIR, 'data/did/resolved')
 
-DBNAME  = 'db.json'
+DBNAME  = 'db.json'                 # TODO: Get gradually rid of this
+SQL_DBNAME  = os.getenv('DBNAME')   # TODO: This will finally rename to DBNAME
 
 EBSI_PRFX   = 'did:ebsi'
 

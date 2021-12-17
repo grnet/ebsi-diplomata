@@ -8,3 +8,5 @@ build/
 env/
 TODOS*
 NOTES*
+*.db
+*local*
