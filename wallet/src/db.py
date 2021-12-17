@@ -1,6 +1,10 @@
 from ssi_lib.conf import _Group
 from tinydb import TinyDB, where
 import json
+import os
+from os.path import dirname
+import sqlite3
+from conf import SQL_DBNAME
 
 _pkey = {
     _Group.KEY: 'kid',
@@ -9,10 +13,34 @@ _pkey = {
     _Group.VP:  'id',
 }
 
+class WalletDbConnectionError(BaseException):
+    pass
+
+def _get_init_script():
+    rootdir = dirname(dirname(os.path.abspath(__file__)))   # TODO
+    return os.path.join(rootdir, 'init-db.sql')
+
+
 class DbConnector(object):
 
     def __init__(self, path):
-        self.db = self._init_db(path)
+        self.db = self._init_db(path)   # TODO: Get gradually rid of this
+        # SQL initialization
+        script = _get_init_script()
+        with open(script, 'r') as f:
+            content = f.read()
+        con = self._create_connection(SQL_DBNAME)
+        cur = con.cursor()
+        cur.executescript(content)
+        con.close()
+
+    @staticmethod 
+    def _create_connection(db):
+        try:
+            con = sqlite3.connect(db)
+        except sqlite3.DatabaseError as err:
+            raise WalletDbConectionError(err)
+        return con
 
     @staticmethod
     def _init_db(path):
