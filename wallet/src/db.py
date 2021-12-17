@@ -143,16 +143,39 @@ class DbConnector(object):
         return out
 
     def get_all(self, group):
-        return self._get_all(group)
+        _out = self._get_all(group)
+        out = _out
+        assert out == _out
+        return out
 
     def get_aliases(self, group):
-        return self._get_aliases(group)
+        _out = self._get_aliases(group)
+        # SQL
+        con = self._create_connection()
+        cur = con.cursor()
+        try:
+            cur.execute(f'''
+                SELECT
+                    alias
+                FROM
+                    '{group}'
+            ''')
+        except sqlite3.DatabaseError as err:
+            raise WalletDbQueryError(err)
+        out = list(map(lambda _: _[0], cur.fetchall()))
+        return out
 
     def get_credentials_by_did(self, alias):
-        return self._get_credentials_by_did(alias)
+        _out = self._get_credentials_by_did(alias)
+        out = _out
+        assert out == _out
+        return out
 
     def get_key_from_did(self, alias):
-        return self._get_key_from_did(alias)
+        _out = self._get_key_from_did(alias)
+        out = _out
+        assert out == _out
+        return out
 
     def store(self, entry, group):
         alias = entry[_pkey[group]]
