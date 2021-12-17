@@ -139,6 +139,19 @@ class DbConnector(object):
 
     def remove(self, alias, group):
         self._remove(alias, group)
+        # SQL
+        con = self._create_connection()
+        cur = con.cursor()
+        try:
+            cur.execute(f'''
+                DELETE FROM
+                    '{group}'
+                WHERE
+                    alias = '{alias}'
+            ''')
+        except sqlite3.DatabaseError as err:
+            raise WalletDbQueryError(err)
+        con.commit()
 
     def clear(self, group):
         self._clear(group)
