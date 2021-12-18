@@ -45,15 +45,11 @@ class DbConnector(object):
     def get_entry(self, alias, group):
         con = self._create_connection()
         cur = con.cursor()
+        query = f'''
+            SELECT body FROM '{group}' WHERE alias = '{alias}'
+        '''
         try:
-            cur.execute(f'''
-                SELECT
-                    body
-                FROM
-                    '{group}'
-                WHERE
-                    alias = '{alias}'
-            ''')
+            cur.execute(query)
         except sqlite3.DatabaseError as err:
             raise WalletDbQueryError(err)
 
@@ -68,13 +64,11 @@ class DbConnector(object):
     def get_nr(self, group):
         con = self._create_connection()
         cur = con.cursor()
+        query = f'''
+            SELECT COUNT(*) FROM '{group}'
+        '''
         try:
-            cur.execute(f'''
-                SELECT
-                    COUNT(*)
-                FROM
-                    '{group}'
-            ''')
+            cur.execute(query)
         except sqlite3.DatabaseError as err:
             raise WalletDbQueryError(err)
         out = cur.fetchone()[0]
@@ -83,13 +77,11 @@ class DbConnector(object):
     def get_aliases(self, group):
         con = self._create_connection()
         cur = con.cursor()
+        query = f'''
+            SELECT alias FROM '{group}'
+        '''
         try:
-            cur.execute(f'''
-                SELECT
-                    alias
-                FROM
-                    '{group}'
-            ''')
+            cur.execute(query)
         except sqlite3.DatabaseError as err:
             raise WalletDbQueryError(err)
         out = list(map(lambda _: _[0], cur.fetchall()))
@@ -98,15 +90,11 @@ class DbConnector(object):
     def get_credentials_by_did(self, alias):
         con = self._create_connection()
         cur = con.cursor()
+        query = f'''
+            SELECT alias FROM vc WHERE holder = '{alias}'
+        '''
         try:
-            cur.execute(f'''
-                SELECT
-                    alias
-                FROM
-                    vc
-                WHERE
-                    holder = '{alias}'
-            ''')
+            cur.execute(query)
         except sqlite3.DatabaseError as err:
             raise WalletDbQueryError(err)
         out = list(map(lambda _: _[0], cur.fetchall()))
@@ -120,34 +108,26 @@ class DbConnector(object):
         match group:
             case _Group.KEY:
                 query = f'''
-                    INSERT INTO
-                        '{group}'(alias, body)
-                    VALUES
-                        ('{alias}', '{body}')
+                    INSERT INTO '{group}'(alias, body)
+                    VALUES ('{alias}', '{body}')
                 '''
             case _Group.DID:
                 key = entry['verificationMethod'][0]['publicKeyJwk']['kid'] # TODO
                 query = f'''
-                    INSERT INTO
-                        '{group}'(key, alias, body)
-                    VALUES
-                        ('{key}', '{alias}', '{body}')
+                    INSERT INTO '{group}'(key, alias, body)
+                    VALUES ('{key}', '{alias}', '{body}')
                 '''
             case _Group.VC:
                 holder = entry['credentialSubject']['id']                   # TODO
                 query = f'''
-                    INSERT INTO
-                        '{group}'(holder, alias, body)
-                    VALUES
-                        ('{holder}', '{alias}', '{body}')
+                    INSERT INTO '{group}'(holder, alias, body)
+                    VALUES ('{holder}', '{alias}', '{body}')
                 '''
             case _Group.VP:
-                holder = entry['holder']                                       # TODO
+                holder = entry['holder']                                    # TODO
                 query = f'''
-                    INSERT INTO
-                        '{group}'(holder, alias, body)
-                    VALUES
-                        ('{holder}', '{alias}', '{body}')
+                    INSERT INTO '{group}'(holder, alias, body)
+                    VALUES ('{holder}', '{alias}', '{body}')
                 '''
         try:
             cur.execute(query)
@@ -159,13 +139,11 @@ class DbConnector(object):
     def remove(self, alias, group):
         con = self._create_connection()
         cur = con.cursor()
+        query = f'''
+            DELETE FROM '{group}' WHERE alias = '{alias}'
+        '''
         try:
-            cur.execute(f'''
-                DELETE FROM
-                    '{group}'
-                WHERE
-                    alias = '{alias}'
-            ''')
+            cur.execute(query)
         except sqlite3.DatabaseError as err:
             raise WalletDbQueryError(err)
         con.commit()
@@ -173,11 +151,11 @@ class DbConnector(object):
     def clear(self, group):
         con = self._create_connection()
         cur = con.cursor()
+        query = f'''
+            DELETE FROM '{group}'
+        '''
         try:
-            cur.execute(f'''
-                DELETE FROM
-                    '{group}'
-            ''')
+            cur.execute(query)
         except sqlite3.DatabaseError as err:
             raise WalletDbQueryError(err)
         con.commit()
