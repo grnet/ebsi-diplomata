@@ -67,9 +67,6 @@ class DbConnector(object):
     def _get_nr(self, group):
         return len(self.db.table(group).all())
 
-    def _get_all(self, group):
-        return self.db.table(group).all()
-
     def _get_aliases(self, group):
         return list(map(
             lambda x: x[_pkey[group]],
@@ -84,11 +81,6 @@ class DbConnector(object):
             filtered,
         ))
         return out
-
-    def _get_key_from_did(self, alias):
-        did = self._get(alias, _Group.DID)
-        if did:
-            return did['verificationMethod'][0]['publicKeyJwk']['kid']
 
     def _store(self, obj, group):
         self.db.table(group).insert(obj)
@@ -142,12 +134,6 @@ class DbConnector(object):
         out = cur.fetchone()[0]
         return out
 
-    def get_all(self, group):
-        _out = self._get_all(group)
-        out = _out
-        assert out == _out
-        return out
-
     def get_aliases(self, group):
         _out = self._get_aliases(group)
         # SQL
@@ -182,12 +168,6 @@ class DbConnector(object):
         except sqlite3.DatabaseError as err:
             raise WalletDbQueryError(err)
         out = list(map(lambda _: _[0], cur.fetchall()))
-        out = _out
-        assert out == _out
-        return out
-
-    def get_key_from_did(self, alias):
-        _out = self._get_key_from_did(alias)
         out = _out
         assert out == _out
         return out
