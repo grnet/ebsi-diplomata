@@ -167,6 +167,21 @@ class DbConnector(object):
 
     def get_credentials_by_did(self, alias):
         _out = self._get_credentials_by_did(alias)
+        # SQL
+        con = self._create_connection()
+        cur = con.cursor()
+        try:
+            cur.execute(f'''
+                SELECT
+                    alias
+                FROM
+                    vc
+                WHERE
+                    holder = '{alias}'
+            ''')
+        except sqlite3.DatabaseError as err:
+            raise WalletDbQueryError(err)
+        out = list(map(lambda _: _[0], cur.fetchall()))
         out = _out
         assert out == _out
         return out
@@ -184,13 +199,40 @@ class DbConnector(object):
         body = json.dumps(entry)
         con = self._create_connection()
         cur = con.cursor()
+        match group:
+            case _Group.KEY:
+                query = f'''
+                    INSERT INTO
+                        '{group}'(alias, body)
+                    VALUES
+                        ('{alias}', '{body}')
+                '''
+            case _Group.DID:
+                key = entry['verificationMethod'][0]['publicKeyJwk']['kid'] # TODO
+                query = f'''
+                    INSERT INTO
+                        '{group}'(key, alias, body)
+                    VALUES
+                        ('{key}', '{alias}', '{body}')
+                '''
+            case _Group.VC:
+                holder = entry['credentialSubject']['id']                   # TODO
+                query = f'''
+                    INSERT INTO
+                        '{group}'(holder, alias, body)
+                    VALUES
+                        ('{holder}', '{alias}', '{body}')
+                '''
+            case _Group.VP:
+                holder = entry['holder']                                       # TODO
+                query = f'''
+                    INSERT INTO
+                        '{group}'(holder, alias, body)
+                    VALUES
+                        ('{holder}', '{alias}', '{body}')
+                '''
         try:
-            cur.execute(f'''
-                INSERT INTO
-                    '{group}'(alias, body)
-                VALUES
-                    ('{alias}', '{body}')
-            ''')
+            cur.execute(query)
         except sqlite3.DatabaseError as err:
             raise WalletDbQueryError(err)
         con.commit()
