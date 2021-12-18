@@ -1,9 +1,6 @@
-from ssi_lib.conf import _Group
-import json
-import os
-from os.path import dirname
 import sqlite3
-from conf import SQL_DBNAME
+import json
+from ssi_lib.conf import _Group
 
 _pkey = {
     _Group.KEY: 'kid',
@@ -18,35 +15,43 @@ class WalletDbConnectionError(BaseException):
 class WalletDbQueryError(BaseException):
     pass
 
-def _get_init_script():
-    rootdir = dirname(dirname(os.path.abspath(__file__)))   # TODO
-    return os.path.join(rootdir, 'init-db.sql')
-
 
 class DbConnector(object):
 
-    def __init__(self, path):
-        script = _get_init_script()
-        with open(script, 'r') as f:
-            content = f.read()
-        con = self._create_connection()
-        cur = con.cursor()
-        cur.executescript(content)
-        con.close()
+    def __init__(self, db):
+        self._run_sql_script(db, self._get_init_script())
+        self.db = db
 
-    @staticmethod 
-    def _create_connection():
+    def _create_connection(self, db=None):
+        if not db: 
+            db = self.db
         try:
-            con = sqlite3.connect(SQL_DBNAME)   # TODO
+            con = sqlite3.connect(db)
         except sqlite3.DatabaseError as err:
             raise WalletDbConectionError(err)
         return con
 
+    @staticmethod
+    def _get_init_script():
+        from os.path import dirname
+        import os
+        rootdir = dirname(dirname(os.path.abspath(
+            __file__)))
+        return os.path.join(rootdir, 'init-db.sql')
+
+    def _run_sql_script(self, db, script):
+        con = self._create_connection(db)
+        cur = con.cursor()
+        with open(script, 'r') as f:
+            sql = f.read()
+        cur.executescript(sql)
+        con.close()
+
+    def _dump_dict(self, entry):
+        return json.dumps(entry, sort_keys=True)
+
     def _load_dict(self, body):
-        aux = json.dumps(json.loads(body),
-            sort_keys=True)
-        out = json.loads(aux)
-        return out
+        return json.loads(body)
 
     def get_entry(self, alias, group):
         con = self._create_connection()
@@ -105,7 +110,7 @@ class DbConnector(object):
         con = self._create_connection()
         cur = con.cursor()
         alias = entry[_pkey[group]]
-        body = json.dumps(entry)
+        body = self._dump_dict(entry)
         match group:
             case _Group.KEY:
                 query = f'''

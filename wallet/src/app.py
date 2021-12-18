@@ -5,15 +5,15 @@ from db import DbConnector
 
 class WalletApp(SSIApp):
 
-    def __init__(self, dbpath, tmpdir):
+    def __init__(self, tmpdir, dbpath):
         self._db = DbConnector(dbpath)
         super().__init__(tmpdir)
     
     @classmethod
     def create(cls, config):
-        dbpath = config['db']
-        tmpdir = config['tmp']
-        return cls(dbpath, tmpdir)
+        tmpdir = config['tmpdir']
+        dbpath = config['dbpath']
+        return cls(tmpdir, dbpath)
 
     def get_aliases(self, group):
         return self._db.get_aliases(group)
