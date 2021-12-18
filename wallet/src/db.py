@@ -64,6 +64,7 @@ class DbConnector(object):
         except sqlite3.DatabaseError as err:
             raise WalletDbQueryError(err)
         body = cur.fetchone()[0]
+        con.close()
         out = self._load_dict(body)
         return out
  
@@ -78,6 +79,7 @@ class DbConnector(object):
         except sqlite3.DatabaseError as err:
             raise WalletDbQueryError(err)
         out = cur.fetchone()[0]
+        con.close()
         return out
 
     def get_aliases(self, group):
@@ -91,6 +93,7 @@ class DbConnector(object):
         except sqlite3.DatabaseError as err:
             raise WalletDbQueryError(err)
         out = list(map(lambda _: _[0], cur.fetchall()))
+        con.close()
         return out
 
     def get_credentials_by_did(self, alias):
@@ -104,6 +107,7 @@ class DbConnector(object):
         except sqlite3.DatabaseError as err:
             raise WalletDbQueryError(err)
         out = list(map(lambda _: _[0], cur.fetchall()))
+        con.close()
         return out
 
     def store(self, entry, group):
@@ -140,6 +144,7 @@ class DbConnector(object):
         except sqlite3.DatabaseError as err:
             raise WalletDbQueryError(err)
         con.commit()
+        con.close()
         return alias
 
     def remove(self, alias, group):
@@ -153,6 +158,7 @@ class DbConnector(object):
         except sqlite3.DatabaseError as err:
             raise WalletDbQueryError(err)
         con.commit()
+        con.close()
 
     def clear(self, group):
         con = self._create_connection()
@@ -165,3 +171,4 @@ class DbConnector(object):
         except sqlite3.DatabaseError as err:
             raise WalletDbQueryError(err)
         con.commit()
+        con.close()
