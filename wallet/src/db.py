@@ -42,6 +42,12 @@ class DbConnector(object):
             raise WalletDbConectionError(err)
         return con
 
+    def _load_dict(self, body):
+        aux = json.dumps(json.loads(body),
+            sort_keys=True)
+        out = json.loads(aux)
+        return out
+
     def get_entry(self, alias, group):
         con = self._create_connection()
         cur = con.cursor()
@@ -52,13 +58,8 @@ class DbConnector(object):
             cur.execute(query)
         except sqlite3.DatabaseError as err:
             raise WalletDbQueryError(err)
-
-        # TODO: Load and sort method
         body = cur.fetchone()[0]
-        aux1 = json.loads(body)
-        aux2 = json.dumps(aux1, sort_keys=True) # TODO
-        out = json.loads(aux2)
-
+        out = self._load_dict(body)
         return out
  
     def get_nr(self, group):
@@ -101,10 +102,10 @@ class DbConnector(object):
         return out
 
     def store(self, entry, group):
-        alias = entry[_pkey[group]]
-        body = json.dumps(entry)
         con = self._create_connection()
         cur = con.cursor()
+        alias = entry[_pkey[group]]
+        body = json.dumps(entry)
         match group:
             case _Group.KEY:
                 query = f'''
