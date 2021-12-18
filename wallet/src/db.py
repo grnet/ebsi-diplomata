@@ -2,12 +2,6 @@ import sqlite3
 import json
 from ssi_lib.conf import _Group
 
-_pkey = {
-    _Group.KEY: 'kid',
-    _Group.DID: 'id',
-    _Group.VC:  'id',
-    _Group.VP:  'id',
-}
 
 class WalletDbConnectionError(BaseException):
     pass
@@ -110,35 +104,62 @@ class DbConnector(object):
         con.close()
         return out
 
-    def store(self, entry, group):
+    def store_key(self, alias, entry):
         con = self._create_connection()
         cur = con.cursor()
-        alias = entry[_pkey[group]]
         body = self._dump_dict(entry)
-        match group:
-            case _Group.KEY:
-                query = f'''
-                    INSERT INTO '{group}'(alias, body)
-                    VALUES ('{alias}', '{body}')
-                '''
-            case _Group.DID:
-                key = entry['verificationMethod'][0]['publicKeyJwk']['kid'] # TODO
-                query = f'''
-                    INSERT INTO '{group}'(key, alias, body)
-                    VALUES ('{key}', '{alias}', '{body}')
-                '''
-            case _Group.VC:
-                holder = entry['credentialSubject']['id']                   # TODO
-                query = f'''
-                    INSERT INTO '{group}'(holder, alias, body)
-                    VALUES ('{holder}', '{alias}', '{body}')
-                '''
-            case _Group.VP:
-                holder = entry['holder']                                    # TODO
-                query = f'''
-                    INSERT INTO '{group}'(holder, alias, body)
-                    VALUES ('{holder}', '{alias}', '{body}')
-                '''
+        query = f'''
+            INSERT INTO key(alias, body)
+            VALUES ('{alias}', '{body}')
+        '''
+        try:
+            cur.execute(query)
+        except sqlite3.DatabaseError as err:
+            raise WalletDbQueryError(err)
+        con.commit()
+        con.close()
+        return alias
+
+    def store_did(self, alias, key, entry):
+        con = self._create_connection()
+        cur = con.cursor()
+        body = self._dump_dict(entry)
+        query = f'''
+            INSERT INTO did(key, alias, body)
+            VALUES ('{key}', '{alias}', '{body}')
+        '''
+        try:
+            cur.execute(query)
+        except sqlite3.DatabaseError as err:
+            raise WalletDbQueryError(err)
+        con.commit()
+        con.close()
+        return alias
+
+    def store_vc(self, alias, holder, entry):
+        con = self._create_connection()
+        cur = con.cursor()
+        body = self._dump_dict(entry)
+        query = f'''
+            INSERT INTO vc(holder, alias, body)
+            VALUES ('{holder}', '{alias}', '{body}')
+        '''
+        try:
+            cur.execute(query)
+        except sqlite3.DatabaseError as err:
+            raise WalletDbQueryError(err)
+        con.commit()
+        con.close()
+        return alias
+
+    def store_vp(self, alias, holder, entry):
+        con = self._create_connection()
+        cur = con.cursor()
+        body = self._dump_dict(entry)
+        query = f'''
+            INSERT INTO vp(holder, alias, body)
+            VALUES ('{holder}', '{alias}', '{body}')
+        '''
         try:
             cur.execute(query)
         except sqlite3.DatabaseError as err:
