@@ -1,5 +1,4 @@
 from ssi_lib.conf import _Group
-from tinydb import TinyDB, where
 import json
 import os
 from os.path import dirname
@@ -27,8 +26,6 @@ def _get_init_script():
 class DbConnector(object):
 
     def __init__(self, path):
-        self.db = self._init_db(path)   # TODO: Get gradually rid of this
-        # SQL
         script = _get_init_script()
         with open(script, 'r') as f:
             content = f.read()
@@ -45,56 +42,7 @@ class DbConnector(object):
             raise WalletDbConectionError(err)
         return con
 
-    @staticmethod
-    def _init_db(path):
-        db = TinyDB(path, **{
-            'sort_keys': True,
-            'indent': 4,
-            'separators': [',', ': '],
-        })
-        for group in (_Group.KEY, _Group.DID, _Group.VC, _Group.VP):
-            db.table(group)
-        return db
-
-    def _get_entry(self, alias, group):
-        filtered = self.db.table(group).search(
-            where(_pkey[group])==alias)
-        if not filtered:
-            return None
-        out = json.loads(str(filtered[0]).replace('\'', '"'))
-        return out
-
-    def _get_nr(self, group):
-        return len(self.db.table(group).all())
-
-    def _get_aliases(self, group):
-        return list(map(
-            lambda x: x[_pkey[group]],
-            self.db.table(group).all(),
-        ))
-
-    def _get_credentials_by_did(self, alias):
-        filtered = self.db.table(_Group.VC).search(
-            where('credentialSubject')['id']==alias)
-        out = list(map(
-            lambda x: x['id'],
-            filtered,
-        ))
-        return out
-
-    def _store(self, obj, group):
-        self.db.table(group).insert(obj)
-
-    def _remove(self, alias, group):
-        self.db.table(group).remove(where(
-            _pkey[group])==alias)
-        
-    def _clear(self, group):
-        self.db.table(group).truncate()
-
     def get_entry(self, alias, group):
-        _out = self._get_entry(alias, group)
-        # SQL
         con = self._create_connection()
         cur = con.cursor()
         try:
@@ -118,8 +66,6 @@ class DbConnector(object):
         return out
  
     def get_nr(self, group):
-        _out = self._get_nr(group)
-        # SQL
         con = self._create_connection()
         cur = con.cursor()
         try:
@@ -135,8 +81,6 @@ class DbConnector(object):
         return out
 
     def get_aliases(self, group):
-        _out = self._get_aliases(group)
-        # SQL
         con = self._create_connection()
         cur = con.cursor()
         try:
@@ -152,8 +96,6 @@ class DbConnector(object):
         return out
 
     def get_credentials_by_did(self, alias):
-        _out = self._get_credentials_by_did(alias)
-        # SQL
         con = self._create_connection()
         cur = con.cursor()
         try:
@@ -168,14 +110,10 @@ class DbConnector(object):
         except sqlite3.DatabaseError as err:
             raise WalletDbQueryError(err)
         out = list(map(lambda _: _[0], cur.fetchall()))
-        out = _out
-        assert out == _out
         return out
 
     def store(self, entry, group):
         alias = entry[_pkey[group]]
-        self._store(entry, group)
-        # SQL
         body = json.dumps(entry)
         con = self._create_connection()
         cur = con.cursor()
@@ -219,8 +157,6 @@ class DbConnector(object):
         return alias
 
     def remove(self, alias, group):
-        self._remove(alias, group)
-        # SQL
         con = self._create_connection()
         cur = con.cursor()
         try:
@@ -235,8 +171,6 @@ class DbConnector(object):
         con.commit()
 
     def clear(self, group):
-        self._clear(group)
-        # SQL
         con = self._create_connection()
         cur = con.cursor()
         try:
