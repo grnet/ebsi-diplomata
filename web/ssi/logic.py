@@ -49,6 +49,27 @@ class SSIParty(SSIApp):
         out['tmpdir'] = tmpdir
         return out
 
+    def _extract_alias_from_key(self, entry):
+        return entry['kid']
+
+    def _extract_alias_from_did(self, entry):
+        return entry['id']
+
+    def _extract_key_from_did(self, entry):
+        return entry['verificationMethod'][0]['publicKeyJwk']['kid']
+
+    def _extract_alias_from_vc(self, entry):
+        return entry['id']
+
+    def _extract_holder_from_vc(self, entry):
+        return entry['credentialSubject']['id']
+
+    def _extract_alias_from_vp(self, entry):
+        return entry['id']
+
+    def _extract_holder_from_vp(self, entry):
+        return entry['holder']
+
     def get_aliases(self, group):
         return self._db.get_aliases(group)
 
@@ -97,20 +118,24 @@ class SSIParty(SSIApp):
     def get_presentation(self, alias):
         return self._db.get_entry(alias, _Group.VP)
 
-    def store(self, obj, group):
-        return self._db.store(obj, group)
+    def store_key(self, entry):
+        alias = self._extract_alias_from_key(entry)
+        return self._db.store_key(alias, entry)
 
-    def store_key(self, obj):
-        return self._db.store(obj, _Group.KEY)
+    def store_did(self, entry):
+        alias = self._extract_alias_from_did(entry)
+        key = self._extract_key_from_did(entry)
+        return self._db.store_did(alias, key, entry)
 
-    def store_did(self, obj):
-        return self._db.store(obj, _Group.DID)
+    def store_credential(self, entry):
+        alias = self._extract_alias_from_vc(entry)
+        holder = self._extract_holder_from_vc(entry)
+        return self._db.store_vc(alias, holder, entry)
 
-    def store_credential(self, obj):
-        return self._db.store(obj, _Group.VC)
-
-    def store_presentation(self, obj):
-        return self._db.store(obj, _Group.VP)
+    def store_presentation(self, entry):
+        alias = self._extract_alias_from_vp(entry)
+        holder = self._extract_holder_from_vp(entry)
+        return self._db.store_vp(alias, holder, entry)
 
     def remove(self, alias, group):
         self._db.remove(alias, group)

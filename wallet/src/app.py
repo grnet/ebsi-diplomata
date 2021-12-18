@@ -84,9 +84,6 @@ class WalletApp(SSIApp):
     def get_presentation(self, alias):
         return self._db.get_entry(alias, _Group.VP)
 
-    def store(self, entry, group):
-        return self._db.store(entry, group)
-
     def store_key(self, entry):
         alias = self._extract_alias_from_key(entry)
         return self._db.store_key(alias, entry)

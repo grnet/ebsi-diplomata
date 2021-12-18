@@ -25,6 +25,12 @@ class DbConnector(object):
             db.table(group)
         return db
 
+    def _dump_dict(self, entry):
+        return json.dumps(entry, sort_keys=True)
+
+    def _load_dict(self, body):
+        return json.loads(body)
+
     def _get_entry(self, alias, group):
         filtered = self.db.table(group).search(
             where(_pkey[group])==alias)
@@ -59,8 +65,8 @@ class DbConnector(object):
         if did:
             return did['verificationMethod'][0]['publicKeyJwk']['kid']
 
-    def _store(self, obj, group):
-        self.db.table(group).insert(obj)
+    def _store(self, entry, group):
+        self.db.table(group).insert(entry)
 
     def _remove(self, alias, group):
         self.db.table(group).remove(where(
@@ -87,9 +93,20 @@ class DbConnector(object):
     def get_key_from_did(self, alias):
         return self._get_key_from_did(alias)
 
-    def store(self, obj, group):
-        alias = obj[_pkey[group]]
-        self._store(obj, group)
+    def store_key(self, alias, entry):
+        self._store(entry, _Group.KEY)
+        return alias
+
+    def store_did(self, alias, key, entry):
+        self._store(entry, _Group.DID)
+        return alias
+
+    def store_vc(self, alias, holder, entry):
+        self._store(entry, _Group.VC)
+        return alias
+
+    def store_vp(self, alias, holder, entry):
+        self._store(entry, _Group.VP)
         return alias
 
     def remove(self, alias, group):

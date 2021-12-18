@@ -180,11 +180,6 @@ class SSIApp(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def store(self, obj, group):
-        """
-        """
-
-    @abstractmethod
     def store_key(self, obj):
         """
         """
