@@ -1,7 +1,14 @@
-import sqlite3
-import json
-from ssi_lib.conf import _Group
+"""This is an interface for making SQL queries to any database whose schema is
+defined by ../init-db.sql. Rough overview of tables:
 
+    key | alias(VARCHAR) | body(JSONB)
+    did | alias(VARCHAR) | body(JSONB) | key(VARCHAR)    [fk to key(alias)]
+    vc  | alias(VARCHAR) | body(JSONB) | holder(VARCHAR) [fk to did(alias)]
+    vp  | alias(VARCHAR) | body(JSONB) | holder(VARCHAR) [fk to did(alias)]
+
+"""
+
+import json
 
 class WalletDbConnectionError(BaseException):
     pass
@@ -9,6 +16,17 @@ class WalletDbConnectionError(BaseException):
 class WalletDbQueryError(BaseException):
     pass
 
+
+# We should here be able to import and use any ORM library conforming to the 
+# DB API 2.0 protocol (PEP 249 spec v2.0), e.g., psycopg for connecting to a
+# postgres database instead of sqlite (this is the use case of an authorised
+# official plugging their wallet to an issuer web service for administrative
+# purposes).
+#
+# TODO: This module is almost agnostic to the ORM in use with the exception of
+# the _run_sql_script function.
+#
+import sqlite3 as _orm
 
 class DbConnector(object):
 
@@ -20,8 +38,8 @@ class DbConnector(object):
         if not db: 
             db = self.db
         try:
-            con = sqlite3.connect(db)
-        except sqlite3.DatabaseError as err:
+            con = _orm.connect(db)
+        except _orm.DatabaseError as err:
             raise WalletDbConectionError(err)
         return con
 
@@ -47,44 +65,44 @@ class DbConnector(object):
     def _load_dict(self, body):
         return json.loads(body)
 
-    def get_entry(self, alias, group):
+    def get_entry(self, alias, table):
         con = self._create_connection()
         cur = con.cursor()
         query = f'''
-            SELECT body FROM '{group}' WHERE alias = '{alias}'
+            SELECT body FROM '{table}' WHERE alias = '{alias}'
         '''
         try:
             cur.execute(query)
-        except sqlite3.DatabaseError as err:
+        except _orm.DatabaseError as err:
             raise WalletDbQueryError(err)
         body = cur.fetchone()[0]
         con.close()
         out = self._load_dict(body)
         return out
  
-    def get_nr(self, group):
+    def get_nr(self, table):
         con = self._create_connection()
         cur = con.cursor()
         query = f'''
-            SELECT COUNT(*) FROM '{group}'
+            SELECT COUNT(*) FROM '{table}'
         '''
         try:
             cur.execute(query)
-        except sqlite3.DatabaseError as err:
+        except _orm.DatabaseError as err:
             raise WalletDbQueryError(err)
         out = cur.fetchone()[0]
         con.close()
         return out
 
-    def get_aliases(self, group):
+    def get_aliases(self, table):
         con = self._create_connection()
         cur = con.cursor()
         query = f'''
-            SELECT alias FROM '{group}'
+            SELECT alias FROM '{table}'
         '''
         try:
             cur.execute(query)
-        except sqlite3.DatabaseError as err:
+        except _orm.DatabaseError as err:
             raise WalletDbQueryError(err)
         out = list(map(lambda _: _[0], cur.fetchall()))
         con.close()
@@ -98,7 +116,7 @@ class DbConnector(object):
         '''
         try:
             cur.execute(query)
-        except sqlite3.DatabaseError as err:
+        except _orm.DatabaseError as err:
             raise WalletDbQueryError(err)
         out = list(map(lambda _: _[0], cur.fetchall()))
         con.close()
@@ -114,7 +132,7 @@ class DbConnector(object):
         '''
         try:
             cur.execute(query)
-        except sqlite3.DatabaseError as err:
+        except _orm.DatabaseError as err:
             raise WalletDbQueryError(err)
         con.commit()
         con.close()
@@ -130,7 +148,7 @@ class DbConnector(object):
         '''
         try:
             cur.execute(query)
-        except sqlite3.DatabaseError as err:
+        except _orm.DatabaseError as err:
             raise WalletDbQueryError(err)
         con.commit()
         con.close()
@@ -146,7 +164,7 @@ class DbConnector(object):
         '''
         try:
             cur.execute(query)
-        except sqlite3.DatabaseError as err:
+        except _orm.DatabaseError as err:
             raise WalletDbQueryError(err)
         con.commit()
         con.close()
@@ -162,34 +180,34 @@ class DbConnector(object):
         '''
         try:
             cur.execute(query)
-        except sqlite3.DatabaseError as err:
+        except _orm.DatabaseError as err:
             raise WalletDbQueryError(err)
         con.commit()
         con.close()
         return alias
 
-    def remove(self, alias, group):
+    def remove(self, alias, table):
         con = self._create_connection()
         cur = con.cursor()
         query = f'''
-            DELETE FROM '{group}' WHERE alias = '{alias}'
+            DELETE FROM '{table}' WHERE alias = '{alias}'
         '''
         try:
             cur.execute(query)
-        except sqlite3.DatabaseError as err:
+        except _orm.DatabaseError as err:
             raise WalletDbQueryError(err)
         con.commit()
         con.close()
 
-    def clear(self, group):
+    def clear(self, table):
         con = self._create_connection()
         cur = con.cursor()
         query = f'''
-            DELETE FROM '{group}'
+            DELETE FROM '{table}'
         '''
         try:
             cur.execute(query)
-        except sqlite3.DatabaseError as err:
+        except _orm.DatabaseError as err:
             raise WalletDbQueryError(err)
         con.commit()
         con.close()
