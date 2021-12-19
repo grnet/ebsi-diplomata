@@ -10,3 +10,4 @@ TODOS*
 NOTES*
 *.db
 *local*
+migrations/

@@ -7,7 +7,7 @@ from ssi_lib import SSIGenerationError, SSIRegistrationError, \
     SSIResolutionError, SSIIssuanceError, SSIVerificationError
 from ssi_lib.conf import _Group   # TODO: Get rid of this?
 from ssi_lib.conf import _Vc # TODO
-from .db import DbConnector
+from ssi.db import DbConnector
 
 
 class IdentityError(BaseException):     # TODO
