@@ -1,7 +1,7 @@
-class _Vc:
+class Vc:
     DIPLOMA = 'DIPLOMA'
 
-class _Template:
+class Template:
     DIPLOMA = {
         'person_identifier': '',
         'person_family_name': '',

@@ -26,20 +26,20 @@ Type `help <command>` for details
 """
 INDENT  = 4
 
-class _Action:
+class Action:
     ISSUE   = 'ISSUE'
     VERIFY  = 'VERIFY'
     CHOOSE  = 'CHOOSE'
     IMPORT  = 'IMPORT'
     DISCARD = 'DISCARD'
 
-class _Group:
+class Table:
     KEY     = 'key'
     DID     = 'did'
     VC      = 'vc'
     VP      = 'vp'
 
-class _UI:
+class UI:
     KEY     = 'key'
     KEYS    = 'keys'
     DID     = 'DID'

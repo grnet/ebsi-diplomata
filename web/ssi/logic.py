@@ -5,7 +5,7 @@ from django.conf import settings
 from ssi_lib import SSIApp
 from ssi_lib import SSIGenerationError, SSIRegistrationError, \
     SSIResolutionError, SSIIssuanceError, SSIVerificationError
-from ssi_lib.conf import _Vc
+from ssi_lib.conf import Vc, Template
 
 
 class IdentityError(BaseException):     # TODO
@@ -47,7 +47,7 @@ class SSIParty(SSIApp):
         out['tmpdir'] = tmpdir
         return out
 
-    def _get_key(self, *args):
+    def _fetch_key(self, *args):
         try:
             with open(self.keyfile, 'r') as f:
                 out = json.load(f)
@@ -55,21 +55,23 @@ class SSIParty(SSIApp):
             return None
         return out
 
-    def _get_local_did(self):                                           # TODO
+    def _fetch_did(self, full=False):
         try:
             with open(self.didfile, 'r') as f:
-                out = json.load(f)
+                did = json.load(f)
         except FileNotFoundError:
             return None
+        out = self._extract_alias_from_did(did) if not full \
+                else did
         return out
 
-    def store_key(self, entry):
+    def _store_key(self, entry):
         alias = self._extract_alias_from_key(entry)
         with open(self.keyfile, 'w+') as f:
             json.dump(entry, f, indent=4)
         return alias
 
-    def store_local_did(self, entry):
+    def _store_did(self, entry):
         alias = self._extract_alias_from_did(entry)
         with open(self.didfile, 'w+') as f:
             json.dump(entry, f, indent=4)
@@ -82,7 +84,7 @@ class SSIParty(SSIApp):
         except SSIGenerationError as err:
             err = 'Could not generate key: %s' % err
             raise CreationError(err)
-        alias = self.store_key(key)
+        alias = self._store_key(key)
         return alias
 
     def _create_did(self, key, token, onboard=True):
@@ -100,20 +102,19 @@ class SSIParty(SSIApp):
                 err = 'Could not register: %s' % err
                 raise CreationError(err)
             logging.info('DID registered to EBSI')
-        alias = self.store_local_did(did)
+        alias = self._store_did(did)
         return alias
 
     def _adapt_credential_content(self, vc_type, content):
-        from ssi_lib.conf import _Template  # TODO
         # TODO
         try:
-            template = getattr(_Template, vc_type)
+            template = getattr(Template, vc_type)
         except AttributeError:
             err = 'Requested credential type does not exist: %s' % vc_type
             raise NotImplementedError(err)
         out = template
         match vc_type:
-            case _Vc.DIPLOMA:
+            case Vc.DIPLOMA:
                 # TODO
                 out['person_identifier'] = content['person_id']
                 out['person_family_name'] = content['name']
@@ -127,8 +128,8 @@ class SSIParty(SSIApp):
     def get_info(self):
         return {'TODO': 'Include here service info'}        # TODO
 
-    def get_local_did(self, full=False):                          # TODO
-        did = self._get_local_did()
+    def get_did(self):
+        did = self._fetch_did(full=False)
         if not did:
             err = 'No DID found'
             raise IdentityError(err)
@@ -151,7 +152,7 @@ class SSIParty(SSIApp):
         return alias
 
     def issue_credential(self, holder, vc_type, content):
-        issuer = self.get_local_did()
+        issuer = self._fetch_did(full=False)
         if not issuer:
             err = 'No issuer DID found'
             raise IssuanceError(err)

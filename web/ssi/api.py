@@ -24,7 +24,7 @@ def show_info(request):
 def show_did(request):
     out = {}
     try:
-        alias = ssi_party.get_local_did()
+        alias = ssi_party.get_did()
         out['did'] = alias
         status = 200
     except IdentityError as err:

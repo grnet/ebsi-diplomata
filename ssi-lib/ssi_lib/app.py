@@ -2,7 +2,7 @@ import os
 import json
 import subprocess
 from abc import ABCMeta, abstractmethod
-from .conf import _Vc, _Template
+from .conf import Vc, Template
 
 
 class SSIGenerationError(BaseException):
@@ -24,7 +24,7 @@ class SSIVerificationError(BaseException):
     pass
 
 _commands = {
-    _Vc.DIPLOMA: 'issue-diploma',
+    Vc.DIPLOMA: 'issue-diploma',
     # TODO: Add here more options
 }
 
@@ -68,15 +68,14 @@ class SSIApp(metaclass=ABCMeta):
         return res, code
 
     @abstractmethod
-    def _get_key(self, *args):
-        """Implemention of this function relates to specific needs and depends
-        on the number of cryptographic keys and the way they are stored (e.g.
-        an issuer may have a unique key stored in a secure data vault, whereas
-        a holder may own multiple keys stored in a wallet sqlite database)."""
+    def _fetch_key(self, *args):
+        """This depends on the number of asymmetric keys and the way they are
+        stored (e.g., an issuer can have one key stored in a data vault while
+        a holder owns multiple keys stored in their wallet's database)"""
 
     def _load_key(self, *args):
         outfile = os.path.join(self.tmpdir, 'jwk.json')
-        entry = self._get_key(*args)
+        entry = self._fetch_key(*args)
         if entry:
             with open(outfile, 'w+') as f:
                 json.dump(entry, f)
@@ -109,7 +108,7 @@ class SSIApp(metaclass=ABCMeta):
 
     def _validate_vc_content(self, vc_type, content):
         try:
-            template = getattr(_Template, vc_type)
+            template = getattr(Template, vc_type)
         except AttributeError as err:
             err = 'Requested credential type does not exist: %s' % vc_type
             raise SSIContentError(err)

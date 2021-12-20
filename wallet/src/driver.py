@@ -5,25 +5,25 @@ from urllib.parse import urljoin
 import requests
 from ui import MenuHandler
 from conf import TMPDIR, WALTDIR, INTRO, PROMPT, INDENT, RESOLVED, \
-    STORAGE, _Action, _Group, _UI, EBSI_PRFX, Ed25519, Secp256k1, RSA
+    STORAGE, Action, Table, UI, EBSI_PRFX, Ed25519, Secp256k1, RSA
 from ssi_lib import SSIGenerationError, SSIRegistrationError, \
     SSIResolutionError, SSIIssuanceError, SSIVerificationError
-from ssi_lib.conf import _Vc # TODO
+from ssi_lib.conf import Vc, Template  # TODO
 
 _mapping = {
-    _UI.KEY: _Group.KEY,
-    _UI.KEYS: _Group.KEY,
-    _UI.DID: _Group.DID,
-    _UI.DIDS: _Group.DID,
-    _UI.VC: _Group.VC,
-    _UI.VCS: _Group.VC,
-    _UI.VP: _Group.VP,
-    _UI.VPS: _Group.VP,
-    _UI.ISSUE: _Action.ISSUE,
-    _UI.VERIFY: _Action.VERIFY,
-    _UI.CHOOSE: _Action.CHOOSE,
-    _UI.IMPORT: _Action.IMPORT,
-    _UI.DISCARD: _Action.DISCARD,
+    UI.KEY: Table.KEY,
+    UI.KEYS: Table.KEY,
+    UI.DID: Table.DID,
+    UI.DIDS: Table.DID,
+    UI.VC: Table.VC,
+    UI.VCS: Table.VC,
+    UI.VP: Table.VP,
+    UI.VPS: Table.VP,
+    UI.ISSUE: Action.ISSUE,
+    UI.VERIFY: Action.VERIFY,
+    UI.CHOOSE: Action.CHOOSE,
+    UI.IMPORT: Action.IMPORT,
+    UI.DISCARD: Action.DISCARD,
 }
 
 __version__ = '0.0.1'
@@ -89,8 +89,8 @@ class WalletShell(cmd.Cmd, MenuHandler):
         self.app = app
         super().__init__()
 
-    def get_keys(self):
-        return self.app.get_keys()
+    def fetch_keys(self):
+        return self.app.fetch_keys()
 
     def run(self):
         super().cmdloop()
@@ -122,29 +122,29 @@ class WalletShell(cmd.Cmd, MenuHandler):
             json.dump(obj, f)
         return tmpfile
 
-    def resolve_group(self, line, prompt):
+    def resolve_table(self, line, prompt):
         line = line.strip().lower().rstrip('s')
         match line:
             case '':
                 ans = self.launch_choice(prompt, [
-                    _UI.KEYS, 
-                    _UI.DIDS, 
-                    _UI.VCS,
-                    _UI.VPS,
+                    UI.KEYS,
+                    UI.DIDS,
+                    UI.VCS,
+                    UI.VPS,
                 ])
                 out = _mapping[ans]
             case (
-                    _UI.KEY |
-                    _UI.DID |
-                    _UI.VC  |
-                    _UI.VP
+                    UI.KEY |
+                    UI.DID |
+                    UI.VC  |
+                    UI.VP
                 ):
                 out = _mapping[line]
             case (
-                    _Group.KEY |
-                    _Group.DID |
-                    _Group.VC  |
-                    _Group.VP
+                    Table.KEY |
+                    Table.DID |
+                    Table.VC  |
+                    Table.VP
                 ):
                 out = line
             case _:
@@ -190,7 +190,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
         return out
 
     def prepare_issuance_payload(self):
-        choices = self.app.get_dids()
+        choices = self.app.fetch_dids()
         if not choices:
             err = 'No DIDs found. Must first create one.'
             raise Abortion(err)
@@ -200,7 +200,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
         # on behalf of the issuer
         payload = {
             'holder': did,
-            'vc_type': _Vc.DIPLOMA,
+            'vc_type': Vc.DIPLOMA,
             'content': {
                 'person_id': '0x666',
                 'name': 'Lucrezia',
@@ -211,16 +211,15 @@ class WalletShell(cmd.Cmd, MenuHandler):
         return payload
 
     def adapt_credential_content(self, vc_type, content):
-        from ssi_lib.conf import _Template  # TODO
         # TODO
         try:
-            template = getattr(_Template, vc_type)
+            template = getattr(Template, vc_type)
         except AttributeError:
             err = 'Requested credential type does not exist: %s' % vc_type
             raise NotImplementedError(err)
         out = template
         match vc_type:
-            case _Vc.DIPLOMA:
+            case Vc.DIPLOMA:
                 # TODO
                 out['person_identifier'] = content['person_id']
                 out['person_family_name'] = content['name']
@@ -236,7 +235,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
             payload = self.prepare_issuance_payload()
         except Abortion as err:
             raise
-        dids = self.app.get_dids()
+        dids = self.app.fetch_dids()
         issuer = self.launch_choice('Choose issuer DID', dids)
         if not self.launch_yn('New credential will be issued. Proceed?'):
             raise Abortion('Issuance aborted')
@@ -267,12 +266,12 @@ class WalletShell(cmd.Cmd, MenuHandler):
         return out
 
     def present_credentials(self, line):
-        dids = self.app.get_aliases(_Group.DID)
+        dids = self.app.fetch_aliases(Table.DID)
         if not dids:
             err = 'No DIDs found. Must create at least one.'
             raise PresentationError(err)
         holder = self.launch_choice('Choose holder DID', dids)
-        vc_choices = self.app.get_credentials_by_did(holder)
+        vc_choices = self.app.fetch_credentials_by_holder(holder)
         if not vc_choices:
             err = 'No credentials found for the provided holder DID'
             raise PresentationError(err)
@@ -283,7 +282,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
             raise PresentationError(err)
         credentials = []
         for alias in vc_selected:
-            credential = self.app.get_credential(alias)
+            credential = self.app.fetch_credential(alias)
             vc_file = self.dump(credential, '%s.json' % alias)
             credentials += [vc_file,]
         try:
@@ -294,15 +293,15 @@ class WalletShell(cmd.Cmd, MenuHandler):
 
     def select_presentation(self):
         match self.launch_choice('Select presentation to verify', [
-            _UI.CHOOSE, _UI.IMPORT]):
-            case _UI.CHOOSE:
-                vps = self.app.get_presentations()
+            UI.CHOOSE, UI.IMPORT]):
+            case UI.CHOOSE:
+                vps = self.app.fetch_presentations()
                 if not vps:
                     err = 'Nothing found'
                     raise Abortion(err)
                 alias = self.launch_choice('', vps)
-                out = self.app.get_presentation(alias)
-            case _UI.IMPORT:
+                out = self.app.fetch_presentation(alias)
+            case UI.IMPORT:
                 try:
                     out = self.import_object()
                 except WalletImportError:
@@ -342,11 +341,11 @@ class WalletShell(cmd.Cmd, MenuHandler):
 
     def do_list(self, line):
         try:
-            group = self.resolve_group(line, prompt='Show list of')
+            table = self.resolve_table(line, prompt='Show list of')
         except BadInputError as err:
             self.flush(err)
             return
-        entries = self.app.get_aliases(group)
+        entries = self.app.fetch_aliases(table)
         if not entries:
             self.flush('Nothing found')
             return
@@ -354,34 +353,34 @@ class WalletShell(cmd.Cmd, MenuHandler):
 
     def do_count(self, line):
         try:
-            group = self.resolve_group(line, prompt='Show number of')
+            table = self.resolve_table(line, prompt='Show number of')
         except BadInputError as err:
             self.flush(err)
             return
-        nr = self.app.get_nr(group)
+        nr = self.app.fetch_nr(table)
         self.flush(nr)
 
     def do_inspect(self, line):
         try:
-            group = self.resolve_group(line, prompt='Inspect from')
+            table = self.resolve_table(line, prompt='Inspect from')
         except BadInputError as err:
             self.flush(err)
             return
-        aliases = self.app.get_aliases(group)
+        aliases = self.app.fetch_aliases(table)
         if not aliases:
             self.flush('Nothing found')
             return
         alias = self.launch_choice('Choose', aliases)
-        entry = self.app.get_entry(alias, group)
+        entry = self.app.fetch_entry(alias, table)
         self.flush(entry)
 
     def do_create(self, line):
         ans = self.launch_choice('Create', [
-            _UI.KEY, 
-            _UI.DID,
+            UI.KEY,
+            UI.DID,
         ])
         match _mapping[ans]:
-            case _Group.KEY:
+            case Table.KEY:
                 algo = self.launch_choice('Choose keygen algorithm', [
                         Ed25519,
                         Secp256k1,
@@ -397,8 +396,8 @@ class WalletShell(cmd.Cmd, MenuHandler):
                     self.flush('Could not create key: %s' % err)
                     return
                 self.flush('Created key: %s' % alias)
-            case _Group.DID:
-                keys = self.get_keys()
+            case Table.DID:
+                keys = self.fetch_keys()
                 if not keys:
                     self.flush('No keys found. Must first create one.')
                     return
@@ -428,7 +427,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 self.flush('Created DID: %s' % alias)
 
     def do_register(self, line):
-        dids = self.app.get_dids()
+        dids = self.app.fetch_dids()
         if not dids:
             self.flush('No DIDs found')
             return
@@ -512,11 +511,11 @@ class WalletShell(cmd.Cmd, MenuHandler):
 
     def do_request(self, line):
         action = self.launch_choice('Request', [
-            _UI.ISSUE, 
-            _UI.VERIFY, 
+            UI.ISSUE,
+            UI.VERIFY,
         ])
         match _mapping[action]:
-            case _Action.ISSUE:
+            case Action.ISSUE:
                 try:
                     payload = self.prepare_issuance_payload()
                 except Abortion as err:
@@ -556,7 +555,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
                     case _:
                         self.flush('Could not issue:')
                         self.flush(resp.json())             # TODO: Capture error
-            case _Action.VERIFY:
+            case Action.VERIFY:
                 try:
                     vp = self.select_presentation()
                 except (Abortion, WalletImportError,) as err:
@@ -592,21 +591,21 @@ class WalletShell(cmd.Cmd, MenuHandler):
                         self.flush('Could not verify:')
                         self.flush(resp.json())             # TODO: Capture error
                 pass
-            case _Action.DISCARD:
+            case Action.DISCARD:
                 self.flush('Request aborted')
 
     def do_export(self, line):
         try:
-            group = self.resolve_group(line, prompt='Export from')
+            table = self.resolve_table(line, prompt='Export from')
         except BadInputError as err:
             self.flush(err)
             return
-        aliases = self.app.get_aliases(group)
+        aliases = self.app.fetch_aliases(table)
         if not aliases:
             self.flush('Nothing found')
             return
         alias = self.launch_choice('Choose', aliases)
-        entry = self.app.get_entry(alias, group)
+        entry = self.app.fetch_entry(alias, table)
         try:
             outfile = self.export_object(entry)
         except Abortion:
@@ -628,18 +627,18 @@ class WalletShell(cmd.Cmd, MenuHandler):
             del obj
             self.flush('Imported object deleted from memory')
             return
-        group = self.launch_choice('Saved as', [
-            _UI.KEY, _UI.DID, _UI.VC, _UI.VP,
+        table = self.launch_choice('Saved as', [
+            UI.KEY, UI.DID, UI.VC, UI.VP,
         ])
-        self.app.store(obj, _mapping[group])
+        self.app.store(obj, _mapping[table])
 
     def do_remove(self, line):
         try:
-            group = self.resolve_group(line, prompt='Remove from')
+            table = self.resolve_table(line, prompt='Remove from')
         except BadInputError as err:
             self.flush(err)
             return
-        aliases = self.app.get_aliases(group)
+        aliases = self.app.fetch_aliases(table)
         if not aliases:
             self.flush('Nothing found')
             return
@@ -649,20 +648,22 @@ class WalletShell(cmd.Cmd, MenuHandler):
             self.flush('Removal aborted')
             return
         for alias in selected:
-            self.app.remove(alias, group)
+            self.app.remove(alias, table)
             self.flush('Removed %s' % alias)
 
     def do_clear(self, line):
         try:
-            group = self.resolve_group(line, prompt='Clear')
+            table = self.resolve_table(line, prompt='Clear')
         except BadInputError as err:
             self.flush(err)
             return
         if not self.launch_yn('This cannot be undone. Proceed?'):
             self.flush('Aborted')
             return
-        self.app.clear(group)
-        self.flush(f'Cleared {group}s')
+        nr_entries = self.app.fetch_nr(table)
+        self.app.clear(table)
+        self.flush(f'Cleared %d %s%s' % (nr_entries, table, 's' if nr_entries
+            != 1 else ''))
 
     def do_EOF(self, line):
         return True

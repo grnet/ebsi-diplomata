@@ -1,6 +1,6 @@
 from ssi_lib import SSIApp
-from conf import _Group
 from db import DbConnector
+from conf import Table
 
 
 class WalletApp(SSIApp):
@@ -15,56 +15,57 @@ class WalletApp(SSIApp):
         dbpath = config['dbpath']
         return cls(tmpdir, dbpath)
 
-    def get_aliases(self, group):
-        return self._db.get_aliases(group)
+    def _fetch_key(self, alias):
+        return self._db.fetch_entry(alias, Table.KEY)
 
-    def _get_key(self, alias):
-        return self._db.get_entry(alias, _Group.KEY)
+    def fetch_aliases(self, table):
+        return self._db.fetch_aliases(table)
 
-    def get_keys(self):
-        return self._db.get_aliases(_Group.KEY)
+    def fetch_keys(self):
+        return self._db.fetch_aliases(Table.KEY)
 
-    def get_dids(self):
-        return self._db.get_aliases(_Group.DID)
+    def fetch_dids(self):
+        return self._db.fetch_aliases(Table.DID)
 
-    def get_credentials(self):
-        return self._db.get_aliases(_Group.VC)
+    def fetch_credentials(self):
+        return self._db.fetch_aliases(Table.VC)
 
-    def get_presentations(self):
-        return self._db.get_aliases(_Group.VP)
+    def fetch_presentations(self):
+        return self._db.fetch_aliases(Table.VP)
 
-    def get_credentials_by_did(self, alias):
-        return self._db.get_credentials_by_did(alias)
+    def fetch_credentials_by_holder(self, alias):
+        return self._db.fetch_credentials_by_holder(
+            alias)
 
-    def get_nr(self, group):
-        return self._db.get_nr(group)
+    def fetch_nr(self, table):
+        return self._db.fetch_nr(table)
 
-    def get_nr_keys(self):
-        return self._db.get_nr(_Group.KEY)
+    def fetch_nr_keys(self):
+        return self._db.fetch_nr(Table.KEY)
 
-    def get_nr_dids(self):
-        return self._db.get_nr(_Group.DID)
+    def fetch_nr_dids(self):
+        return self._db.fetch_nr(Table.DID)
 
-    def get_nr_credentials(self):
-        return self._db.get_nr(_Group.VC)
+    def fetch_nr_credentials(self):
+        return self._db.fetch_nr(Table.VC)
 
-    def get_nr_presentations(self):
-        return self._db.get_nr(_Group.VP)
+    def fetch_nr_presentations(self):
+        return self._db.fetch_nr(Table.VP)
 
-    def get_entry(self, alias, group):
-        return self._db.get_entry(alias, group)
+    def fetch_entry(self, alias, table):
+        return self._db.fetch_entry(alias, table)
 
-    def get_key(self, alias):
-        return self._get_key(alias)
+    def fetch_key(self, alias):
+        return self._fetch_key(alias)
 
-    def get_did(self, alias):
-        return self._db.get_entry(alias, _Group.DID)
+    def fetch_did(self, alias):
+        return self._db.fetch_entry(alias, Table.DID)
 
-    def get_credential(self, alias):
-        return self._db.get_entry(alias, _Group.VC)
+    def fetch_credential(self, alias):
+        return self._db.fetch_entry(alias, Table.VC)
 
-    def get_presentation(self, alias):
-        return self._db.get_entry(alias, _Group.VP)
+    def fetch_presentation(self, alias):
+        return self._db.fetch_entry(alias, Table.VP)
 
     def store_key(self, entry):
         alias = self._extract_alias_from_key(entry)
@@ -85,20 +86,20 @@ class WalletApp(SSIApp):
         holder = self._extract_holder_from_vp(entry)
         return self._db.store_vp(alias, holder, entry)
 
-    def remove(self, alias, group):
-        self._db.remove(alias, group)
+    def remove(self, alias, table):
+        self._db.remove(alias, table)
 
-    def clear(self, group):
-        self._db.clear(group)
+    def clear(self, table):
+        self._db.clear(table)
 
     def clear_keys(self):
-        self._db.clear(_Group.KEY)
+        self._db.clear(Table.KEY)
 
     def clear_dids(self):
-        self._db.clear(_Group.DID)
+        self._db.clear(Table.DID)
 
     def clear_credentials(self):
-        self._db.clear(_Group.VC)
+        self._db.clear(Table.VC)
 
     def clear_presentations(self):
-        self._db.clear(_Group.VP)
+        self._db.clear(Table.VP)

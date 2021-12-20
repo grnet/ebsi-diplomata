@@ -65,7 +65,7 @@ class DbConnector(object):
     def _load_dict(self, body):
         return json.loads(body)
 
-    def get_entry(self, alias, table):
+    def fetch_entry(self, alias, table):
         con = self._create_connection()
         cur = con.cursor()
         query = f'''
@@ -80,7 +80,7 @@ class DbConnector(object):
         out = self._load_dict(body)
         return out
  
-    def get_nr(self, table):
+    def fetch_nr(self, table):
         con = self._create_connection()
         cur = con.cursor()
         query = f'''
@@ -94,7 +94,7 @@ class DbConnector(object):
         con.close()
         return out
 
-    def get_aliases(self, table):
+    def fetch_aliases(self, table):
         con = self._create_connection()
         cur = con.cursor()
         query = f'''
@@ -108,7 +108,7 @@ class DbConnector(object):
         con.close()
         return out
 
-    def get_credentials_by_did(self, alias):
+    def fetch_credentials_by_holder(self, alias):
         con = self._create_connection()
         cur = con.cursor()
         query = f'''
