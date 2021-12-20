@@ -1,0 +1,213 @@
+"""This is an interface for making SQL queries to any database whose schema is
+defined by ../init-db.sql. Rough overview of tables:
+
+    key | alias(VARCHAR) | body(JSONB)
+    did | alias(VARCHAR) | body(JSONB) | key(VARCHAR)    [fk to key(alias)]
+    vc  | alias(VARCHAR) | body(JSONB) | holder(VARCHAR) [fk to did(alias)]
+    vp  | alias(VARCHAR) | body(JSONB) | holder(VARCHAR) [fk to did(alias)]
+
+"""
+
+import json
+
+class WalletDbConnectionError(BaseException):
+    pass
+
+class WalletDbQueryError(BaseException):
+    pass
+
+
+# We should here be able to import and use any ORM library conforming to the 
+# DB API 2.0 protocol (PEP 249 spec v2.0), e.g., psycopg for connecting to a
+# postgres database instead of sqlite (this is the use case of an authorised
+# official plugging their wallet to an issuer web service for administrative
+# purposes).
+#
+# TODO: This module is almost agnostic to the ORM in use with the exception of
+# the _run_sql_script function.
+#
+import sqlite3 as _orm
+
+class DbConnector(object):
+
+    def __init__(self, db):
+        self._run_sql_script(db, self._get_init_script())
+        self.db = db
+
+    def _create_connection(self, db=None):
+        if not db: 
+            db = self.db
+        try:
+            con = _orm.connect(db)
+        except _orm.DatabaseError as err:
+            raise WalletDbConectionError(err)
+        return con
+
+    @staticmethod
+    def _get_init_script():
+        from os.path import dirname
+        import os
+        rootdir = dirname(dirname(os.path.abspath(
+            __file__)))
+        return os.path.join(rootdir, 'init-db.sql')
+
+    def _run_sql_script(self, db, script):
+        con = self._create_connection(db)
+        cur = con.cursor()
+        with open(script, 'r') as f:
+            sql = f.read()
+        cur.executescript(sql)
+        con.close()
+
+    def _dump_dict(self, entry):
+        return json.dumps(entry, sort_keys=True)
+
+    def _load_dict(self, body):
+        return json.loads(body)
+
+    def get_entry(self, alias, table):
+        con = self._create_connection()
+        cur = con.cursor()
+        query = f'''
+            SELECT body FROM '{table}' WHERE alias = '{alias}'
+        '''
+        try:
+            cur.execute(query)
+        except _orm.DatabaseError as err:
+            raise WalletDbQueryError(err)
+        body = cur.fetchone()[0]
+        con.close()
+        out = self._load_dict(body)
+        return out
+ 
+    def get_nr(self, table):
+        con = self._create_connection()
+        cur = con.cursor()
+        query = f'''
+            SELECT COUNT(*) FROM '{table}'
+        '''
+        try:
+            cur.execute(query)
+        except _orm.DatabaseError as err:
+            raise WalletDbQueryError(err)
+        out = cur.fetchone()[0]
+        con.close()
+        return out
+
+    def get_aliases(self, table):
+        con = self._create_connection()
+        cur = con.cursor()
+        query = f'''
+            SELECT alias FROM '{table}'
+        '''
+        try:
+            cur.execute(query)
+        except _orm.DatabaseError as err:
+            raise WalletDbQueryError(err)
+        out = list(map(lambda _: _[0], cur.fetchall()))
+        con.close()
+        return out
+
+    def get_credentials_by_did(self, alias):
+        con = self._create_connection()
+        cur = con.cursor()
+        query = f'''
+            SELECT alias FROM vc WHERE holder = '{alias}'
+        '''
+        try:
+            cur.execute(query)
+        except _orm.DatabaseError as err:
+            raise WalletDbQueryError(err)
+        out = list(map(lambda _: _[0], cur.fetchall()))
+        con.close()
+        return out
+
+    def store_key(self, alias, entry):
+        con = self._create_connection()
+        cur = con.cursor()
+        body = self._dump_dict(entry)
+        query = f'''
+            INSERT INTO key(alias, body)
+            VALUES ('{alias}', '{body}')
+        '''
+        try:
+            cur.execute(query)
+        except _orm.DatabaseError as err:
+            raise WalletDbQueryError(err)
+        con.commit()
+        con.close()
+        return alias
+
+    def store_did(self, alias, key, entry):
+        con = self._create_connection()
+        cur = con.cursor()
+        body = self._dump_dict(entry)
+        query = f'''
+            INSERT INTO did(key, alias, body)
+            VALUES ('{key}', '{alias}', '{body}')
+        '''
+        try:
+            cur.execute(query)
+        except _orm.DatabaseError as err:
+            raise WalletDbQueryError(err)
+        con.commit()
+        con.close()
+        return alias
+
+    def store_vc(self, alias, holder, entry):
+        con = self._create_connection()
+        cur = con.cursor()
+        body = self._dump_dict(entry)
+        query = f'''
+            INSERT INTO vc(holder, alias, body)
+            VALUES ('{holder}', '{alias}', '{body}')
+        '''
+        try:
+            cur.execute(query)
+        except _orm.DatabaseError as err:
+            raise WalletDbQueryError(err)
+        con.commit()
+        con.close()
+        return alias
+
+    def store_vp(self, alias, holder, entry):
+        con = self._create_connection()
+        cur = con.cursor()
+        body = self._dump_dict(entry)
+        query = f'''
+            INSERT INTO vp(holder, alias, body)
+            VALUES ('{holder}', '{alias}', '{body}')
+        '''
+        try:
+            cur.execute(query)
+        except _orm.DatabaseError as err:
+            raise WalletDbQueryError(err)
+        con.commit()
+        con.close()
+        return alias
+
+    def remove(self, alias, table):
+        con = self._create_connection()
+        cur = con.cursor()
+        query = f'''
+            DELETE FROM '{table}' WHERE alias = '{alias}'
+        '''
+        try:
+            cur.execute(query)
+        except _orm.DatabaseError as err:
+            raise WalletDbQueryError(err)
+        con.commit()
+        con.close()
+
+    def clear(self, table):
+        con = self._create_connection()
+        cur = con.cursor()
+        query = f'''
+            DELETE FROM '{table}'
+        '''
+        try:
+            cur.execute(query)
+        except _orm.DatabaseError as err:
+            raise WalletDbQueryError(err)
+        con.commit()
+        con.close()

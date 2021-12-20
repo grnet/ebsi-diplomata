@@ -5,8 +5,6 @@ from django.conf import settings
 from ssi_lib import SSIApp
 from ssi_lib import SSIGenerationError, SSIRegistrationError, \
     SSIResolutionError, SSIIssuanceError, SSIVerificationError
-from ssi_lib.conf import _Group   # TODO: Get rid of this?
-from ssi_lib.conf import _Vc # TODO
 
 
 class IdentityError(BaseException):     # TODO
@@ -24,8 +22,12 @@ class VerificationError(BaseException): # TODO
 
 class SSIParty(SSIApp):
 
-    def __init__(self, dbpath, tmpdir):
-        super().__init__(dbpath, tmpdir)
+    def __init__(self, tmpdir):
+        # TODO: Explicitly define data vault location for securely storing
+        # asymmetric key and relevant DID.
+        self.keyfile = os.path.join(settings.STORAGE, 'jwk.json')   # TODO
+        self.didfile = os.path.join(settings.STORAGE, 'did.json')   # TODO
+        super().__init__(tmpdir)
 
     @classmethod
     def init_from_app(cls, settings):
@@ -34,18 +36,43 @@ class SSIParty(SSIApp):
 
     @classmethod
     def create(cls, config):
-        dbpath = config['dbpath']
         tmpdir = config['tmpdir']
-        return cls(dbpath, tmpdir)
+        return cls(tmpdir)
 
     @classmethod
     def derive_config(cls, settings):
         out = {}
-        dbpath = os.path.join(settings.STORAGE, 'db.json')      # TODO
         tmpdir = settings.TMPDIR
-        out['dbpath'] = dbpath
         out['tmpdir'] = tmpdir
         return out
+
+    def _get_key(self, *args):
+        try:
+            with open(self.keyfile, 'r') as f:
+                out = json.load(f)
+        except FileNotFoundError:
+            return None
+        return out
+
+    def _get_local_did(self):                                           # TODO
+        try:
+            with open(self.didfile, 'r') as f:
+                out = json.load(f)
+        except FileNotFoundError:
+            return None
+        return out
+
+    def store_key(self, entry):
+        alias = self._extract_alias_from_key(entry)
+        with open(self.keyfile, 'w+') as f:
+            json.dump(entry, f, indent=4)
+        return alias
+
+    def store_local_did(self, entry):
+        alias = self._extract_alias_from_did(entry)
+        with open(self.didfile, 'w+') as f:
+            json.dump(entry, f, indent=4)
+        return alias
 
     def _create_key(self, algo):
         logging.info('Generating %s key (takes seconds) ...' % algo)
@@ -72,29 +99,21 @@ class SSIParty(SSIApp):
                 err = 'Could not register: %s' % err
                 raise CreationError(err)
             logging.info('DID registered to EBSI')
-        alias = self.store_did(did)
+        alias = self.store_local_did(did)
         return alias
-
-    def _get_did(self):
-        dids = self.get_dids()
-        return dids[-1] if dids else None
 
     def get_info(self):
         return {'TODO': 'Include here service info'}        # TODO
 
-    def get_did(self, full=False):                          # TODO
-        dids = self.get_dids()
-        if not dids:
+    def get_local_did(self, full=False):                          # TODO
+        did = self._get_local_did()
+        if not did:
             err = 'No DID found'
             raise IdentityError(err)
-        alias = dids[-1]
-        if not full:
-            return alias
-        return super().get_did(alias)
+        alias = self._extract_alias_from_did(did)
+        return alias
 
     def create_did(self, token, algo, onboard):
-        self.clear_keys()
-        self.clear_dids()
         try:
             key = self._create_key(algo)
         except CreationError as err:
@@ -110,7 +129,7 @@ class SSIParty(SSIApp):
         return alias
 
     def issue_credential(self, holder, template, content):
-        issuer = self._get_did()
+        issuer = self.get_local_did()
         if not issuer:
             err = 'No issuer DID found'
             raise IssuanceError(err)

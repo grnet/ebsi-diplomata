@@ -45,4 +45,6 @@ COPY ./${CODE} .
 ENV TMPDIR ${HOMEDIR}/tmp
 RUN mkdir -p ${TMPDIR}
 
+RUN apt-get install -y sqlite3
+
 ENTRYPOINT ["./entrypoint.sh"]

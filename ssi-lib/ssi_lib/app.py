@@ -1,8 +1,8 @@
 import os
 import json
 import subprocess
-from .db import DbConnector
-from .conf import _Group, _Vc
+from abc import ABCMeta, abstractmethod
+from .conf import _Vc
 
 
 class SSIGenerationError(BaseException):
@@ -32,17 +32,31 @@ def run_cmd(args):
     return (resp, code)
 
 
-class SSIApp(object):
+class SSIApp(metaclass=ABCMeta):
 
-    def __init__(self, dbpath, tmpdir):
-        self._db = DbConnector(dbpath)
+    def __init__(self, tmpdir):
         self.tmpdir = tmpdir
 
-    @classmethod
-    def create(cls, config):
-        dbpath = config['db']
-        tmpdir = config['tmp']
-        return cls(dbpath, tmpdir)
+    def _extract_alias_from_key(self, entry):
+        return entry['kid']
+
+    def _extract_alias_from_did(self, entry):
+        return entry['id']
+
+    def _extract_key_from_did(self, entry):
+        return entry['verificationMethod'][0]['publicKeyJwk']['kid']
+
+    def _extract_alias_from_vc(self, entry):
+        return entry['id']
+
+    def _extract_holder_from_vc(self, entry):
+        return entry['credentialSubject']['id']
+
+    def _extract_alias_from_vp(self, entry):
+        return entry['id']
+
+    def _extract_holder_from_vp(self, entry):
+        return entry['holder']
 
     def _generate_key(self, algo, outfile):
         res, code = run_cmd([
@@ -50,13 +64,22 @@ class SSIApp(object):
         ])
         return res, code
 
-    def _load_key(self, alias):
+    @abstractmethod
+    def _get_key(self, *args):
+        """
+        """
+
+    def _load_key(self, *args):
         outfile = os.path.join(self.tmpdir, 'jwk.json')
-        entry = self._db.get_entry(alias, _Group.KEY)
-        with open(outfile, 'w+') as f:
-            json.dump(entry, f)
-        res, code = run_cmd(['load-key', '--file', outfile])
-        os.remove(outfile)
+        entry = self._get_key(*args)
+        if entry:
+            with open(outfile, 'w+') as f:
+                json.dump(entry, f)
+            res, code = run_cmd(['load-key', '--file', outfile])
+            os.remove(outfile)
+        else:
+            res = 'No key found'
+            code = 1
         return res, code
 
     def _generate_did(self, key, outfile):
@@ -69,7 +92,7 @@ class SSIApp(object):
         token_file = os.path.join(self.tmpdir, 'bearer-token.txt')
         with open(token_file, 'w+') as f:
             f.write(token)
-        res, code = run_cmd(['register-did', '--did', alias, 
+        res, code = run_cmd(['register-did', '--did', alias,
             '--token', token_file, '--resolve',
         ])
         os.remove(token_file)
@@ -105,87 +128,6 @@ class SSIApp(object):
             'verify-credentials', '--presentation', tmpfile,])
         os.remove(tmpfile)
         return res, code
-
-    def get_aliases(self, group):
-        return self._db.get_aliases(group)
-
-    def get_keys(self):
-        return self._db.get_aliases(_Group.KEY)
-
-    def get_dids(self):
-        return self._db.get_aliases(_Group.DID)
-
-    def get_credentials(self):
-        return self._db.get_aliases(_Group.VC)
-
-    def get_presentations(self):
-        return self._db.get_aliases(_Group.VP)
-
-    def get_credentials_by_did(self, alias):
-        return self._db.get_credentials_by_did(alias)
-
-    def get_nr(self, group):
-        return self._db.get_nr(group)
-
-    def get_nr_keys(self):
-        return self._db.get_nr(_Group.KEY)
-
-    def get_nr_dids(self):
-        return self._db.get_nr(_Group.DID)
-
-    def get_nr_credentials(self):
-        return self._db.get_nr(_Group.VC)
-
-    def get_nr_presentations(self):
-        return self._db.get_nr(_Group.VP)
-
-    def get_entry(self, alias, group):
-        return self._db.get_entry(alias, group)
-
-    def get_key(self, alias):
-        return self._db.get_entry(alias, _Group.KEY)
-
-    def get_did(self, alias):
-        return self._db.get_entry(alias, _Group.DID)
-
-    def get_credential(self, alias):
-        return self._db.get_entry(alias, _Group.VC)
-
-    def get_presentation(self, alias):
-        return self._db.get_entry(alias, _Group.VP)
-
-    def store(self, obj, group):
-        return self._db.store(obj, group)
-
-    def store_key(self, obj):
-        return self._db.store(obj, _Group.KEY)
-
-    def store_did(self, obj):
-        return self._db.store(obj, _Group.DID)
-
-    def store_credential(self, obj):
-        return self._db.store(obj, _Group.VC)
-
-    def store_presentation(self, obj):
-        return self._db.store(obj, _Group.VP)
-
-    def remove(self, alias, group):
-        self._db.remove(alias, group)
-
-    def clear(self, group):
-        self._db.clear(group)
-
-    def clear_keys(self):
-        self._db.clear(_Group.KEY)
-
-    def clear_dids(self):
-        self._db.clear(_Group.DID)
-
-    def clear_credentials(self):
-        self._db.clear(_Group.VC)
-
-    def clear_presentations(self):
-        self._db.clear(_Group.VP)
 
     def generate_key(self, algo):
         outfile = os.path.join(self.tmpdir, 'jwk.json')
@@ -228,8 +170,8 @@ class SSIApp(object):
         match template:
             case _Vc.DIPLOMA:
                 # TODO: Issuer should here complete the following form by
-                # comparing the submitted content against its database. Empty 
-                # strings lead to the demo defaults of the walt-ssi library. 
+                # comparing the submitted content against its database. Empty
+                # strings lead to the demo defaults of the walt-ssi library.
                 # IMPORTANT: Order of key-value pairs matters!!!
                 form = {
                     'person_identifier': content['person_id'],

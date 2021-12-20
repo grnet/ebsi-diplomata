@@ -6,7 +6,7 @@ TMPDIR      = os.getenv('TMPDIR')
 WALTDIR     = os.getenv('WALTDIR')
 RESOLVED    = os.path.join(WALTDIR, 'data/did/resolved')
 
-DBNAME  = 'db.json'
+DBNAME  = os.getenv('DBNAME')
 
 EBSI_PRFX   = 'did:ebsi'
 
@@ -32,6 +32,12 @@ class _Action:
     CHOOSE  = 'CHOOSE'
     IMPORT  = 'IMPORT'
     DISCARD = 'DISCARD'
+
+class _Group:
+    KEY     = 'key'
+    DID     = 'did'
+    VC      = 'vc'
+    VP      = 'vp'
 
 class _UI:
     KEY     = 'key'

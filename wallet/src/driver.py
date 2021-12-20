@@ -5,10 +5,9 @@ from urllib.parse import urljoin
 import requests
 from ui import MenuHandler
 from conf import TMPDIR, WALTDIR, INTRO, PROMPT, INDENT, RESOLVED, \
-    STORAGE, _Action, _UI, EBSI_PRFX, Ed25519, Secp256k1, RSA
+    STORAGE, _Action, _Group, _UI, EBSI_PRFX, Ed25519, Secp256k1, RSA
 from ssi_lib import SSIGenerationError, SSIRegistrationError, \
     SSIResolutionError, SSIIssuanceError, SSIVerificationError
-from ssi_lib.conf import _Group   # TODO: Get rid of this?
 from ssi_lib.conf import _Vc # TODO
 
 _mapping = {
@@ -227,8 +226,6 @@ class WalletShell(cmd.Cmd, MenuHandler):
         except KeyError as err:
             raise IssuanceError(err)
         try:
-            holder, template, content = self.prepare_issuance_payload(
-                payload)
             out = self.app.issue_credential(holder, issuer, template,
                     content)
         except SSIIssuanceError as err:
@@ -255,7 +252,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
             err = 'No credentials found for the provided holder DID'
             raise PresentationError(err)
         vc_selected = self.launch_selection(
-            'Select credentials to verify', vc_choices)
+            'Select credentials to present', vc_choices)
         if not vc_selected:
             err = 'Presentation aborted: No credentials selected'
             raise PresentationError(err)

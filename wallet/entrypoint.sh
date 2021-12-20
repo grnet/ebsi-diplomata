@@ -1,5 +1,9 @@
 #!/bin/bash
 
-python3 src   # TODO
+set -e
+
+cat init-db.sql | sqlite3 ${DBNAME}   # TODO
+
+python3 src                           # TODO
 
 exec "$@"
