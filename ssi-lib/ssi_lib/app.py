@@ -66,8 +66,10 @@ class SSIApp(metaclass=ABCMeta):
 
     @abstractmethod
     def _get_key(self, *args):
-        """
-        """
+        """Implemention of this function relates to specific needs and depends
+        on the number of cryptographic keys and the way they are stored (e.g.
+        an issuer may have a unique key stored in a secure data vault, whereas
+        a holder may own multiple keys stored in a wallet sqlite database)."""
 
     def _load_key(self, *args):
         outfile = os.path.join(self.tmpdir, 'jwk.json')
@@ -75,7 +77,7 @@ class SSIApp(metaclass=ABCMeta):
         if entry:
             with open(outfile, 'w+') as f:
                 json.dump(entry, f)
-            res, code = run_cmd(['load-key', '--file', outfile])
+            res, code = run_cmd(['load-key', '--file', outfile,])
             os.remove(outfile)
         else:
             res = 'No key found'
@@ -102,23 +104,75 @@ class SSIApp(metaclass=ABCMeta):
         res, code = run_cmd(['resolve-did', '--did', alias,])
         return res, code
 
-    def _issue_credential(self, holder, issuer, command, arguments,
-            outfile):
+    def _complete_vc(self, template, content):
+        match template:
+            case _Vc.DIPLOMA:
+                # TODO: Issuer should here complete the following form by
+                # comparing the submitted content against its database. Empty
+                # strings lead to the demo defaults of the walt-ssi library.
+                # IMPORTANT: Order of key-value pairs matters!!!
+                form = {
+                    'person_identifier': content['person_id'],
+                    'person_family_name': content['name'],
+                    'person_given_name': content['surname'],
+                    'person_date_of_birth': '',
+                    'awarding_opportunity_id': '',
+                    'awarding_opportunity_identifier': content['subject'],
+                    'awarding_opportunity_location': '',
+                    'awarding_opportunity_started_at': '',
+                    'awarding_opportunity_ended_at': '',
+                    'awarding_body_preferred_name': '',
+                    'awarding_body_homepage': '',
+                    'awarding_body_registraction': '',
+                    'awarding_body_eidas_legal_identifier': '',
+                    'grading_scheme_id': '',
+                    'grading_scheme_title': '',
+                    'grading_scheme_description': '',
+                    'learning_achievement_id': '',
+                    'learning_achievement_title': '',
+                    'learning_achievement_description': '',
+                    'learning_achievement_additional_note': '',
+                    'learning_specification_id': '',
+                    'learning_specification_ects_credit_points': '',
+                    'learning_specification_eqf_level': '',
+                    'learning_specification_iscedf_code': '',
+                    'learning_specification_nqf_level': '',
+                    'learning_specification_evidence_id': '',
+                    'learning_specification_evidence_type': '',
+                    'learning_specification_verifier': '',
+                    'learning_specification_evidence_document': '',
+                    'learning_specification_subject_presence': '',
+                    'learning_specification_document_presence': '',
+                }
+            case _:
+                raise NotImplementedError('TODO')
+        out = form.values()
+        return out
+
+    def _issue_vc(self, holder, issuer, template, content, outfile):
+        args = self._complete_vc(template, content) 
         res, code = run_cmd([
-            command,
+            _commands[template],
             '--holder', holder,
             '--issuer', issuer,
             '--export', outfile,
-            *arguments,
+            *args,
         ])
         return res, code
 
-    def _generate_presentation(self, holder, credentials):
-        args = ['present-credentials', '--holder', holder]
+    def _present_credentials(self, holder, credentials):
+        args = ['present-credentials', '--holder', holder,]
         for credential in credentials:
             args += ['-c', credential,]
         res, code = run_cmd(args)
         return res, code
+
+    def _extract_presentation_filename(self, buff):
+        sep = 'Verifiable presentation was saved to file: '
+        if not sep in buff:
+            return None
+        out = buff.split(sep)[-1].replace('"', '')
+        return out
 
     def _verify_presentation(self, presentation):
         tmpfile = os.path.join(self.tmpdir, 'vp.json')
@@ -173,57 +227,10 @@ class SSIApp(metaclass=ABCMeta):
         if code != 0:
             raise SSIResolutionError(res)
 
-    def _complete_credentials_form(self, template, content):
-        match template:
-            case _Vc.DIPLOMA:
-                # TODO: Issuer should here complete the following form by
-                # comparing the submitted content against its database. Empty
-                # strings lead to the demo defaults of the walt-ssi library.
-                # IMPORTANT: Order of key-value pairs matters!!!
-                form = {
-                    'person_identifier': content['person_id'],
-                    'person_family_name': content['name'],
-                    'person_given_name': content['surname'],
-                    'person_date_of_birth': '',
-                    'awarding_opportunity_id': '',
-                    'awarding_opportunity_identifier': content['subject'],
-                    'awarding_opportunity_location': '',
-                    'awarding_opportunity_started_at': '',
-                    'awarding_opportunity_ended_at': '',
-                    'awarding_body_preferred_name': '',
-                    'awarding_body_homepage': '',
-                    'awarding_body_registraction': '',
-                    'awarding_body_eidas_legal_identifier': '',
-                    'grading_scheme_id': '',
-                    'grading_scheme_title': '',
-                    'grading_scheme_description': '',
-                    'learning_achievement_id': '',
-                    'learning_achievement_title': '',
-                    'learning_achievement_description': '',
-                    'learning_achievement_additional_note': '',
-                    'learning_specification_id': '',
-                    'learning_specification_ects_credit_points': '',
-                    'learning_specification_eqf_level': '',
-                    'learning_specification_iscedf_code': '',
-                    'learning_specification_nqf_level': '',
-                    'learning_specification_evidence_id': '',
-                    'learning_specification_evidence_type': '',
-                    'learning_specification_verifier': '',
-                    'learning_specification_evidence_document': '',
-                    'learning_specification_subject_presence': '',
-                    'learning_specification_document_presence': '',
-                }
-            case _:
-                raise NotImplementedError('TODO')
-        arguments = form.values()
-        return arguments
-
     def issue_credential(self, holder, issuer, template, content):
-        command = _commands[template]
-        arguments = self._complete_credentials_form(template, content)
         outfile = os.path.join(self.tmpdir, 'vc.json')
-        res, code = self._issue_credential(holder, issuer,
-                command, arguments, outfile)
+        res, code = self._issue_vc(holder, issuer, template, content,
+                outfile)
         if code != 0:
             raise SSIIssuanceError(res)
         with open(outfile, 'r') as f:
@@ -232,13 +239,12 @@ class SSIApp(metaclass=ABCMeta):
         return out
 
     def generate_presentation(self, holder, credentials, waltdir):
-        res, code = self._generate_presentation(holder, credentials)
+        res, code = self._present_credentials(holder, credentials)
         if code != 0:
             raise SSIGenerationError(res)
-        sep = 'Verifiable presentation was saved to file: '
-        if not sep in res:
+        filename = self._extract_presentation_filename(res)
+        if not filename:
             raise SSIGenerationError(res)
-        filename = res.split(sep)[-1].replace('"', '')
         outfile = os.path.join(waltdir, filename)
         with open(outfile, 'r') as f:
             out = json.load(f)
