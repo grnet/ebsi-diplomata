@@ -129,6 +129,13 @@ class SSIApp(metaclass=ABCMeta):
         os.remove(tmpfile)
         return res, code
 
+    def _parse_verification_results(self, buff):
+        aux = buff.split('Results: ', 1)[-1].replace(':', '').split(' ')
+        out = {}
+        for i in range(0, len(aux), 2):
+            out[aux[i]] = {'true': True, 'false': False}[aux[i + 1]]
+        return out
+
     def generate_key(self, algo):
         outfile = os.path.join(self.tmpdir, 'jwk.json')
         res, code = self._generate_key(algo, outfile)
@@ -244,9 +251,5 @@ class SSIApp(metaclass=ABCMeta):
         res, code = self._verify_presentation(presentation)
         if code != 0:
             raise SSIVerificationError(res)
-        # Parse results
-        aux = res.split('Results: ', 1)[-1].replace(':', '').split(' ')
-        results = {}
-        for i in range(0, len(aux), 2):
-            results[aux[i]] = {'true': True, 'false': False}[aux[i + 1]]
-        return results
+        out = self._parse_verification_results(res)
+        return out
