@@ -61,14 +61,14 @@ def issue_credential(request):
     try:
         payload = extract_payload(request)
         holder = payload['holder']
-        template = payload['template']
+        vc_type = payload['vc_type']
         content = payload['content']
     except (JSONDecodeError, KeyError,) as err:
         out['err'] = 'Bad request'
         status = 400                                            # TODO
         return JsonResponse(out, safe=False, status=status)
     try:
-        vc = ssi_party.issue_credential(holder, template,
+        vc = ssi_party.issue_credential(holder, vc_type,
                 content)
         out['vc'] = vc
         status = 200

@@ -190,17 +190,17 @@ class WalletShell(cmd.Cmd, MenuHandler):
         return out
 
     def prepare_issuance_payload(self):
-        dids = self.app.get_dids()
-        if not dids:
+        choices = self.app.get_dids()
+        if not choices:
             err = 'No DIDs found. Must first create one.'
             raise Abortion(err)
-        holder = self.launch_choice('Choose holder DID', dids)
-        # TODO: Select values via user input
+        did = self.launch_choice('Choose holder DID', choices)
+        # TODO: Select credential type and values via user input
         # TODO: This construction assumes than an API spec has been advertized
         # on behalf of the issuer
         payload = {
-            'holder': holder,
-            'template': _Vc.DIPLOMA,
+            'holder': did,
+            'vc_type': _Vc.DIPLOMA,
             'content': {
                 'person_id': '0x666',
                 'name': 'Lucrezia',
@@ -209,6 +209,27 @@ class WalletShell(cmd.Cmd, MenuHandler):
             },
         }
         return payload
+
+    def adapt_credential_content(self, vc_type, content):
+        from ssi_lib.conf import _Template  # TODO
+        # TODO
+        try:
+            template = getattr(_Template, vc_type)
+        except AttributeError:
+            err = 'Requested credential type does not exist: %s' % vc_type
+            raise NotImplementedError(err)
+        out = template
+        match vc_type:
+            case _Vc.DIPLOMA:
+                # TODO
+                out['person_identifier'] = content['person_id']
+                out['person_family_name'] = content['name']
+                out['person_given_name'] = content['surname']
+                out['awarding_opportunity_identifier'] = content['subject']
+            case _:
+                err = 'Requested credential type does not exist: %s' % vc_type
+                raise NotImplementedError(err)
+        return out
 
     def issue_credential(self, line):
         try:
@@ -221,12 +242,16 @@ class WalletShell(cmd.Cmd, MenuHandler):
             raise Abortion('Issuance aborted')
         try:
             holder = payload['holder']
-            template = payload['template']
+            vc_type = payload['vc_type']
             content = payload['content']
         except KeyError as err:
             raise IssuanceError(err)
         try:
-            out = self.app.issue_credential(holder, issuer, template,
+            content = self.adapt_credential_content(vc_type, content)
+        except NotImplementedError as err:
+            raise SSIIssuanceError(err)
+        try:
+            out = self.app.issue_credential(holder, issuer, vc_type,
                     content)
         except SSIIssuanceError as err:
             raise IssuanceError(err)

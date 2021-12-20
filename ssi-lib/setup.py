@@ -7,7 +7,7 @@ try:
   with open('requirements.txt', 'r') as f:
     install_requires = [_.strip() for _ in f.readlines()]
 except FileNotFoundError:
-    install_requires = ['tinydb>=4.5.2',]
+    install_requires = []
 
 with open('README.md', 'r') as f:
         long_description = f.read()

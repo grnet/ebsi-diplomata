@@ -2,7 +2,7 @@ import os
 import json
 import subprocess
 from abc import ABCMeta, abstractmethod
-from .conf import _Vc
+from .conf import _Vc, _Template
 
 
 class SSIGenerationError(BaseException):
@@ -12,6 +12,9 @@ class SSIRegistrationError(BaseException):
     pass
 
 class SSIResolutionError(BaseException):
+    pass
+
+class SSIContentError(BaseException):
     pass
 
 class SSIIssuanceError(BaseException):
@@ -104,59 +107,23 @@ class SSIApp(metaclass=ABCMeta):
         res, code = run_cmd(['resolve-did', '--did', alias,])
         return res, code
 
-    def _complete_vc(self, template, content):
-        match template:
-            case _Vc.DIPLOMA:
-                # TODO: Issuer should here complete the following form by
-                # comparing the submitted content against its database. Empty
-                # strings lead to the demo defaults of the walt-ssi library.
-                # IMPORTANT: Order of key-value pairs matters!!!
-                form = {
-                    'person_identifier': content['person_id'],
-                    'person_family_name': content['name'],
-                    'person_given_name': content['surname'],
-                    'person_date_of_birth': '',
-                    'awarding_opportunity_id': '',
-                    'awarding_opportunity_identifier': content['subject'],
-                    'awarding_opportunity_location': '',
-                    'awarding_opportunity_started_at': '',
-                    'awarding_opportunity_ended_at': '',
-                    'awarding_body_preferred_name': '',
-                    'awarding_body_homepage': '',
-                    'awarding_body_registraction': '',
-                    'awarding_body_eidas_legal_identifier': '',
-                    'grading_scheme_id': '',
-                    'grading_scheme_title': '',
-                    'grading_scheme_description': '',
-                    'learning_achievement_id': '',
-                    'learning_achievement_title': '',
-                    'learning_achievement_description': '',
-                    'learning_achievement_additional_note': '',
-                    'learning_specification_id': '',
-                    'learning_specification_ects_credit_points': '',
-                    'learning_specification_eqf_level': '',
-                    'learning_specification_iscedf_code': '',
-                    'learning_specification_nqf_level': '',
-                    'learning_specification_evidence_id': '',
-                    'learning_specification_evidence_type': '',
-                    'learning_specification_verifier': '',
-                    'learning_specification_evidence_document': '',
-                    'learning_specification_subject_presence': '',
-                    'learning_specification_document_presence': '',
-                }
-            case _:
-                raise NotImplementedError('TODO')
-        out = form.values()
-        return out
+    def _validate_vc_content(self, vc_type, content):
+        try:
+            template = getattr(_Template, vc_type)
+        except AttributeError as err:
+            err = 'Requested credential type does not exist: %s' % vc_type
+            raise SSIContentError(err)
+        if not template.keys() == content.keys():
+            err = 'Provided credential content has wrong key-value pairs'
+            raise SSIContentError(err)
 
-    def _issue_vc(self, holder, issuer, template, content, outfile):
-        args = self._complete_vc(template, content) 
+    def _issue_vc(self, holder, issuer, vc_type, content, outfile):
         res, code = run_cmd([
-            _commands[template],
+            _commands[vc_type],
             '--holder', holder,
             '--issuer', issuer,
             '--export', outfile,
-            *args,
+            *content.values(),
         ])
         return res, code
 
@@ -227,9 +194,14 @@ class SSIApp(metaclass=ABCMeta):
         if code != 0:
             raise SSIResolutionError(res)
 
-    def issue_credential(self, holder, issuer, template, content):
+    def issue_credential(self, holder, issuer, vc_type, content):
+        try:
+            self._validate_vc_content(vc_type, content)
+        except SSIContentError as err:
+            err = 'Invalid credential content provided: %s' % err
+            raise SSIIssuanceError(err)
         outfile = os.path.join(self.tmpdir, 'vc.json')
-        res, code = self._issue_vc(holder, issuer, template, content,
+        res, code = self._issue_vc(holder, issuer, vc_type, content,
                 outfile)
         if code != 0:
             raise SSIIssuanceError(res)

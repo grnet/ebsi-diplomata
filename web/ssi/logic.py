@@ -5,6 +5,7 @@ from django.conf import settings
 from ssi_lib import SSIApp
 from ssi_lib import SSIGenerationError, SSIRegistrationError, \
     SSIResolutionError, SSIIssuanceError, SSIVerificationError
+from ssi_lib.conf import _Vc
 
 
 class IdentityError(BaseException):     # TODO
@@ -102,6 +103,27 @@ class SSIParty(SSIApp):
         alias = self.store_local_did(did)
         return alias
 
+    def _adapt_credential_content(self, vc_type, content):
+        from ssi_lib.conf import _Template  # TODO
+        # TODO
+        try:
+            template = getattr(_Template, vc_type)
+        except AttributeError:
+            err = 'Requested credential type does not exist: %s' % vc_type
+            raise NotImplementedError(err)
+        out = template
+        match vc_type:
+            case _Vc.DIPLOMA:
+                # TODO
+                out['person_identifier'] = content['person_id']
+                out['person_family_name'] = content['name']
+                out['person_given_name'] = content['surname']
+                out['awarding_opportunity_identifier'] = content['subject']
+            case _:
+                err = 'Requested credential type does not exist: %s' % vc_type
+                raise NotImplementedError(err)
+        return out
+
     def get_info(self):
         return {'TODO': 'Include here service info'}        # TODO
 
@@ -128,13 +150,18 @@ class SSIParty(SSIApp):
         logging.info('Created DID %s' % alias)
         return alias
 
-    def issue_credential(self, holder, template, content):
+    def issue_credential(self, holder, vc_type, content):
         issuer = self.get_local_did()
         if not issuer:
             err = 'No issuer DID found'
             raise IssuanceError(err)
         try:
-            out = super().issue_credential(holder, issuer, template,
+            content = self._adapt_credential_content(vc_type, 
+                    content)
+        except NotImplementedError as err:
+            raise IssuanceError(err)
+        try:
+            out = super().issue_credential(holder, issuer, vc_type,
                     content)
         except SSIIssuanceError as err:
             raise IssuanceError(err)
