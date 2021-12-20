@@ -33,6 +33,12 @@ class _Action:
     IMPORT  = 'IMPORT'
     DISCARD = 'DISCARD'
 
+class _Group:
+    KEY     = 'key'
+    DID     = 'did'
+    VC      = 'vc'
+    VP      = 'vp'
+
 class _UI:
     KEY     = 'key'
     KEYS    = 'keys'

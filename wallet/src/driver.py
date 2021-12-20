@@ -5,10 +5,9 @@ from urllib.parse import urljoin
 import requests
 from ui import MenuHandler
 from conf import TMPDIR, WALTDIR, INTRO, PROMPT, INDENT, RESOLVED, \
-    STORAGE, _Action, _UI, EBSI_PRFX, Ed25519, Secp256k1, RSA
+    STORAGE, _Action, _Group, _UI, EBSI_PRFX, Ed25519, Secp256k1, RSA
 from ssi_lib import SSIGenerationError, SSIRegistrationError, \
     SSIResolutionError, SSIIssuanceError, SSIVerificationError
-from ssi_lib.conf import _Group   # TODO: Get rid of this?
 from ssi_lib.conf import _Vc # TODO
 
 _mapping = {

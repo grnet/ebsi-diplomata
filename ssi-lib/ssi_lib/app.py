@@ -2,7 +2,7 @@ import os
 import json
 import subprocess
 from abc import ABCMeta, abstractmethod
-from .conf import _Group, _Vc
+from .conf import _Vc
 
 
 class SSIGenerationError(BaseException):
@@ -37,19 +37,49 @@ class SSIApp(metaclass=ABCMeta):
     def __init__(self, tmpdir):
         self.tmpdir = tmpdir
 
+    def _extract_alias_from_key(self, entry):
+        return entry['kid']
+
+    def _extract_alias_from_did(self, entry):
+        return entry['id']
+
+    def _extract_key_from_did(self, entry):
+        return entry['verificationMethod'][0]['publicKeyJwk']['kid']
+
+    def _extract_alias_from_vc(self, entry):
+        return entry['id']
+
+    def _extract_holder_from_vc(self, entry):
+        return entry['credentialSubject']['id']
+
+    def _extract_alias_from_vp(self, entry):
+        return entry['id']
+
+    def _extract_holder_from_vp(self, entry):
+        return entry['holder']
+
     def _generate_key(self, algo, outfile):
         res, code = run_cmd([
             'generate-key', '--algo', algo, '--export', outfile,
         ])
         return res, code
 
-    def _load_key(self, alias):
+    @abstractmethod
+    def _get_key(self, *args):
+        """
+        """
+
+    def _load_key(self, *args):
         outfile = os.path.join(self.tmpdir, 'jwk.json')
-        entry = self.get_entry(alias, _Group.KEY)
-        with open(outfile, 'w+') as f:
-            json.dump(entry, f)
-        res, code = run_cmd(['load-key', '--file', outfile])
-        os.remove(outfile)
+        entry = self._get_key(*args)
+        if entry:
+            with open(outfile, 'w+') as f:
+                json.dump(entry, f)
+            res, code = run_cmd(['load-key', '--file', outfile])
+            os.remove(outfile)
+        else:
+            res = 'No key found'
+            code = 1
         return res, code
 
     def _generate_did(self, key, outfile):
@@ -98,136 +128,6 @@ class SSIApp(metaclass=ABCMeta):
             'verify-credentials', '--presentation', tmpfile,])
         os.remove(tmpfile)
         return res, code
-
-    @abstractmethod
-    def get_aliases(self, group):
-        """
-        """
-
-    @abstractmethod
-    def get_keys(self):
-        """
-        """
-
-    @abstractmethod
-    def get_dids(self):
-        """
-        """
-
-    @abstractmethod
-    def get_credentials(self):
-        """
-        """
-
-    @abstractmethod
-    def get_presentations(self):
-        """
-        """
-
-    @abstractmethod
-    def get_credentials_by_did(self, alias):
-        """
-        """
-
-    @abstractmethod
-    def get_nr(self, group):
-        """
-        """
-
-    @abstractmethod
-    def get_nr_keys(self):
-        """
-        """
-
-    @abstractmethod
-    def get_nr_dids(self):
-        """
-        """
-
-    @abstractmethod
-    def get_nr_credentials(self):
-        """
-        """
-
-    @abstractmethod
-    def get_nr_presentations(self):
-        """
-        """
-
-    @abstractmethod
-    def get_entry(self, alias, group):
-        """
-        """
-
-    @abstractmethod
-    def get_key(self, alias):
-        """
-        """
-
-    @abstractmethod
-    def get_did(self, alias):
-        """
-        """
-
-    @abstractmethod
-    def get_credential(self, alias):
-        """
-        """
-
-    @abstractmethod
-    def get_presentation(self, alias):
-        """
-        """
-
-    @abstractmethod
-    def store_key(self, obj):
-        """
-        """
-
-    @abstractmethod
-    def store_did(self, obj):
-        """
-        """
-
-    @abstractmethod
-    def store_credential(self, obj):
-        """
-        """
-
-    @abstractmethod
-    def store_presentation(self, obj):
-        """
-        """
-
-    @abstractmethod
-    def remove(self, alias, group):
-        """
-        """
-
-    @abstractmethod
-    def clear(self, group):
-        """
-        """
-
-    @abstractmethod
-    def clear_keys(self):
-        """
-        """
-
-    @abstractmethod
-    def clear_dids(self):
-        """
-        """
-
-    @abstractmethod
-    def clear_credentials(self):
-        """
-        """
-
-    @abstractmethod
-    def clear_presentations(self):
-        """
-        """
 
     def generate_key(self, algo):
         outfile = os.path.join(self.tmpdir, 'jwk.json')

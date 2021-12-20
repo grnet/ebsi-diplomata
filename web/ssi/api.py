@@ -24,12 +24,12 @@ def show_info(request):
 def show_did(request):
     out = {}
     try:
-        alias = ssi_party.get_did()
+        alias = ssi_party.get_local_did()
         out['did'] = alias
         status = 200
     except IdentityError as err:
         out['msg'] = '%s' % err
-        status = 204
+        status = 200                                            # TODO
     return JsonResponse(out, safe=False, status=status)
 
 @csrf_exempt

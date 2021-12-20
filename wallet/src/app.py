@@ -1,5 +1,5 @@
 from ssi_lib import SSIApp
-from ssi_lib.conf import _Group
+from conf import _Group
 from db import DbConnector
 
 
@@ -15,29 +15,11 @@ class WalletApp(SSIApp):
         dbpath = config['dbpath']
         return cls(tmpdir, dbpath)
 
-    def _extract_alias_from_key(self, entry):
-        return entry['kid']
-
-    def _extract_alias_from_did(self, entry):
-        return entry['id']
-
-    def _extract_key_from_did(self, entry):
-        return entry['verificationMethod'][0]['publicKeyJwk']['kid']
-
-    def _extract_alias_from_vc(self, entry):
-        return entry['id']
-
-    def _extract_holder_from_vc(self, entry):
-        return entry['credentialSubject']['id']
-
-    def _extract_alias_from_vp(self, entry):
-        return entry['id']
-
-    def _extract_holder_from_vp(self, entry):
-        return entry['holder']
-
     def get_aliases(self, group):
         return self._db.get_aliases(group)
+
+    def _get_key(self, alias):
+        return self._db.get_entry(alias, _Group.KEY)
 
     def get_keys(self):
         return self._db.get_aliases(_Group.KEY)
@@ -73,7 +55,7 @@ class WalletApp(SSIApp):
         return self._db.get_entry(alias, group)
 
     def get_key(self, alias):
-        return self._db.get_entry(alias, _Group.KEY)
+        return self._get_key(alias)
 
     def get_did(self, alias):
         return self._db.get_entry(alias, _Group.DID)
