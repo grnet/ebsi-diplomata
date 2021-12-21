@@ -4,7 +4,7 @@ import logging
 from django.conf import settings
 from ssi_lib import SSIApp, SSIGenerationError, SSIRegistrationError, \
     SSIResolutionError, SSIIssuanceError, SSIVerificationError, \
-    SSIVcContentError, Template, Vc
+    Template, Vc
 
 
 class IdentityError(BaseException):
@@ -81,23 +81,21 @@ def _generate_did(key, token, onboard=True):
         logging.info('DID registered to EBSI')
     return did
 
-def _adapt_credential_content(vc_type, content):
-    try:
-        # TODO: Remove this
-        template = app.resolve_template(vc_type)
-    except SSIVcContentError:
-        raise
-    out = template
-    match vc_type:
-        case Vc.DIPLOMA:
-            # TODO
-            out['person_identifier'] = content['person_id']
-            out['person_family_name'] = content['name']
-            out['person_given_name'] = content['surname']
-            out['awarding_opportunity_identifier'] = content['subject']
-        case _:
-            err = 'Requested credential type does not exist: %s' % vc_type
-            raise SSIVcContentError(err)
+def _normalize_diploma_content(content):
+    # Issuer should here compare the submitted content against the database and
+    # accordingly resolve the content of the diploma to be issued (This
+    # typically means transformation and completion of the provided content).
+    # TODO: Unaltered values of the original template (empty strings) lead
+    # during issuance to the default demo values of the walt-ssikit backend.
+    # This does not affect cryptographic correctness and protocol execution but
+    # evidently leads to credentials that do not correspond to reality. Make
+    # sure that all pairs of the original template are visited and properly
+    # modified within the present reality context.
+    out = getattr(Template, Vc.DIPLOMA)
+    out['person_identifier'] = content['person_id']
+    out['person_family_name'] = content['name']
+    out['person_given_name'] = content['surname']
+    out['awarding_opportunity_identifier'] = content['subject']
     return out
 
 def fetch_did():
@@ -133,9 +131,9 @@ def issue_credential(holder, vc_type, content):
         err = 'No issuer DID found'
         raise IssuanceError(err)
     try:
-        content = _adapt_credential_content(vc_type, 
-                content)
-    except SSIVcContentError as err:
+        content = _normalize_diploma_content(content)
+    except KeyError as err:
+        err = 'Malformed diploma content provided: %s' % err
         raise IssuanceError(err)
     try:
         out = app.issue_credential(holder, issuer, vc_type,

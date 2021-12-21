@@ -9,10 +9,10 @@ from ssi_lib import \
     SSIResolutionError, \
     SSIIssuanceError, \
     SSIVerificationError, \
-    SSIVcContentError, \
     Template, \
     Vc
-from conf import STORAGE, TMPDIR, WALTDIR, RESOLVED, Table
+from conf import STORAGE, TMPDIR, WALTDIR, RESOLVED, Table, \
+    Ed25519, Secp256k1, RSA
 from driver.conf import INTRO, PROMPT, INDENT, Action, UI
 from driver.ui import MenuHandler
 from __init__ import __version__
@@ -217,22 +217,13 @@ class WalletShell(cmd.Cmd, MenuHandler):
         }
         return payload
 
-    def adapt_credential_content(self, vc_type, content):
-        try:
-            template = self.app.resolve_template(vc_type)
-        except SSIVcContentError:
-            raise
-        out = template
-        match vc_type:
-            case Vc.DIPLOMA:
-                # TODO
-                out['person_identifier'] = content['person_id']
-                out['person_family_name'] = content['name']
-                out['person_given_name'] = content['surname']
-                out['awarding_opportunity_identifier'] = content['subject']
-            case _:
-                err = 'Requested credential type does not exist: %s' % vc_type
-                raise SSIVcContentError(err)
+    def normalize_diploma_content(self, content):
+        # TODO
+        out = getattr(Template, Vc.DIPLOMA)
+        out['person_identifier'] = content['person_id']
+        out['person_family_name'] = content['name']
+        out['person_given_name'] = content['surname']
+        out['awarding_opportunity_identifier'] = content['subject']
         return out
 
     def issue_credential(self, line):
@@ -251,8 +242,8 @@ class WalletShell(cmd.Cmd, MenuHandler):
         except KeyError as err:
             raise IssuanceError(err)
         try:
-            content = self.adapt_credential_content(vc_type, content)
-        except SSIVcContentError as err:
+            content = self.normalize_diploma_content(content)
+        except KeyError as err:
             raise SSIIssuanceError(err)
         try:
             out = self.app.issue_credential(holder, issuer, vc_type,

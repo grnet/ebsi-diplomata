@@ -14,9 +14,6 @@ class SSIRegistrationError(BaseException):
 class SSIResolutionError(BaseException):
     pass
 
-class SSIVcContentError(BaseException):     # TODO: Get rid of this
-    pass
-
 class SSIIssuanceError(BaseException):
     pass
 
@@ -92,13 +89,8 @@ class SSIApp(object):
         return template
 
     def _validate_vc_content(self, vc_type, content):
-        try:
-            template = self._resolve_template(vc_type)
-        except AttributeError as err:
-            raise SSIVcContentError(err)
-        if not template.keys() == content.keys():
-            err = 'Provided credential content has wrong key-value pairs'
-            raise SSIVcContentError(err)
+        template = self._resolve_template(vc_type)
+        return template.keys() == content.keys()
 
     def _issue_vc(self, holder, issuer, vc_type, content, outfile):
         res, code = self._run_cmd([
@@ -201,18 +193,8 @@ class SSIApp(object):
         if code != 0:
             raise SSIResolutionError(res)
 
-    def resolve_template(self, vc_type):
-        try:
-            template = getattr(Template, vc_type)
-        except AttributeError:
-            err = 'Requested credential type does not exist: %s' % vc_type
-            raise SSIVcContentError(err)
-        return template
-
     def issue_credential(self, holder, issuer, vc_type, content):
-        try:
-            self._validate_vc_content(vc_type, content)
-        except SSIVcContentError as err:
+        if not self._validate_vc_content(vc_type, content):
             err = 'Invalid credential content provided: %s' % err
             raise SSIIssuanceError(err)
         outfile = os.path.join(self.tmpdir, 'vc.json')

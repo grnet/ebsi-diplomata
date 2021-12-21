@@ -7,7 +7,6 @@ from .ssi import \
     SSIResolutionError, \
     SSIIssuanceError, \
     SSIVerificationError, \
-    SSIVcContentError, \
     Template, \
     Vc
 
@@ -20,7 +19,6 @@ __all__ = (
     'SSIResolutionError',
     'SSIIssuanceError',
     'SSIVerificationError',
-    'SSIVcContentError',
     'Template',
     'Vc',
 )
