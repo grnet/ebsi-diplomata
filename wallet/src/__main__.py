@@ -2,13 +2,13 @@ import sys
 from driver import WalletShell
 from app import WalletApp
 from db import WalletDbConnectionError
-import conf
+from conf import TMPDIR, DBNAME
 
 if __name__ == '__main__':
     try:
         app = WalletApp.create({
-            'tmpdir': conf.TMPDIR,
-            'dbpath': conf.DBNAME,
+            'tmpdir': TMPDIR,
+            'dbpath': DBNAME,
         })
     except WalletDbConnectionError as err:
         sys.stdout.write('Could not connect to database: %s\n' \

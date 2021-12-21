@@ -3,13 +3,13 @@ import json
 import os
 from urllib.parse import urljoin
 import requests
-from ui import MenuHandler
-from conf import TMPDIR, WALTDIR, INTRO, PROMPT, INDENT, RESOLVED, \
-    STORAGE, Action, Table, UI, EBSI_PRFX, Ed25519, Secp256k1, RSA
 from ssi_lib import SSIGenerationError, SSIRegistrationError, \
     SSIResolutionError, SSIIssuanceError, SSIVerificationError, \
     SSIContentError
 from ssi_lib.conf import Vc, Template  # TODO
+from conf import STORAGE, TMPDIR, WALTDIR, RESOLVED, Table
+from driver.conf import INTRO, PROMPT, INDENT, Action, UI
+from driver.ui import MenuHandler
 
 _mapping = {
     UI.KEY: Table.KEY,

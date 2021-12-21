@@ -8,7 +8,16 @@ defined by ../init-db.sql. Rough overview of tables:
 
 """
 
+# We should here be able to import and use any ORM library conforming to the 
+# DB API 2.0 protocol (PEP 249 spec v2.0), e.g., psycopg for connecting to a
+# postgres database instead of sqlite (this is the use case of an authorised
+# official plugging their wallet to an issuer web service for administrative
+# purposes). TODO: This module is almost agnostic to the ORM in use with the 
+# exception of the _run_sql_script function.
+#
+import sqlite3 as _orm
 import json
+
 
 class WalletDbConnectionError(BaseException):
     pass
@@ -16,17 +25,6 @@ class WalletDbConnectionError(BaseException):
 class WalletDbQueryError(BaseException):
     pass
 
-
-# We should here be able to import and use any ORM library conforming to the 
-# DB API 2.0 protocol (PEP 249 spec v2.0), e.g., psycopg for connecting to a
-# postgres database instead of sqlite (this is the use case of an authorised
-# official plugging their wallet to an issuer web service for administrative
-# purposes).
-#
-# TODO: This module is almost agnostic to the ORM in use with the exception of
-# the _run_sql_script function.
-#
-import sqlite3 as _orm
 
 class DbConnector(object):
 
