@@ -21,7 +21,7 @@ class SSIVerificationError(BaseException):
     pass
 
 
-class SSIApp(object):
+class SSI(object):
 
     def __init__(self, tmpdir):
         self.tmpdir = tmpdir

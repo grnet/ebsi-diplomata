@@ -2,7 +2,7 @@ import os
 import json
 import logging
 from django.conf import settings
-from ssi_lib import SSIApp, SSIGenerationError, SSIRegistrationError, \
+from ssi_lib import SSI, SSIGenerationError, SSIRegistrationError, \
     SSIResolutionError, SSIIssuanceError, SSIVerificationError, \
     Template, Vc
 
@@ -24,7 +24,7 @@ VAULT = settings.STORAGE    # TOOD: Use an encrypted secure data vault
 KEYFILE = os.path.join(VAULT, 'jwk.json')   # TODO
 DIDFILE = os.path.join(VAULT, 'did.json')   # TODO
 
-app = SSIApp(settings.TMPDIR)
+_ssi = SSI(settings.TMPDIR)
 
 def _fetch_key():
     try:
@@ -40,18 +40,18 @@ def _fetch_did(full=False):
             did = json.load(f)
     except FileNotFoundError:
         return None
-    out = app.extract_alias_from_did(did) if not full \
+    out = _ssi.extract_alias_from_did(did) if not full \
             else did
     return out
 
 def _store_key(entry):
-    alias = app.extract_alias_from_key(entry)
+    alias = _ssi.extract_alias_from_key(entry)
     with open(KEYFILE, 'w+') as f:
         json.dump(entry, f, indent=4)
     return alias
 
 def _store_did(entry):
-    alias = app.extract_alias_from_did(entry)
+    alias = _ssi.extract_alias_from_did(entry)
     with open(DIDFILE, 'w+') as f:
         json.dump(entry, f, indent=4)
     return alias
@@ -59,7 +59,7 @@ def _store_did(entry):
 def _generate_key(algo):
     logging.info('Generating %s key (takes seconds) ...' % algo)
     try:
-        key = app.generate_key(algo)
+        key = _ssi.generate_key(algo)
     except SSIGenerationError as err:
         raise
     return key
@@ -67,15 +67,15 @@ def _generate_key(algo):
 def _generate_did(key, token, onboard=True):
     logging.info('Generating DID (takes seconds) ...')
     try:
-        did = app.generate_did(key, token, onboard, 
+        did = _ssi.generate_did(key, token, onboard, 
                 load_key=False) # TODO
     except SSIGenerationError as err:
         raise
     if onboard:
         logging.info('Registering DID to EBSI (takes seconds)...')
         try:
-            alias = app.extract_alias_from_did(did)
-            app.register_did(alias, token)
+            alias = _ssi.extract_alias_from_did(did)
+            _ssi.register_did(alias, token)
         except SSIRegistrationError as err:
             raise
         logging.info('DID registered to EBSI')
@@ -136,7 +136,7 @@ def issue_credential(holder, vc_type, content):
         err = 'Malformed diploma content provided: %s' % err
         raise IssuanceError(err)
     try:
-        out = app.issue_credential(holder, issuer, vc_type,
+        out = _ssi.issue_credential(holder, issuer, vc_type,
                 content)
     except SSIIssuanceError as err:
         raise IssuanceError(err)
@@ -144,7 +144,7 @@ def issue_credential(holder, vc_type, content):
 
 def verify_presentation(vp):
     try:
-        out = app.verify_presentation(vp)
+        out = _ssi.verify_presentation(vp)
     except SSIVerificationError as err:
         raise VerificationError(err)
     return out

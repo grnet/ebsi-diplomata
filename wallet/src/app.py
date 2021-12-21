@@ -1,9 +1,9 @@
-from ssi_lib import SSIApp
+from ssi_lib import SSI
 from db import DbConnector
 from conf import Table
 
 
-class WalletApp(SSIApp):
+class WalletApp(SSI):
 
     def __init__(self, tmpdir, dbpath):
         self._db = DbConnector(dbpath)

@@ -1,7 +1,7 @@
 """Library providing SSI capabilities"""
 
 from .ssi import \
-    SSIApp, \
+    SSI, \
     SSIGenerationError, \
     SSIRegistrationError, \
     SSIResolutionError, \
@@ -13,7 +13,7 @@ from .ssi import \
 __version__ = '0.1.0'
 
 __all__ = (
-    'SSIApp',
+    'SSI',
     'SSIGenerationError',
     'SSIRegistrationError',
     'SSIResolutionError',
