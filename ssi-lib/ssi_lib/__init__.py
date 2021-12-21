@@ -1,14 +1,17 @@
 """Library providing SSI capabilities"""
 
-from .app import SSIApp, \
+from .ssi import \
+    SSIApp, \
     SSIGenerationError, \
     SSIRegistrationError, \
     SSIResolutionError, \
     SSIIssuanceError, \
     SSIVerificationError, \
-    SSIContentError
+    SSIVcContentError, \
+    Template, \
+    Vc
 
-__version__ = '0.0.1'
+__version__ = '0.1.0'
 
 __all__ = (
     'SSIApp',
@@ -17,5 +20,7 @@ __all__ = (
     'SSIResolutionError',
     'SSIIssuanceError',
     'SSIVerificationError',
-    'SSIContentError',
+    'SSIVcContentError',
+    'Template',
+    'Vc',
 )

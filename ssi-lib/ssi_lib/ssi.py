@@ -2,7 +2,7 @@ import os
 import json
 import subprocess
 from abc import ABCMeta, abstractmethod
-from .conf import Vc, Template
+from .types import Vc, Template
 
 
 class SSIGenerationError(BaseException):
@@ -14,7 +14,7 @@ class SSIRegistrationError(BaseException):
 class SSIResolutionError(BaseException):
     pass
 
-class SSIContentError(BaseException):
+class SSIVcContentError(BaseException):     # TODO: Get rid of this
     pass
 
 class SSIIssuanceError(BaseException):
@@ -23,16 +23,14 @@ class SSIIssuanceError(BaseException):
 class SSIVerificationError(BaseException):
     pass
 
-_commands = {
-    Vc.DIPLOMA: 'issue-diploma',
-    # TODO: Add here more options
-}
 
-
-class SSIApp(metaclass=ABCMeta):
+class SSIApp(object):
 
     def __init__(self, tmpdir):
         self.tmpdir = tmpdir
+        self.commands = {
+            Vc.DIPLOMA: 'issue-diploma',
+        }
 
     @staticmethod
     def _run_cmd(args):
@@ -47,11 +45,10 @@ class SSIApp(metaclass=ABCMeta):
         ])
         return res, code
 
-    @abstractmethod
-    def _fetch_key(self, *args):
-        """This depends on the number of asymmetric keys and the way they are
-        stored (e.g., an issuer can have one key stored in a data vault while
-        a holder owns multiple keys stored in their wallet's database)"""
+    # @abstractmethod
+    # def _fetch_key(self, *args):
+    #     """
+    #     """
 
     def _load_key(self, *args):
         outfile = os.path.join(self.tmpdir, 'jwk.json')
@@ -98,14 +95,14 @@ class SSIApp(metaclass=ABCMeta):
         try:
             template = self._resolve_template(vc_type)
         except AttributeError as err:
-            raise SSIContentError(err)
+            raise SSIVcContentError(err)
         if not template.keys() == content.keys():
             err = 'Provided credential content has wrong key-value pairs'
-            raise SSIContentError(err)
+            raise SSIVcContentError(err)
 
     def _issue_vc(self, holder, issuer, vc_type, content, outfile):
         res, code = self._run_cmd([
-            _commands[vc_type],
+            self.commands[vc_type],
             '--holder', holder,
             '--issuer', issuer,
             '--export', outfile,
@@ -209,13 +206,13 @@ class SSIApp(metaclass=ABCMeta):
             template = getattr(Template, vc_type)
         except AttributeError:
             err = 'Requested credential type does not exist: %s' % vc_type
-            raise SSIContentError(err)
+            raise SSIVcContentError(err)
         return template
 
     def issue_credential(self, holder, issuer, vc_type, content):
         try:
             self._validate_vc_content(vc_type, content)
-        except SSIContentError as err:
+        except SSIVcContentError as err:
             err = 'Invalid credential content provided: %s' % err
             raise SSIIssuanceError(err)
         outfile = os.path.join(self.tmpdir, 'vc.json')

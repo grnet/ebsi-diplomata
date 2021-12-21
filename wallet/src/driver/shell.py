@@ -3,13 +3,20 @@ import json
 import os
 from urllib.parse import urljoin
 import requests
-from ssi_lib import SSIGenerationError, SSIRegistrationError, \
-    SSIResolutionError, SSIIssuanceError, SSIVerificationError, \
-    SSIContentError
-from ssi_lib.conf import Vc, Template  # TODO
+from ssi_lib import \
+    SSIGenerationError, \
+    SSIRegistrationError, \
+    SSIResolutionError, \
+    SSIIssuanceError, \
+    SSIVerificationError, \
+    SSIVcContentError, \
+    Template, \
+    Vc
 from conf import STORAGE, TMPDIR, WALTDIR, RESOLVED, Table
 from driver.conf import INTRO, PROMPT, INDENT, Action, UI
 from driver.ui import MenuHandler
+from __init__ import __version__
+
 
 _mapping = {
     UI.KEY: Table.KEY,
@@ -27,7 +34,6 @@ _mapping = {
     UI.DISCARD: Action.DISCARD,
 }
 
-__version__ = '0.0.1'
 
 class Abortion(BaseException):
     pass
@@ -214,7 +220,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
     def adapt_credential_content(self, vc_type, content):
         try:
             template = self.app.resolve_template(vc_type)
-        except SSIContentError:
+        except SSIVcContentError:
             raise
         out = template
         match vc_type:
@@ -226,7 +232,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 out['awarding_opportunity_identifier'] = content['subject']
             case _:
                 err = 'Requested credential type does not exist: %s' % vc_type
-                raise SSIContentError(err)
+                raise SSIVcContentError(err)
         return out
 
     def issue_credential(self, line):
@@ -246,7 +252,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
             raise IssuanceError(err)
         try:
             content = self.adapt_credential_content(vc_type, content)
-        except SSIContentError as err:
+        except SSIVcContentError as err:
             raise SSIIssuanceError(err)
         try:
             out = self.app.issue_credential(holder, issuer, vc_type,
