@@ -11,3 +11,4 @@ NOTES*
 *.db
 *local*
 migrations/
+demo.py

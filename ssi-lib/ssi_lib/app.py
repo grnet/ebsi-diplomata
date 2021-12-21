@@ -28,41 +28,21 @@ _commands = {
     # TODO: Add here more options
 }
 
-def run_cmd(args):
-    rslt = subprocess.run(args, stdout=subprocess.PIPE)
-    resp = rslt.stdout.decode('utf-8').rstrip('\n')
-    code = rslt.returncode
-    return (resp, code)
-
 
 class SSIApp(metaclass=ABCMeta):
 
     def __init__(self, tmpdir):
         self.tmpdir = tmpdir
 
-    def _extract_alias_from_key(self, entry):
-        return entry['kid']
-
-    def _extract_alias_from_did(self, entry):
-        return entry['id']
-
-    def _extract_key_from_did(self, entry):
-        return entry['verificationMethod'][0]['publicKeyJwk']['kid']
-
-    def _extract_alias_from_vc(self, entry):
-        return entry['id']
-
-    def _extract_holder_from_vc(self, entry):
-        return entry['credentialSubject']['id']
-
-    def _extract_alias_from_vp(self, entry):
-        return entry['id']
-
-    def _extract_holder_from_vp(self, entry):
-        return entry['holder']
+    @staticmethod
+    def _run_cmd(args):
+        rslt = subprocess.run(args, stdout=subprocess.PIPE)
+        resp = rslt.stdout.decode('utf-8').rstrip('\n')
+        code = rslt.returncode
+        return (resp, code)
 
     def _generate_key(self, algo, outfile):
-        res, code = run_cmd([
+        res, code = self._run_cmd([
             'generate-key', '--algo', algo, '--export', outfile,
         ])
         return res, code
@@ -79,7 +59,7 @@ class SSIApp(metaclass=ABCMeta):
         if entry:
             with open(outfile, 'w+') as f:
                 json.dump(entry, f)
-            res, code = run_cmd(['load-key', '--file', outfile,])
+            res, code = self._run_cmd(['load-key', '--file', outfile,])
             os.remove(outfile)
         else:
             res = 'No key found'
@@ -87,7 +67,7 @@ class SSIApp(metaclass=ABCMeta):
         return res, code
 
     def _generate_did(self, key, outfile):
-        res, code = run_cmd([
+        res, code = self._run_cmd([
             'generate-did', '--key', key, '--export', outfile,
         ])
         return res, code
@@ -96,28 +76,35 @@ class SSIApp(metaclass=ABCMeta):
         token_file = os.path.join(self.tmpdir, 'bearer-token.txt')
         with open(token_file, 'w+') as f:
             f.write(token)
-        res, code = run_cmd(['register-did', '--did', alias,
+        res, code = self._run_cmd(['register-did', '--did', alias,
             '--token', token_file, '--resolve',
         ])
         os.remove(token_file)
         return res, code
 
     def _resolve_did(self, alias):
-        res, code = run_cmd(['resolve-did', '--did', alias,])
+        res, code = self._run_cmd(['resolve-did', '--did', alias,])
         return res, code
+
+    def _resolve_template(self, vc_type):
+        try:
+            template = getattr(Template, vc_type)
+        except AttributeError:
+            err = 'Requested credential type does not exist: %s' % vc_type
+            raise AttributeError(err)
+        return template
 
     def _validate_vc_content(self, vc_type, content):
         try:
-            template = getattr(Template, vc_type)
+            template = self._resolve_template(vc_type)
         except AttributeError as err:
-            err = 'Requested credential type does not exist: %s' % vc_type
             raise SSIContentError(err)
         if not template.keys() == content.keys():
             err = 'Provided credential content has wrong key-value pairs'
             raise SSIContentError(err)
 
     def _issue_vc(self, holder, issuer, vc_type, content, outfile):
-        res, code = run_cmd([
+        res, code = self._run_cmd([
             _commands[vc_type],
             '--holder', holder,
             '--issuer', issuer,
@@ -130,7 +117,7 @@ class SSIApp(metaclass=ABCMeta):
         args = ['present-credentials', '--holder', holder,]
         for credential in credentials:
             args += ['-c', credential,]
-        res, code = run_cmd(args)
+        res, code = self._run_cmd(args)
         return res, code
 
     def _extract_presentation_filename(self, buff):
@@ -144,7 +131,7 @@ class SSIApp(metaclass=ABCMeta):
         tmpfile = os.path.join(self.tmpdir, 'vp.json')
         with open(tmpfile, 'w+') as f:
             json.dump(presentation, f)
-        res, code = run_cmd([
+        res, code = self._run_cmd([
             'verify-credentials', '--presentation', tmpfile,])
         os.remove(tmpfile)
         return res, code
@@ -156,6 +143,27 @@ class SSIApp(metaclass=ABCMeta):
             out[aux[i]] = {'true': True, 'false': False}[aux[i + 1]]
         return out
 
+    def extract_alias_from_key(self, entry):
+        return entry['kid']
+
+    def extract_alias_from_did(self, entry):
+        return entry['id']
+
+    def extract_key_from_did(self, entry):
+        return entry['verificationMethod'][0]['publicKeyJwk']['kid']
+
+    def extract_alias_from_vc(self, entry):
+        return entry['id']
+
+    def extract_holder_from_vc(self, entry):
+        return entry['credentialSubject']['id']
+
+    def extract_alias_from_vp(self, entry):
+        return entry['id']
+
+    def extract_holder_from_vp(self, entry):
+        return entry['holder']
+
     def generate_key(self, algo):
         outfile = os.path.join(self.tmpdir, 'jwk.json')
         res, code = self._generate_key(algo, outfile)
@@ -166,11 +174,14 @@ class SSIApp(metaclass=ABCMeta):
         os.remove(outfile)
         return out
 
-    def generate_did(self, key, token, onboard=True):
-        res, code = self._load_key(key)
-        if code != 0:
-            err = 'Could not load key: %s' % res
-            raise SSIGenerationError(err)
+    def generate_did(self, key, token, onboard=True, load_key=True):
+        if load_key:
+            # TODO: Investigate how necessary this step is 
+            # with respect to EBSI onboarding
+            res, code = self._load_key(key)
+            if code != 0:
+                err = 'Could not load key: %s' % res
+                raise SSIGenerationError(err)
         outfile = os.path.join(self.tmpdir, 'did.json')
         res, code = self._generate_did(key, outfile)
         if code != 0:
@@ -192,6 +203,14 @@ class SSIApp(metaclass=ABCMeta):
         res, code = self._resolve_did(alias)
         if code != 0:
             raise SSIResolutionError(res)
+
+    def resolve_template(self, vc_type):
+        try:
+            template = getattr(Template, vc_type)
+        except AttributeError:
+            err = 'Requested credential type does not exist: %s' % vc_type
+            raise SSIContentError(err)
+        return template
 
     def issue_credential(self, holder, issuer, vc_type, content):
         try:

@@ -4,7 +4,8 @@ import logging
 from django.conf import settings
 from ssi_lib import SSIApp
 from ssi_lib import SSIGenerationError, SSIRegistrationError, \
-    SSIResolutionError, SSIIssuanceError, SSIVerificationError
+    SSIResolutionError, SSIIssuanceError, SSIVerificationError, \
+    SSIContentError
 from ssi_lib.conf import Vc, Template
 
 
@@ -61,18 +62,18 @@ class SSIParty(SSIApp):
                 did = json.load(f)
         except FileNotFoundError:
             return None
-        out = self._extract_alias_from_did(did) if not full \
+        out = self.extract_alias_from_did(did) if not full \
                 else did
         return out
 
     def _store_key(self, entry):
-        alias = self._extract_alias_from_key(entry)
+        alias = self.extract_alias_from_key(entry)
         with open(self.keyfile, 'w+') as f:
             json.dump(entry, f, indent=4)
         return alias
 
     def _store_did(self, entry):
-        alias = self._extract_alias_from_did(entry)
+        alias = self.extract_alias_from_did(entry)
         with open(self.didfile, 'w+') as f:
             json.dump(entry, f, indent=4)
         return alias
@@ -106,12 +107,11 @@ class SSIParty(SSIApp):
         return alias
 
     def _adapt_credential_content(self, vc_type, content):
-        # TODO
         try:
-            template = getattr(Template, vc_type)
-        except AttributeError:
-            err = 'Requested credential type does not exist: %s' % vc_type
-            raise NotImplementedError(err)
+            # TODO: Remove this
+            template = self.resolve_template(vc_type)
+        except SSIContentError:
+            raise
         out = template
         match vc_type:
             case Vc.DIPLOMA:
@@ -122,18 +122,17 @@ class SSIParty(SSIApp):
                 out['awarding_opportunity_identifier'] = content['subject']
             case _:
                 err = 'Requested credential type does not exist: %s' % vc_type
-                raise NotImplementedError(err)
+                raise SSIContentError(err)
         return out
 
     def get_info(self):
         return {'TODO': 'Include here service info'}        # TODO
 
     def get_did(self):
-        did = self._fetch_did(full=False)
-        if not did:
+        alias = self._fetch_did(full=False)
+        if not alias:
             err = 'No DID found'
             raise IdentityError(err)
-        alias = self._extract_alias_from_did(did)
         return alias
 
     def create_did(self, token, algo, onboard):
@@ -159,7 +158,7 @@ class SSIParty(SSIApp):
         try:
             content = self._adapt_credential_content(vc_type, 
                     content)
-        except NotImplementedError as err:
+        except SSIContentError as err:
             raise IssuanceError(err)
         try:
             out = super().issue_credential(holder, issuer, vc_type,

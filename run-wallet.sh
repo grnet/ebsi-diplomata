@@ -68,7 +68,7 @@ if [ ${DO_RUN} == true ]; then
         --network=host \
         -v ${PWD}/wallet:/${WORKDIR} \
         -v ${PWD}/storage/wallet:${STORAGE} \
-        -v ${PWD}/commands:/usr/local/sbin \
+        -v ${PWD}/ssi-lib/commands:/usr/local/sbin \
         -e DBNAME=${DBNAME} \
         --interactive \
         --tty \

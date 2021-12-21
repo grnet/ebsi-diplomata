@@ -23,7 +23,7 @@ services:
     volumes:
       - ./web:/home/web/app
       - ./storage/issuer:/home/web/storage
-      - ./commands:/usr/local/sbin
+      - ./ssi-lib/commands:/usr/local/sbin
     depends_on:
       - diplomas_postgres
   verifier:
@@ -48,7 +48,7 @@ services:
     volumes:
       - ./web:/home/web/app
       - ./storage/verifier:/home/web/storage
-      - ./commands:/usr/local/sbin
+      - ./ssi-lib/commands:/usr/local/sbin
     depends_on:
       - diplomas_postgres
   diplomas_postgres:

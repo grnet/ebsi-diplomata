@@ -7,7 +7,8 @@ from ui import MenuHandler
 from conf import TMPDIR, WALTDIR, INTRO, PROMPT, INDENT, RESOLVED, \
     STORAGE, Action, Table, UI, EBSI_PRFX, Ed25519, Secp256k1, RSA
 from ssi_lib import SSIGenerationError, SSIRegistrationError, \
-    SSIResolutionError, SSIIssuanceError, SSIVerificationError
+    SSIResolutionError, SSIIssuanceError, SSIVerificationError, \
+    SSIContentError
 from ssi_lib.conf import Vc, Template  # TODO
 
 _mapping = {
@@ -211,12 +212,10 @@ class WalletShell(cmd.Cmd, MenuHandler):
         return payload
 
     def adapt_credential_content(self, vc_type, content):
-        # TODO
         try:
-            template = getattr(Template, vc_type)
-        except AttributeError:
-            err = 'Requested credential type does not exist: %s' % vc_type
-            raise NotImplementedError(err)
+            template = self.app.resolve_template(vc_type)
+        except SSIContentError:
+            raise
         out = template
         match vc_type:
             case Vc.DIPLOMA:
@@ -227,7 +226,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 out['awarding_opportunity_identifier'] = content['subject']
             case _:
                 err = 'Requested credential type does not exist: %s' % vc_type
-                raise NotImplementedError(err)
+                raise SSIContentError(err)
         return out
 
     def issue_credential(self, line):
@@ -247,7 +246,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
             raise IssuanceError(err)
         try:
             content = self.adapt_credential_content(vc_type, content)
-        except NotImplementedError as err:
+        except SSIContentError as err:
             raise SSIIssuanceError(err)
         try:
             out = self.app.issue_credential(holder, issuer, vc_type,

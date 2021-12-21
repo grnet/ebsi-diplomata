@@ -68,22 +68,22 @@ class WalletApp(SSIApp):
         return self._db.fetch_entry(alias, Table.VP)
 
     def store_key(self, entry):
-        alias = self._extract_alias_from_key(entry)
+        alias = self.extract_alias_from_key(entry)
         return self._db.store_key(alias, entry)
 
     def store_did(self, entry):
-        alias = self._extract_alias_from_did(entry)
-        key = self._extract_key_from_did(entry)
+        alias = self.extract_alias_from_did(entry)
+        key = self.extract_key_from_did(entry)
         return self._db.store_did(alias, key, entry)
 
     def store_credential(self, entry):
-        alias = self._extract_alias_from_vc(entry)
-        holder = self._extract_holder_from_vc(entry)
+        alias = self.extract_alias_from_vc(entry)
+        holder = self.extract_holder_from_vc(entry)
         return self._db.store_vc(alias, holder, entry)
 
     def store_presentation(self, entry):
-        alias = self._extract_alias_from_vp(entry)
-        holder = self._extract_holder_from_vp(entry)
+        alias = self.extract_alias_from_vp(entry)
+        holder = self.extract_holder_from_vp(entry)
         return self._db.store_vp(alias, holder, entry)
 
     def remove(self, alias, table):
