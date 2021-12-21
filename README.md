@@ -1,5 +1,15 @@
 # ebsi-diplomas
 
+**Issuance and verification of university diplomas in the SSI/EBSI environment**
+
+This simulates the lifecycle of verifiable diplomas in the Self-Sovereign Identity (SSI)
+context, where the digital identities of involved parties are decentralized identifiers
+(DIDs) registered at the European Blockchain Service Infrastracture (EBSI). Purpose of
+this project the stabilization of issuer/verifier REST APIs along with the creation of
+a python package which can be used by all involved parties. To this end the
+[`waltid-ssikit`](https://github.com/walt-id/waltid-ssikit) is used as a SSI/EBSI
+backend of acclaimed general utiliy.
+
 ## Setup
 
 Make sure to initialize submodules when cloning the project, so that
@@ -10,13 +20,14 @@ Make sure to initialize submodules when cloning the project, so that
 git clone git@gitlab.grnet.gr:devs/priviledge/ebsi-diplomata.git --recurse-submodules
 ```
 
-Build the wallet application as follows:
+Assuming `docker` is installed, build the wallet application as follows:
 
 ```commandline
 ./run-wallet.sh --only-build
 ```
 
-Build the issuer and verifier services as follows:
+Similarly, assuming `docker-compose` is available, build the issuer and verifier
+services with:
 
 ```commandline
 docker-compose build
@@ -24,20 +35,29 @@ docker-compose build
 
 ## Quickstart
 
-Run the issuer and verifier services with
+Run the `issuer` and `verifier` services at localhost:7000-1 respectively with:
 
 ```commandline
 docker-compose up
 ```
 
-and visit localhost at ports `7000` and `7001` respectively. Run locally
-the wallet app with
+Once both services are up, create a DID for each with:
+
+```commandline
+./create-dids
+```
+
+**Note**: You will be asked to provide an EBSI token for onboarding the newly
+created DIDs.
+
+Run the wallet inside a container called `holder` with:
 
 ```commandline
 ./run-wallet.sh
 ```
 
-You are now ready to interact with the services.
+You are ready to manage identities and interact via the wallet shell (command
+interpreter). Type `help` to see available commands and details.
 
 ## Development
 
@@ -52,7 +72,9 @@ git submodule update --remote
 
 **Upon any such update, make sure to rebuild wallet and services.**
 
-## Wallet
+### The `ssi-lib` package
+
+### The wallet app
 
 Wallet data are persistently stored under `storage/wallet`. Assuming `sqlite3` 
 is installed and the wallet runs at a container called `holder`, the database 
@@ -61,5 +83,3 @@ can be accessed with
 ```commandline
 sqlite3 storage/wallet/holder.db
 ```
-
-### Tests
