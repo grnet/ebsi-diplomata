@@ -5,14 +5,13 @@ from urllib.parse import urljoin
 import requests
 from ssi_lib import \
     SSIGenerationError, \
-    SSIResolutionError, \
     SSIIssuanceError, \
     SSIVerificationError, \
     Template, \
     Vc
-from conf import STORAGE, TMPDIR, WALTDIR, RESOLVED, Table, \
+from conf import STORAGE, TMPDIR, WALTDIR, Table, \
     Ed25519, Secp256k1, RSA
-from app import CreationError, RegistrationError
+from app import CreationError, RegistrationError, ResolutionError
 from driver.conf import INTRO, PROMPT, INDENT, Action, UI
 from driver.ui import MenuHandler
 from __init__ import __version__
@@ -151,13 +150,6 @@ class WalletShell(cmd.Cmd, MenuHandler):
             case _:
                 err = 'Bad input: %s' % line
                 raise BadInputError(err)
-        return out
-
-    def retrieve_resolved_did(self, alias):
-        resolved = os.path.join(RESOLVED, 'did-ebsi-%s.json' % \
-            alias.lstrip(EBSI_PRFX))
-        with open(resolved, 'r') as f:
-            out = json.load(f)
         return out
 
     def prepare_issuance_payload(self):
@@ -407,10 +399,10 @@ class WalletShell(cmd.Cmd, MenuHandler):
         self.flush('Resolving ...')
         try:
             self.app.resolve_did(alias)
-        except SSIResolutionError as err:
+        except ResolutionError as err:
             self.flush('Could not resolve: %s' % err)
             return
-        did = self.retrieve_resolved_did(alias)
+        did = self.app.retrieve_resolved_did(alias)
         self.flush(did)
 
     def do_issue(self, line):

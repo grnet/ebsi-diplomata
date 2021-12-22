@@ -1,12 +1,16 @@
-from ssi_lib import SSI, SSIGenerationError, SSIRegistrationError
+from ssi_lib import SSI, SSIGenerationError, SSIRegistrationError, \
+    SSIResolutionError
+from conf import EBSI_PRFX, RESOLVED, Table
 from db import DbConnector
-from conf import Table
 
 
 class CreationError(BaseException):
     pass
 
 class RegistrationError(BaseException):
+    pass
+
+class ResolutionError(BaseException):
     pass
 
 
@@ -126,6 +130,12 @@ class WalletApp(SSI):
         except SSIRegistrationError as err:
             raise RegistrationError(err)
 
+    def resolve_did(self, alias):
+        try:
+            super().resolve_did(alias)
+        except SSIResolutionError as err:
+            raise ResolutionError(err)
+
     def create_did(self, key, token, onboard=True):
         try:
             did = self.generate_did(key, token, onboard)
@@ -141,3 +151,10 @@ class WalletApp(SSI):
                 raise CreationError(err)
         alias = self.store_did(did)
         return alias
+
+    def retrieve_resolved_did(self, alias):
+        resolved = os.path.join(RESOLVED, 'did-ebsi-%s.json' % \
+            alias.lstrip(EBSI_PRFX))
+        with open(resolved, 'r') as f:
+            out = json.load(f)
+        return out
