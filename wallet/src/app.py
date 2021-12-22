@@ -1,7 +1,8 @@
 from urllib.parse import urljoin
 import requests
 from ssi_lib import SSI, SSIGenerationError, SSIRegistrationError, \
-    SSIResolutionError, SSIIssuanceError, SSIVerificationError
+    SSIResolutionError, SSIIssuanceError, SSIVerificationError, \
+    Template, Vc
 from conf import EBSI_PRFX, RESOLVED, WALTDIR, Table
 from db import DbConnector
 
@@ -198,13 +199,41 @@ class WalletApp(SSI, HttpClient):
             did = json.load(f)
         return did
 
-    def issue_credential(self, holder, issuer, vc_type, content):
-        try:
-            vc = super().issue_credential(holder, issuer, vc_type,
-                    content)
-        except SSIIssuanceError as err:
-            raise IssuanceError(err)
-        return vc
+    def prepare_issuance_payload(self, holder, person_id, name,
+            surname, subject):
+        return {
+            'holder': holder,
+            'vc_type': Vc.DIPLOMA,
+            'content': {
+                'person_id': person_id,
+                'name': name,
+                'surname': surname,
+                'subject': subject,
+            }
+        }
+
+    def mock_issuer(self, issuer, payload):
+        holder = payload['holder']
+        vc_type = payload['vc_type']
+        content = payload['content']
+        # Normalize diploma content according to template
+        aux = content
+        content = getattr(Template, Vc.DIPLOMA)
+        content['person_identifier'] = aux['person_id']
+        content['person_family_name'] = aux['name']
+        content['person_given_name'] = aux['surname']
+        content['awarding_opportunity_identifier'] = aux['subject']
+        # Issue and return diploma
+        out = self.issue_credential(holder, issuer, vc_type,
+                content)
+        return out
+
+    def request_issuance(self, remote, endpoint, holder, person_id,
+            name, surname, subject):
+        payload = self.prepare_issuance_payload(holder, person_id, name,
+                surname, subject)
+        resp = self.http_post(remote, endpoint, payload)
+        return resp
 
     def create_presentation(self, holder, credentials,
             waltdir=WALTDIR):
@@ -224,13 +253,9 @@ class WalletApp(SSI, HttpClient):
             raise VerificationError(err)
         return results
 
-    def request_issuance(self, remote, endpoint, payload):
-        resp = self.http_post(remote, endpoint, payload)
-        return resp
-
-    def request_verification(self, remote, endpoint, 
-                presentation):
-        resp = self.http_post(remote, endpoint, {
+    def request_verification(self, remote, endpoint, presentation):
+        payload = {
             'vp': presentation,
-        })
+        }
+        resp = self.http_post(payload)
         return resp

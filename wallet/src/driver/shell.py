@@ -1,10 +1,7 @@
+import os
 import cmd, sys
 import json
-import os
-from ssi_lib import \
-    Template, \
-    Vc
-from conf import STORAGE, TMPDIR, Table, Ed25519, Secp256k1, RSA \
+from conf import STORAGE, TMPDIR, Table, Ed25519, Secp256k1, RSA, \
         ISSUER_ADDRESS, ISSUE_ENDPOINT, \
         VERIFIER_ADDRESS, VERIFY_ENDPOINT
 from app import CreationError, RegistrationError, ResolutionError, \
@@ -13,9 +10,6 @@ from driver.conf import INTRO, PROMPT, INDENT, Action, UI
 from driver.ui import MenuHandler
 from __init__ import __version__
 
-
-# This module is terminal and any exceptions in it are intended 
-# for internal consumption (print message in stdout and return)
 
 class NothingFound(BaseException):
     pass
@@ -28,6 +22,7 @@ class BadInput(BaseException):
 
 class Abortion(BaseException):
     pass
+
 
 class WalletShell(cmd.Cmd, MenuHandler):
     intro   = INTRO.format(__version__)
@@ -136,54 +131,30 @@ class WalletShell(cmd.Cmd, MenuHandler):
         alias = self._app.create_did(key, token, onboard)
         return alias
 
-    def parse_issuance_payload(self):
-        choices = self._app.fetch_dids()
-        if not choices:
+    def parse_issuance_params(self):
+        aliases = self._app.fetch_dids()
+        if not aliases:
             err = 'No DIDs found. Must first create one.'
             raise NothingFound(err)
-        did = self.launch_choice('Choose holder DID', choices)
-        # TODO: Select credential type and values via user input
-        # TODO: This construction assumes than an API spec has been advertized
-        # on behalf of the issuer
-        payload = {
-            'holder': did,
-            'vc_type': Vc.DIPLOMA,
-            'content': {
-                'person_id': '0x666',
-                'name': 'Lucrezia',
-                'surname': 'Borgia',
-                'subject': 'POISONING',
-            },
-        }
-        return payload
-
-    def normalize_diploma_content(self, content):
-        # TODO
-        out = getattr(Template, Vc.DIPLOMA)
-        out['person_identifier'] = content['person_id']
-        out['person_family_name'] = content['name']
-        out['person_given_name'] = content['surname']
-        out['awarding_opportunity_identifier'] = content['subject']
-        return out
+        holder = self.launch_choice('Choose holder DID', aliases)
+        # TODO: Select credential content via user input
+        person_id = '0x666'
+        name = 'Lucrezia'
+        surname = 'Borgia'
+        subject = 'POISONING'
+        return holder, person_id, name, surname, subject
 
     def issue_credential(self, line):
-        payload = self.parse_issuance_payload()
-        dids = self._app.fetch_dids()
-        issuer = self.launch_choice('Choose issuer DID', dids)
-        if not self.launch_yn('New credential will be issued. Proceed?'):
+        holder, person_id, name, surname, subject = \
+            self.parse_issuance_params()
+        aliases = self._app.fetch_dids()
+        issuer = self.launch_choice('Choose issuer DID', aliases)
+        if not self.launch_yn('New credential will be issued. ' +
+                'Proceed?'):
             raise Abortion('Issuance aborted')
-        try:
-            holder = payload['holder']
-            vc_type = payload['vc_type']
-            content = payload['content']
-        except KeyError as err:
-            raise IssuanceError(err)
-        try:
-            content = self.normalize_diploma_content(content)
-        except KeyError as err:
-            raise IssuanceError(err)
-        out = self._app.issue_credential(holder, issuer, vc_type,
-                content)
+        payload = self._app.prepare_issuance_payload(holder, person_id, 
+                name, surname, subject)
+        out = self._app.mock_issuer(issuer, payload)
         return out
 
     def present_credentials(self, line):
@@ -460,16 +431,16 @@ class WalletShell(cmd.Cmd, MenuHandler):
         match self._mapping[action]:
             case Action.ISSUE:
                 try:
-                    payload = self.parse_issuance_payload()
+                    holder, person_id, name, surname, subject = \
+                        self.parse_issuance_params()
                 except NothingFound as err:
                     self.flush('Request aborted: %s' % err)
                     return
                 self.flush('Waiting for response (takes seconds)...')
                 try:
-                    # TODO: The wallet holder should here be able to choose
-                    # from a known registrar of issuers
                     resp = self._app.request_issuance(ISSUER_ADDRESS,
-                            ISSUER_ENDPOINT, payload)
+                            ISSUE_ENDPOINT, holder, person_id, name, surname,
+                            subject)
                 except HttpConnectionError as err:
                     self.flush('Could not connect to issuer: %s' % err)
                     return
@@ -485,8 +456,6 @@ class WalletShell(cmd.Cmd, MenuHandler):
                     return
                 self.flush('Waiting for response (takes seconds)...')
                 try:
-                    # TODO: The wallet holder should here be able to choose
-                    # from a known registrar of verifiers
                     resp = self._app.request_verification(VERIFIER_ADDRESS,
                             VERIFY_ENDPOINT, vp)
                 except HttpConnectionError as err:
