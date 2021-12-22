@@ -2,13 +2,15 @@
 
 **Issuance and verification of university diplomas in the SSI/EBSI environment**
 
+![Python >= 3.10](https://img.shields.io/badge/python-%3E%3D%203.10-blue.svg)
+
 This simulates the lifecycle of verifiable diplomas in the Self-Sovereign Identity (SSI)
 context, where the digital identities of involved parties are decentralized identifiers
 (DIDs) registered at the European Blockchain Service Infrastracture (EBSI). Purpose of
 this project the stabilization of issuer/verifier REST APIs along with the creation of
 a python package which can be used by all involved parties. To this end the
-[`waltid-ssikit`](https://github.com/walt-id/waltid-ssikit) is used as a SSI/EBSI
-backend of acclaimed general utiliy.
+[`waltid-ssikit`](https://github.com/walt-id/waltid-ssikit) library is used 
+as a SSI/EBSI backend of acclaimed general utiliy.
 
 ## Setup
 
@@ -35,7 +37,7 @@ docker-compose build
 
 ## Quickstart
 
-Run the `issuer` and `verifier` services at localhost:7000-1 respectively with:
+Run the `issuer` and `verifier` services at `localhost:7000-1` respectively with:
 
 ```commandline
 docker-compose up
@@ -70,16 +72,4 @@ included submodule must be regularly updated:
 git submodule update --remote
 ```
 
-**Upon any such update, make sure to rebuild wallet and services.**
-
-### The `ssi-lib` package
-
-### The wallet app
-
-Wallet data are persistently stored under `storage/wallet`. Assuming `sqlite3` 
-is installed and the wallet runs at a container called `holder`, the database 
-can be accessed with
-
-```commandline
-sqlite3 storage/wallet/holder.db
-```
+**Upon any such update, make sure to rebuild the containers.**
