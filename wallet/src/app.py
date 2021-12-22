@@ -1,5 +1,5 @@
 from ssi_lib import SSI, SSIGenerationError, SSIRegistrationError, \
-    SSIResolutionError, SSIIssuanceError
+    SSIResolutionError, SSIIssuanceError, SSIVerificationError
 from conf import EBSI_PRFX, RESOLVED, WALTDIR, Table
 from db import DbConnector
 
@@ -14,6 +14,9 @@ class ResolutionError(BaseException):
     pass
 
 class IssuanceError(BaseException):
+    pass
+
+class VerificationError(BaseException):
     pass
 
 
@@ -180,3 +183,10 @@ class WalletApp(SSI):
             raise CreationError(err)
         alias = self.store_presentation(vp)
         return alias
+
+    def verify_presentation(self, vp):
+        try:
+            results = super().verify_presentation(vp)
+        except SSIVerificationError as err:
+            raise VerificationError(err)
+        return results

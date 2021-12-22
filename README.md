@@ -1,15 +1,15 @@
 # ebsi-diplomas
 
-**Issuance and verification of university diplomas in the SSI/EBSI environment**
+**Issuance and verification of university diplomas in the SSI/EBSI context.**
 
 ![Python >= 3.10](https://img.shields.io/badge/python-%3E%3D%203.10-blue.svg)
 
 This simulates the lifecycle of verifiable diplomas in the Self-Sovereign Identity (SSI)
 context, where the digital identities of involved parties are decentralized identifiers
-(DIDs) registered at the European Blockchain Service Infrastracture (EBSI). Purpose of
-this project the stabilization of issuer/verifier REST APIs along with the creation of
-a python package which can be used by all involved parties. To this end the
-[`waltid-ssikit`](https://github.com/walt-id/waltid-ssikit) library is used 
+(DIDs) registered at the European Blockchain Service Infrastracture (EBSI) ledger.
+Purpose of this project is the stabilization of issuer and verifier REST APIs along with
+the creation of a python package which can be used by all involved parties. To this
+end the [`waltid-ssikit`](https://github.com/walt-id/waltid-ssikit) library is used
 as a SSI/EBSI backend of acclaimed general utiliy.
 
 ## Setup

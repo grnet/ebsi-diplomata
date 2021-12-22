@@ -4,12 +4,11 @@ import os
 from urllib.parse import urljoin
 import requests
 from ssi_lib import \
-    SSIVerificationError, \
     Template, \
     Vc
 from conf import STORAGE, TMPDIR, Table, Ed25519, Secp256k1, RSA
 from app import CreationError, RegistrationError, ResolutionError, \
-        IssuanceError
+        IssuanceError, VerificationError
 from driver.conf import INTRO, PROMPT, INDENT, Action, UI
 from driver.ui import MenuHandler
 from __init__ import __version__
@@ -243,13 +242,6 @@ class WalletShell(cmd.Cmd, MenuHandler):
                     raise
         return out
 
-    def verify_presentation(self, vp):
-        try:
-            results = self.app.verify_presentation(vp)
-        except SSIVerificationError as err:
-            raise VerificationError(err)
-        return results
-
     def export_object(self, entry):
         filename = ''
         while filename in ('', None):
@@ -434,7 +426,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
             return
         self.flush('Verifying (takes seconds)...')
         try:
-            results = self.verify_presentation(vp)
+            results = self.app.verify_presentation(vp)
         except VerificationError as err:
             self.flush('Could not verify: %s' % err)
             return
@@ -447,6 +439,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
         action = self.launch_choice('Request', [
             UI.ISSUE,
             UI.VERIFY,
+            UI.DISCARD,
         ])
         match _mapping[action]:
             case Action.ISSUE:
