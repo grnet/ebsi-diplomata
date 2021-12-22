@@ -4,7 +4,7 @@ from ssi_lib import SSI, SSIGenerationError, SSIRegistrationError, \
     SSIResolutionError, SSIIssuanceError, SSIVerificationError, \
     Template, Vc
 from conf import EBSI_PRFX, RESOLVED, WALTDIR, Table
-from db import DbConnector
+from db import DbConnector, DbConnectionError
 
 
 class CreationError(BaseException):
@@ -56,16 +56,14 @@ class HttpClient(object):
 
 class WalletApp(SSI, HttpClient):
 
-    def __init__(self, tmpdir, dbpath):
-        self._db = DbConnector(dbpath)
+    def __init__(self, tmpdir, db):
+        try:
+            self._db = DbConnector(db)
+        except DbConnectionError as err:
+            err = 'Could not connect to database: %s' % err
+            raise RuntimeError(err)
         super().__init__(tmpdir)
     
-    @classmethod
-    def create(cls, config):
-        tmpdir = config['tmpdir']
-        dbpath = config['dbpath']
-        return cls(tmpdir, dbpath)
-
     def _fetch_key(self, alias):
         return self._db.fetch_entry(alias, Table.KEY)
 

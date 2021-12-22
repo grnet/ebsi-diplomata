@@ -6,21 +6,19 @@ defined by ../init-db.sql. Rough overview of tables:
     vc  | alias(VARCHAR) | body(JSONB) | holder(VARCHAR) [fk to did(alias)]
     vp  | alias(VARCHAR) | body(JSONB) | holder(VARCHAR) [fk to did(alias)]
 
+We should here be able to import and use any ORM library conforming to the
+DB API 2.0 protocol (PEP 249 spec v2.0), e.g., psycopg for connecting to a
+postgres database instead of sqlite.
 """
 
-# We should here be able to import and use any ORM library conforming to the 
-# DB API 2.0 protocol (PEP 249 spec v2.0), e.g., psycopg for connecting to a
-# postgres database instead of sqlite. TODO: This module is almost agnostic 
-# to the ORM in use with the exception of the _run_sql_script function.
-#
 import sqlite3 as _orm
 import json
 
 
-class WalletDbConnectionError(BaseException):
+class DbConnectionError(BaseException):
     pass
 
-class WalletDbQueryError(BaseException):
+class DbQueryError(BaseException):
     pass
 
 
@@ -48,6 +46,8 @@ class DbConnector(object):
         return os.path.join(rootdir, 'init-db.sql')
 
     def _run_sql_script(self, db, script):
+        # TODO: The present module is agnostic to the ORM in use with the
+        # exception of this function (executescript is sqlite spcific).
         con = self._create_connection(db)
         cur = con.cursor()
         with open(script, 'r') as f:
@@ -70,7 +70,7 @@ class DbConnector(object):
         try:
             cur.execute(query)
         except _orm.DatabaseError as err:
-            raise WalletDbQueryError(err)
+            raise DbQueryError(err)
         body = cur.fetchone()[0]
         con.close()
         out = self._load_dict(body)
@@ -85,7 +85,7 @@ class DbConnector(object):
         try:
             cur.execute(query)
         except _orm.DatabaseError as err:
-            raise WalletDbQueryError(err)
+            raise DbQueryError(err)
         out = cur.fetchone()[0]
         con.close()
         return out
@@ -99,7 +99,7 @@ class DbConnector(object):
         try:
             cur.execute(query)
         except _orm.DatabaseError as err:
-            raise WalletDbQueryError(err)
+            raise DbQueryError(err)
         out = list(map(lambda _: _[0], cur.fetchall()))
         con.close()
         return out
@@ -113,7 +113,7 @@ class DbConnector(object):
         try:
             cur.execute(query)
         except _orm.DatabaseError as err:
-            raise WalletDbQueryError(err)
+            raise DbQueryError(err)
         out = list(map(lambda _: _[0], cur.fetchall()))
         con.close()
         return out
@@ -129,7 +129,7 @@ class DbConnector(object):
         try:
             cur.execute(query)
         except _orm.DatabaseError as err:
-            raise WalletDbQueryError(err)
+            raise DbQueryError(err)
         con.commit()
         con.close()
         return alias
@@ -145,7 +145,7 @@ class DbConnector(object):
         try:
             cur.execute(query)
         except _orm.DatabaseError as err:
-            raise WalletDbQueryError(err)
+            raise DbQueryError(err)
         con.commit()
         con.close()
         return alias
@@ -161,7 +161,7 @@ class DbConnector(object):
         try:
             cur.execute(query)
         except _orm.DatabaseError as err:
-            raise WalletDbQueryError(err)
+            raise DbQueryError(err)
         con.commit()
         con.close()
         return alias
@@ -177,7 +177,7 @@ class DbConnector(object):
         try:
             cur.execute(query)
         except _orm.DatabaseError as err:
-            raise WalletDbQueryError(err)
+            raise DbQueryError(err)
         con.commit()
         con.close()
         return alias
@@ -191,7 +191,7 @@ class DbConnector(object):
         try:
             cur.execute(query)
         except _orm.DatabaseError as err:
-            raise WalletDbQueryError(err)
+            raise DbQueryError(err)
         con.commit()
         con.close()
 
@@ -204,6 +204,6 @@ class DbConnector(object):
         try:
             cur.execute(query)
         except _orm.DatabaseError as err:
-            raise WalletDbQueryError(err)
+            raise DbQueryError(err)
         con.commit()
         con.close()
