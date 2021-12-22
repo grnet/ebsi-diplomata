@@ -1,6 +1,10 @@
-from ssi_lib import SSI
+from ssi_lib import SSI, SSIGenerationError
 from db import DbConnector
 from conf import Table
+
+
+class CreationError(BaseException):
+    pass
 
 
 class WalletApp(SSI):
@@ -103,3 +107,12 @@ class WalletApp(SSI):
 
     def clear_presentations(self):
         self._db.clear(Table.VP)
+
+    def create_key(self, algo):
+        try:
+            key = self.generate_key(algo)
+        except SSIGenerationError as err:
+            err = 'Could not generate key: %s' % err
+            raise CreationError(err)
+        alias = self.store_key(key)
+        return alias

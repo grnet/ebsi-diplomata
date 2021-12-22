@@ -13,6 +13,7 @@ from ssi_lib import \
     Vc
 from conf import STORAGE, TMPDIR, WALTDIR, RESOLVED, Table, \
     Ed25519, Secp256k1, RSA
+from app import CreationError
 from driver.conf import INTRO, PROMPT, INDENT, Action, UI
 from driver.ui import MenuHandler
 from __init__ import __version__
@@ -39,9 +40,6 @@ class Abortion(BaseException):
     pass
 
 class BadInputError(BaseException):
-    pass
-
-class CreationError(BaseException):
     pass
 
 class RegistrationError(BaseException):
@@ -158,15 +156,6 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 err = 'Bad input: %s' % line
                 raise BadInputError(err)
         return out
-
-    def create_key(self, algo):
-        try:
-            key = self.app.generate_key(algo)
-        except SSIGenerationError as err:
-            err = 'Could not generate key: %s' % err
-            raise CreationError(err)
-        alias = self.app.store_key(key)
-        return alias
 
     def register_did(self, alias, token):
         try:
@@ -387,7 +376,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
                     return
                 self.flush('Generating %s key (takes seconds) ...' % algo)
                 try:
-                    alias = self.create_key(algo)
+                    alias = self.app.create_key(algo)
                 except CreationError as err:
                     self.flush('Could not create key: %s' % err)
                     return
