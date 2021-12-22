@@ -5,7 +5,6 @@ from urllib.parse import urljoin
 import requests
 from ssi_lib import \
     SSIGenerationError, \
-    SSIRegistrationError, \
     SSIResolutionError, \
     SSIIssuanceError, \
     SSIVerificationError, \
@@ -13,7 +12,7 @@ from ssi_lib import \
     Vc
 from conf import STORAGE, TMPDIR, WALTDIR, RESOLVED, Table, \
     Ed25519, Secp256k1, RSA
-from app import CreationError
+from app import CreationError, RegistrationError
 from driver.conf import INTRO, PROMPT, INDENT, Action, UI
 from driver.ui import MenuHandler
 from __init__ import __version__
@@ -40,9 +39,6 @@ class Abortion(BaseException):
     pass
 
 class BadInputError(BaseException):
-    pass
-
-class RegistrationError(BaseException):
     pass
 
 class IssuanceError(BaseException):
@@ -157,12 +153,6 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 raise BadInputError(err)
         return out
 
-    def register_did(self, alias, token):
-        try:
-            self.app.register_did(alias, token)
-        except SSIRegistrationError as err:
-            raise RegistrationError(err)
-
     def create_did(self, key, token, onboard=True):
         try:
             did = self.app.generate_did(key, token, onboard)
@@ -171,8 +161,9 @@ class WalletShell(cmd.Cmd, MenuHandler):
             raise CreationError(err)
         if onboard:
             try:
-                self.app.register_did(did['id'], token)
-            except SSIRegistrationError as err:
+                alias = self.app.extract_alias_from_did(did)
+                self.app.register_did(alias, token)
+            except RegistrationError as err:
                 err = 'Could not register: %s' % err
                 raise CreationError(err)
         alias = self.app.store_did(did)
@@ -421,7 +412,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
         self.flush('Registering (takes seconds) ...')
         try:
             self.app.register_did(alias, token)
-        except SSIRegistrationError as err:
+        except RegistrationError as err:
             err = 'Could not register: %s' % err
             self.flush(err)
             return

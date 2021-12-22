@@ -1,9 +1,12 @@
-from ssi_lib import SSI, SSIGenerationError
+from ssi_lib import SSI, SSIGenerationError, SSIRegistrationError
 from db import DbConnector
 from conf import Table
 
 
 class CreationError(BaseException):
+    pass
+
+class RegistrationError(BaseException):
     pass
 
 
@@ -116,3 +119,9 @@ class WalletApp(SSI):
             raise CreationError(err)
         alias = self.store_key(key)
         return alias
+
+    def register_did(self, alias, token):
+        try:
+            super().register_did(alias, token)
+        except SSIRegistrationError as err:
+            raise RegistrationError(err)
