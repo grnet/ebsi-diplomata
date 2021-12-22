@@ -1,6 +1,6 @@
 from ssi_lib import SSI, SSIGenerationError, SSIRegistrationError, \
-    SSIResolutionError
-from conf import EBSI_PRFX, RESOLVED, Table
+    SSIResolutionError, SSIIssuanceError
+from conf import EBSI_PRFX, RESOLVED, WALTDIR, Table
 from db import DbConnector
 
 
@@ -11,6 +11,9 @@ class RegistrationError(BaseException):
     pass
 
 class ResolutionError(BaseException):
+    pass
+
+class IssuanceError(BaseException):
     pass
 
 
@@ -156,5 +159,24 @@ class WalletApp(SSI):
         resolved = os.path.join(RESOLVED, 'did-ebsi-%s.json' % \
             alias.lstrip(EBSI_PRFX))
         with open(resolved, 'r') as f:
-            out = json.load(f)
-        return out
+            did = json.load(f)
+        return did
+
+    def issue_credential(self, holder, issuer, vc_type, content):
+        try:
+            vc = super().issue_credential(holder, issuer, vc_type,
+                    content)
+        except SSIIssuanceError as err:
+            raise IssuanceError(err)
+        return vc
+
+    def create_presentation(self, holder, credentials,
+            waltdir=WALTDIR):
+        try:
+            vp = self.generate_presentation(holder, credentials,
+                    waltdir)
+        except SSIGenerationError as err:
+            err = 'Could not generate presentation: %s' % err
+            raise CreationError(err)
+        alias = self.store_presentation(vp)
+        return alias

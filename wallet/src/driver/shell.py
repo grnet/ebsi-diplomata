@@ -4,14 +4,12 @@ import os
 from urllib.parse import urljoin
 import requests
 from ssi_lib import \
-    SSIGenerationError, \
-    SSIIssuanceError, \
     SSIVerificationError, \
     Template, \
     Vc
-from conf import STORAGE, TMPDIR, WALTDIR, Table, \
-    Ed25519, Secp256k1, RSA
-from app import CreationError, RegistrationError, ResolutionError
+from conf import STORAGE, TMPDIR, Table, Ed25519, Secp256k1, RSA
+from app import CreationError, RegistrationError, ResolutionError, \
+        IssuanceError
 from driver.conf import INTRO, PROMPT, INDENT, Action, UI
 from driver.ui import MenuHandler
 from __init__ import __version__
@@ -38,9 +36,6 @@ class Abortion(BaseException):
     pass
 
 class BadInputError(BaseException):
-    pass
-
-class IssuanceError(BaseException):
     pass
 
 class PresentationError(BaseException):
@@ -200,21 +195,9 @@ class WalletShell(cmd.Cmd, MenuHandler):
         try:
             content = self.normalize_diploma_content(content)
         except KeyError as err:
-            raise SSIIssuanceError(err)
-        try:
-            out = self.app.issue_credential(holder, issuer, vc_type,
-                    content)
-        except SSIIssuanceError as err:
             raise IssuanceError(err)
-        return out
-
-    def create_presentation(self, holder, credentials):
-        try:
-            out = self.app.generate_presentation(holder, credentials,
-                WALTDIR)
-        except SSIGenerationError as err:
-            err = 'Could not generate presentation: %s' % err
-            raise CreationError(err)
+        out = self.app.issue_credential(holder, issuer, vc_type,
+                content)
         return out
 
     def present_credentials(self, line):
@@ -238,10 +221,10 @@ class WalletShell(cmd.Cmd, MenuHandler):
             vc_file = self.dump(credential, '%s.json' % alias)
             credentials += [vc_file,]
         try:
-            out = self.create_presentation(holder, credentials)
+            alias = self.app.create_presentation(holder, credentials)
         except CreationError as err:
             raise PresentationError(err)
-        return out
+        return alias
 
     def select_presentation(self):
         match self.launch_choice('Select presentation to verify', [
@@ -426,19 +409,18 @@ class WalletShell(cmd.Cmd, MenuHandler):
 
     def do_present(self, line):
         try:
-            presentation = self.present_credentials(line)
+            alias = self.present_credentials(line)
         except PresentationError as err:
             self.flush('Could not present: %s' % err)
             return
-        self.flush('Created presentation from selected credentials.')
+        self.flush('Presentation saved in disk: %s' % alias)
         if self.launch_yn('Inspect?'):
-            self.flush(presentation)
-        if self.launch_yn('Save in disk?'):
-            alias = self.app.store_presentation(presentation)
-            self.flush('Presentation was saved to disk:\n%s' % alias)
+            vp = self.app.fetch_presentation(alias)
+            self.flush(vp)
         if self.launch_yn('Export?'):
+            vp = self.app.fetch_presentation(alias)
             try:
-                outfile = self.export_object(presentation)
+                outfile = self.export_object(vp)
             except Abortion:
                 self.flush('Aborted export')
                 return
