@@ -1,3 +1,5 @@
+from urllib.parse import urljoin
+import requests
 from ssi_lib import SSI, SSIGenerationError, SSIRegistrationError, \
     SSIResolutionError, SSIIssuanceError, SSIVerificationError
 from conf import EBSI_PRFX, RESOLVED, WALTDIR, Table
@@ -13,11 +15,39 @@ class RegistrationError(BaseException):
 class ResolutionError(BaseException):
     pass
 
+class HttpConnectionError(BaseException):
+    pass
+
 class IssuanceError(BaseException):
     pass
 
 class VerificationError(BaseException):
     pass
+
+
+class HttpClient(object):
+
+    def __init__(self, remote):
+        self.remote = remote
+
+    def _create_url(self, endpoint):
+        return urljoin(self.remote, endpoint.lstrip('/'))
+
+    def _do_request(self, method, url, **kw):
+        try:
+            resp = getattr(requests, method)(url, **kw)
+        except requests.exceptions.ConnectionError as err:
+            raise HttpConnectionError(err)
+        return resp
+
+    def get(self, endpoint):
+        resp = self._do_request('get', self._create_url(endpoint))
+        return resp
+
+    def post(self, endpoint, payload):
+        resp = self._do_request('post', self._create_url(endpoint),
+                json=payload)
+        return resp
 
 
 class WalletApp(SSI):
@@ -173,6 +203,14 @@ class WalletApp(SSI):
             raise IssuanceError(err)
         return vc
 
+    def request_issuance(self, payload):
+        # TODO: Choose from known registrar of issuers or receive from
+        # user input
+        address = 'http://localhost:7000'
+        endpoint = 'api/v1/credentials/issue/'
+        resp = HttpClient(address).post(endpoint, payload)
+        return resp
+
     def create_presentation(self, holder, credentials,
             waltdir=WALTDIR):
         try:
@@ -190,3 +228,18 @@ class WalletApp(SSI):
         except SSIVerificationError as err:
             raise VerificationError(err)
         return results
+
+    def request_verification(self, presentation):
+        # TODO: Choose from known registrar of issuers or receive from
+        # user input
+        address = 'http://localhost:7001'
+        endpoint = 'api/v1/credentials/verify/'
+        resp = HttpClient(address).post(endpoint, {
+            'vp': presentation,
+        })
+        return resp
+
+    def parse_http_response(self, resp):
+        code = resp.status_code
+        body = resp.json()
+        return code, body

@@ -1,14 +1,12 @@
 import cmd, sys
 import json
 import os
-from urllib.parse import urljoin
-import requests
 from ssi_lib import \
     Template, \
     Vc
 from conf import STORAGE, TMPDIR, Table, Ed25519, Secp256k1, RSA
 from app import CreationError, RegistrationError, ResolutionError, \
-        IssuanceError, VerificationError
+        IssuanceError, VerificationError, HttpConnectionError
 from driver.conf import INTRO, PROMPT, INDENT, Action, UI
 from driver.ui import MenuHandler
 from __init__ import __version__
@@ -28,35 +26,6 @@ class BadInput(BaseException):
 
 class Abortion(BaseException):
     pass
-
-class HttpConnectionError(BaseException):
-    pass
-
-
-class HttpClient(object):
-
-    def __init__(self, remote):
-        self.remote = remote
-
-    def _create_url(self, endpoint):
-        return urljoin(self.remote, endpoint.lstrip('/'))
-
-    def _do_request(self, method, url, **kw):
-        try:
-            resp = getattr(requests, method)(url, **kw)
-        except requests.exceptions.ConnectionError as err:
-            raise HttpConnectionError(err)
-        return resp
-
-    def get(self, endpoint):
-        resp = self._do_request('get', self._create_url(endpoint))
-        return resp
-
-    def post(self, endpoint, payload):
-        resp = self._do_request('post', self._create_url(endpoint),
-                json=payload)
-        return resp
-
 
 class WalletShell(cmd.Cmd, MenuHandler):
     intro   = INTRO.format(__version__)
@@ -275,36 +244,9 @@ class WalletShell(cmd.Cmd, MenuHandler):
             raise BadImport(err)
         return out
 
-    def request_issuance(self, payload):
-        # TODO: Choose from known registrar of issuers or receive from
-        # user input
-        address = 'http://localhost:7000'
-        endpoint = 'api/v1/credentials/issue/'
-        self.flush('Waiting for response (takes seconds)...')
-        resp = HttpClient(address).post(endpoint, payload)
-        return resp
-
-    def request_verification(self, presentation):
-        # TODO: Choose from known registrar of issuers or receive from
-        # user input
-        address = 'http://localhost:7001'
-        endpoint = 'api/v1/credentials/verify/'
-        self.flush('Waiting for response (takes seconds)...')
-        resp = HttpClient(address).post(endpoint, {
-            'vp': presentation,
-        })
-        return resp
-
-    def parse_response(self, resp):
-        code = resp.status_code
-        body = resp.json()
-        return code, body
-
     def handle_issuance_response(self, resp):
-        code, body = self.parse_response(resp)
+        code, body = self._app.parse_http_response(resp)
         match code:
-            # This handling assumes that an API has been advertized by the
-            # issuer
             case 200:
                 credential = body['vc']
             case 400 | 512 :
@@ -328,10 +270,8 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 % alias)
 
     def handle_verification_response(self, resp):
-        code, body = self.parse_response(resp)
+        code, body = self._app.parse_http_response(resp)
         match code:
-            # This handling assumes that an API has been advertized by the
-            # verifier
             case 200:
                 results = body['results']
                 verified = results['Verified']
@@ -522,8 +462,9 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 except NothingFound as err:
                     self.flush('Request aborted: %s' % err)
                     return
+                self.flush('Waiting for response (takes seconds)...')
                 try:
-                    resp = self.request_issuance(payload)
+                    resp = self._app.request_issuance(payload)
                 except HttpConnectionError as err:
                     self.flush('Could not connect to issuer: %s' % err)
                     return
@@ -537,8 +478,9 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 except NothingFound as err:
                     self.flush('Verification aborted: %s' % err)
                     return
+                self.flush('Waiting for response (takes seconds)...')
                 try:
-                    resp = self.request_verification(vp)
+                    resp = self._app.request_verification(vp)
                 except HttpConnectionError as err:
                     self.flush('Could not connect to verifier: %s' % err)
                     return
