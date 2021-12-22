@@ -4,7 +4,9 @@ import os
 from ssi_lib import \
     Template, \
     Vc
-from conf import STORAGE, TMPDIR, Table, Ed25519, Secp256k1, RSA
+from conf import STORAGE, TMPDIR, Table, Ed25519, Secp256k1, RSA \
+        ISSUER_ADDRESS, ISSUE_ENDPOINT, \
+        VERIFIER_ADDRESS, VERIFY_ENDPOINT
 from app import CreationError, RegistrationError, ResolutionError, \
         IssuanceError, VerificationError, HttpConnectionError
 from driver.conf import INTRO, PROMPT, INDENT, Action, UI
@@ -464,7 +466,10 @@ class WalletShell(cmd.Cmd, MenuHandler):
                     return
                 self.flush('Waiting for response (takes seconds)...')
                 try:
-                    resp = self._app.request_issuance(payload)
+                    # TODO: The wallet holder should here be able to choose
+                    # from a known registrar of issuers
+                    resp = self._app.request_issuance(ISSUER_ADDRESS,
+                            ISSUER_ENDPOINT, payload)
                 except HttpConnectionError as err:
                     self.flush('Could not connect to issuer: %s' % err)
                     return
@@ -480,7 +485,10 @@ class WalletShell(cmd.Cmd, MenuHandler):
                     return
                 self.flush('Waiting for response (takes seconds)...')
                 try:
-                    resp = self._app.request_verification(vp)
+                    # TODO: The wallet holder should here be able to choose
+                    # from a known registrar of verifiers
+                    resp = self._app.request_verification(VERIFIER_ADDRESS,
+                            VERIFY_ENDPOINT, vp)
                 except HttpConnectionError as err:
                     self.flush('Could not connect to verifier: %s' % err)
                     return

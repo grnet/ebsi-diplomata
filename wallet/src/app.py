@@ -27,11 +27,8 @@ class VerificationError(BaseException):
 
 class HttpClient(object):
 
-    def __init__(self, remote):
-        self.remote = remote
-
-    def _create_url(self, endpoint):
-        return urljoin(self.remote, endpoint.lstrip('/'))
+    def _create_url(self, remote, endpoint):
+        return urljoin(remote, endpoint.lstrip('/'))
 
     def _do_request(self, method, url, **kw):
         try:
@@ -40,17 +37,23 @@ class HttpClient(object):
             raise HttpConnectionError(err)
         return resp
 
-    def get(self, endpoint):
-        resp = self._do_request('get', self._create_url(endpoint))
+    def http_get(self, remote, endpoint):
+        url = self._create_url(remote, endpoint)
+        resp = self._do_request('get', url)
         return resp
 
-    def post(self, endpoint, payload):
-        resp = self._do_request('post', self._create_url(endpoint),
-                json=payload)
+    def http_post(self, remote, endpoint, payload):
+        url = self._create_url(remote, endpoint)
+        resp = self._do_request('post', url, json=payload)
         return resp
 
+    def parse_http_response(self, resp):
+        code = resp.status_code
+        body = resp.json()
+        return code, body
 
-class WalletApp(SSI):
+
+class WalletApp(SSI, HttpClient):
 
     def __init__(self, tmpdir, dbpath):
         self._db = DbConnector(dbpath)
@@ -203,14 +206,6 @@ class WalletApp(SSI):
             raise IssuanceError(err)
         return vc
 
-    def request_issuance(self, payload):
-        # TODO: Choose from known registrar of issuers or receive from
-        # user input
-        address = 'http://localhost:7000'
-        endpoint = 'api/v1/credentials/issue/'
-        resp = HttpClient(address).post(endpoint, payload)
-        return resp
-
     def create_presentation(self, holder, credentials,
             waltdir=WALTDIR):
         try:
@@ -229,17 +224,13 @@ class WalletApp(SSI):
             raise VerificationError(err)
         return results
 
-    def request_verification(self, presentation):
-        # TODO: Choose from known registrar of issuers or receive from
-        # user input
-        address = 'http://localhost:7001'
-        endpoint = 'api/v1/credentials/verify/'
-        resp = HttpClient(address).post(endpoint, {
+    def request_issuance(self, remote, endpoint, payload):
+        resp = self.http_post(remote, endpoint, payload)
+        return resp
+
+    def request_verification(self, remote, endpoint, 
+                presentation):
+        resp = self.http_post(remote, endpoint, {
             'vp': presentation,
         })
         return resp
-
-    def parse_http_response(self, resp):
-        code = resp.status_code
-        body = resp.json()
-        return code, body
