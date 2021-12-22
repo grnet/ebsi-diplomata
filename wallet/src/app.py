@@ -125,3 +125,19 @@ class WalletApp(SSI):
             super().register_did(alias, token)
         except SSIRegistrationError as err:
             raise RegistrationError(err)
+
+    def create_did(self, key, token, onboard=True):
+        try:
+            did = self.generate_did(key, token, onboard)
+        except SSIGenerationError as err:
+            err = 'Could not generate DID: %s' % err
+            raise CreationError(err)
+        if onboard:
+            try:
+                alias = self.extract_alias_from_did(did)
+                super().register_did(alias, token)
+            except SSIRegistrationError as err:
+                err = 'Could not register: %s' % err
+                raise CreationError(err)
+        alias = self.store_did(did)
+        return alias

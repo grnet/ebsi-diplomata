@@ -153,22 +153,6 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 raise BadInputError(err)
         return out
 
-    def create_did(self, key, token, onboard=True):
-        try:
-            did = self.app.generate_did(key, token, onboard)
-        except SSIGenerationError as err:
-            err = 'Could not generate DID: %s' % err
-            raise CreationError(err)
-        if onboard:
-            try:
-                alias = self.app.extract_alias_from_did(did)
-                self.app.register_did(alias, token)
-            except RegistrationError as err:
-                err = 'Could not register: %s' % err
-                raise CreationError(err)
-        alias = self.app.store_did(did)
-        return alias
-
     def retrieve_resolved_did(self, alias):
         resolved = os.path.join(RESOLVED, 'did-ebsi-%s.json' % \
             alias.lstrip(EBSI_PRFX))
@@ -396,7 +380,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
                     return
                 self.flush('Creating DID (takes seconds) ...')
                 try:
-                    alias = self.create_did(key, token, onboard)
+                    alias = self.app.create_did(key, token, onboard)
                 except CreationError as err:
                     self.flush('Could not create DID: %s' % err)
                     return
