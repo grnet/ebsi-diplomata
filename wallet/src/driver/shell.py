@@ -14,8 +14,8 @@ from driver.ui import MenuHandler
 from __init__ import __version__
 
 
-# This module is terminal and any exceptions are intended for internal
-# consumption (print message in stdout and return).
+# This module is terminal and any exceptions in it are intended 
+# for internal consumption (print message in stdout and return)
 
 class NothingFound(BaseException):
     pass
@@ -135,6 +135,35 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 err = 'Bad input: %s' % line
                 raise BadInput(err)
         return out
+
+    def create_key(self, algo):
+        if not self.launch_yn('Key will be save to disk. Proceed?'):
+            err = 'Keygen aborted'
+            raise Abortion(err)
+        self.flush('Generating %s key (takes seconds) ...' % algo)
+        alias = self._app.create_key(algo)
+        return alias
+
+    def create_did(self, key):
+        token = ''
+        if self.launch_yn('Do you want to provide an EBSI token?'):
+            token = self.launch_input('Token:')
+        if not token and not self.launch_yn(
+            'WARNING: No token provided. The newly created DID will\n' +
+            'not be registered to the EBSI. Proceed?'):
+            err = 'DID creation aborted'
+            raise Abortion(err)
+        onboard = False
+        if token:
+            onboard = self.launch_yn(
+                'Register the newly created DID to EBSI?')
+        if not self.launch_yn(
+                'A new DID will be saved to disk. Proceed?'):
+            err = 'DID creation aborted'
+            raise Abortion(err)
+        self.flush('Creating DID (takes seconds) ...')
+        alias = self._app.create_did(key, token, onboard)
+        return alias
 
     def prepare_issuance_payload(self):
         choices = self._app.fetch_dids()
@@ -293,45 +322,30 @@ class WalletShell(cmd.Cmd, MenuHandler):
                         Secp256k1,
                         RSA,
                     ])
-                if not self.launch_yn('Key will be save to disk. Proceed?'):
-                    self.flush('Key creation aborted')
-                    return
-                self.flush('Generating %s key (takes seconds) ...' % algo)
                 try:
-                    alias = self._app.create_key(algo)
+                    alias = self.create_key(algo)
                 except CreationError as err:
                     self.flush('Could not create key: %s' % err)
                     return
-                self.flush('Created key: %s' % alias)
+                except Abortion as err:
+                    self.flush(err)
+                    return
+                self.flush('Saved key in database: %s' % alias)
             case Table.DID:
-                keys = self._app.fetch_keys()
-                if not keys:
+                aliases = self._app.fetch_keys()
+                if not aliases:
                     self.flush('No keys found. Must first create one.')
                     return
-                key = self.launch_choice('Choose key:', keys)
-                token = ''
-                if self.launch_yn('Do you want to provide an EBSI token?'):
-                    token = self.launch_input('Token:')
-                if not token and not self.launch_yn(
-                    'WARNING: No token provided. The newly created DID will\n' +
-                    'not be registered to the EBSI. Proceed?'):
-                    self.flush('DID creation aborted')
-                    return
-                onboard = False
-                if token:
-                    onboard = self.launch_yn(
-                        'Register the newly created DID to EBSI?')
-                if not self.launch_yn(
-                        'A new DID will be saved to disk. Proceed?'):
-                    self.flush('DID creation aborted')
-                    return
-                self.flush('Creating DID (takes seconds) ...')
+                key = self.launch_choice('Choose key:', aliases)
                 try:
-                    alias = self._app.create_did(key, token, onboard)
+                    alias = self.create_did(key)
                 except CreationError as err:
                     self.flush('Could not create DID: %s' % err)
                     return
-                self.flush('Created DID: %s' % alias)
+                except Abortion as err:
+                    self.flush(err)
+                    return
+                self.flush('Saved DID in database: %s' % alias)
 
     def do_register(self, line):
         dids = self._app.fetch_dids()
