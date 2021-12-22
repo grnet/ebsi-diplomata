@@ -17,3 +17,10 @@ class Table:
     VC      = 'vc'
     VP      = 'vp'
 
+
+ISSUER_ADDRESS      = 'http://localhost:7000'
+ISSUE_ENDPOINT      = 'api/v1/credentials/issue/'
+VERIFIER_ADDRESS    = 'http://localhost:7001'
+VERIFY_ENDPOINT     = 'api/v1/credentials/verify/'
+
+

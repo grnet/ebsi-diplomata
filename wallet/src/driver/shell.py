@@ -1,91 +1,27 @@
+import os
 import cmd, sys
 import json
-import os
-from urllib.parse import urljoin
-import requests
-from ssi_lib import \
-    SSIGenerationError, \
-    SSIRegistrationError, \
-    SSIResolutionError, \
-    SSIIssuanceError, \
-    SSIVerificationError, \
-    Template, \
-    Vc
-from conf import STORAGE, TMPDIR, WALTDIR, RESOLVED, Table, \
-    Ed25519, Secp256k1, RSA
+from conf import STORAGE, TMPDIR, Table, Ed25519, Secp256k1, RSA, \
+        ISSUER_ADDRESS, ISSUE_ENDPOINT, \
+        VERIFIER_ADDRESS, VERIFY_ENDPOINT
+from app import CreationError, RegistrationError, ResolutionError, \
+        IssuanceError, VerificationError, HttpConnectionError
 from driver.conf import INTRO, PROMPT, INDENT, Action, UI
 from driver.ui import MenuHandler
 from __init__ import __version__
 
 
-_mapping = {
-    UI.KEY: Table.KEY,
-    UI.KEYS: Table.KEY,
-    UI.DID: Table.DID,
-    UI.DIDS: Table.DID,
-    UI.VC: Table.VC,
-    UI.VCS: Table.VC,
-    UI.VP: Table.VP,
-    UI.VPS: Table.VP,
-    UI.ISSUE: Action.ISSUE,
-    UI.VERIFY: Action.VERIFY,
-    UI.CHOOSE: Action.CHOOSE,
-    UI.IMPORT: Action.IMPORT,
-    UI.DISCARD: Action.DISCARD,
-}
+class NothingFound(BaseException):
+    pass
 
+class BadImport(BaseException):
+    pass
+
+class BadInput(BaseException):
+    pass
 
 class Abortion(BaseException):
     pass
-
-class BadInputError(BaseException):
-    pass
-
-class CreationError(BaseException):
-    pass
-
-class RegistrationError(BaseException):
-    pass
-
-class IssuanceError(BaseException):
-    pass
-
-class PresentationError(BaseException):
-    pass
-
-class VerificationError(BaseException):
-    pass
-
-class WalletImportError(BaseException):
-    pass
-
-class HttpConnectionError(BaseException):
-    pass
-
-
-class HttpClient(object):
-
-    def __init__(self, remote):
-        self.remote = remote
-
-    def _create_url(self, endpoint):
-        return urljoin(self.remote, endpoint.lstrip('/'))
-
-    def _do_request(self, method, url, **kw):
-        try:
-            resp = getattr(requests, method)(url, **kw)
-        except requests.exceptions.ConnectionError as err:
-            raise HttpConnectionError(err)
-        return resp
-
-    def get(self, endpoint):
-        resp = self._do_request('get', self._create_url(endpoint))
-        return resp
-
-    def post(self, endpoint, payload):
-        resp = self._do_request('post', self._create_url(endpoint),
-                json=payload)
-        return resp
 
 
 class WalletShell(cmd.Cmd, MenuHandler):
@@ -93,11 +29,23 @@ class WalletShell(cmd.Cmd, MenuHandler):
     prompt  = PROMPT
 
     def __init__(self, app):
-        self.app = app
+        self._app = app
+        self._mapping = {
+            UI.KEY: Table.KEY,
+            UI.KEYS: Table.KEY,
+            UI.DID: Table.DID,
+            UI.DIDS: Table.DID,
+            UI.VC: Table.VC,
+            UI.VCS: Table.VC,
+            UI.VP: Table.VP,
+            UI.VPS: Table.VP,
+            UI.ISSUE: Action.ISSUE,
+            UI.VERIFY: Action.VERIFY,
+            UI.CHOOSE: Action.CHOOSE,
+            UI.IMPORT: Action.IMPORT,
+            UI.DISCARD: Action.DISCARD,
+        }
         super().__init__()
-
-    def fetch_keys(self):
-        return self.app.fetch_keys()
 
     def run(self):
         super().cmdloop()
@@ -109,17 +57,12 @@ class WalletShell(cmd.Cmd, MenuHandler):
         pass
 
     def flush(self, buff):
-        if type(buff) in (dict, list,):
-            buff = json.dumps(buff, indent=INDENT)
-        else:
-            buff = str(buff)
+        buff = json.dumps(buff, indent=INDENT) if type(buff) \
+                in (dict, list,) else str(buff)
         sys.stdout.write(buff + '\n')
 
     def flush_list(self, lst):
         for _ in lst: self.flush(_)
-
-    def flush_help(self, *messages):
-        self.flush('\n'.join(messages))
 
     def dump(self, obj, filename):
         filename = filename + ('.json' \
@@ -139,14 +82,14 @@ class WalletShell(cmd.Cmd, MenuHandler):
                     UI.VCS,
                     UI.VPS,
                 ])
-                out = _mapping[ans]
+                out = self._mapping[ans]
             case (
                     UI.KEY |
                     UI.DID |
                     UI.VC  |
                     UI.VP
                 ):
-                out = _mapping[line]
+                out = self._mapping[line]
             case (
                     Table.KEY |
                     Table.DID |
@@ -156,160 +99,100 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 out = line
             case _:
                 err = 'Bad input: %s' % line
-                raise BadInputError(err)
+                raise BadInput(err)
         return out
 
     def create_key(self, algo):
-        try:
-            key = self.app.generate_key(algo)
-        except SSIGenerationError as err:
-            err = 'Could not generate key: %s' % err
-            raise CreationError(err)
-        alias = self.app.store_key(key)
-        return alias
-
-    def register_did(self, alias, token):
-        try:
-            self.app.register_did(alias, token)
-        except SSIRegistrationError as err:
-            raise RegistrationError(err)
-
-    def create_did(self, key, token, onboard=True):
-        try:
-            did = self.app.generate_did(key, token, onboard)
-        except SSIGenerationError as err:
-            err = 'Could not generate DID: %s' % err
-            raise CreationError(err)
-        if onboard:
-            try:
-                self.app.register_did(did['id'], token)
-            except SSIRegistrationError as err:
-                err = 'Could not register: %s' % err
-                raise CreationError(err)
-        alias = self.app.store_did(did)
-        return alias
-
-    def retrieve_resolved_did(self, alias):
-        resolved = os.path.join(RESOLVED, 'did-ebsi-%s.json' % \
-            alias.lstrip(EBSI_PRFX))
-        with open(resolved, 'r') as f:
-            out = json.load(f)
-        return out
-
-    def prepare_issuance_payload(self):
-        choices = self.app.fetch_dids()
-        if not choices:
-            err = 'No DIDs found. Must first create one.'
+        if not self.launch_yn('Key will be saved to disk. Proceed?'):
+            err = 'Keygen aborted'
             raise Abortion(err)
-        did = self.launch_choice('Choose holder DID', choices)
-        # TODO: Select credential type and values via user input
-        # TODO: This construction assumes than an API spec has been advertized
-        # on behalf of the issuer
-        payload = {
-            'holder': did,
-            'vc_type': Vc.DIPLOMA,
-            'content': {
-                'person_id': '0x666',
-                'name': 'Lucrezia',
-                'surname': 'Borgia',
-                'subject': 'POISONING',
-            },
-        }
-        return payload
+        self.flush('Generating %s key (takes seconds) ...' % algo)
+        alias = self._app.create_key(algo)
+        return alias
 
-    def normalize_diploma_content(self, content):
-        # TODO
-        out = getattr(Template, Vc.DIPLOMA)
-        out['person_identifier'] = content['person_id']
-        out['person_family_name'] = content['name']
-        out['person_given_name'] = content['surname']
-        out['awarding_opportunity_identifier'] = content['subject']
-        return out
+    def create_did(self, key):
+        token = ''
+        if self.launch_yn('Do you want to provide an EBSI token?'):
+            token = self.launch_input('Token:')
+        if not token and not self.launch_yn(
+            'WARNING: No token provided. The newly created DID will\n' +
+            'not be registered to the EBSI. Proceed?'):
+            err = 'DID creation aborted'
+            raise Abortion(err)
+        onboard = False
+        if token:
+            onboard = self.launch_yn(
+                'Register the newly created DID to EBSI?')
+        if not self.launch_yn(
+                'A new DID will be saved to disk. Proceed?'):
+            err = 'DID creation aborted'
+            raise Abortion(err)
+        self.flush('Creating DID (takes seconds) ...')
+        alias = self._app.create_did(key, token, onboard)
+        return alias
+
+    def parse_issuance_params(self):
+        aliases = self._app.fetch_dids()
+        if not aliases:
+            err = 'No DIDs found. Must first create one.'
+            raise NothingFound(err)
+        holder = self.launch_choice('Choose holder DID', aliases)
+        # TODO: Select credential content via user input
+        person_id = '0x666'
+        name = 'Lucrezia'
+        surname = 'Borgia'
+        subject = 'POISONING'
+        return holder, person_id, name, surname, subject
 
     def issue_credential(self, line):
-        try:
-            payload = self.prepare_issuance_payload()
-        except Abortion as err:
-            raise
-        dids = self.app.fetch_dids()
-        issuer = self.launch_choice('Choose issuer DID', dids)
-        if not self.launch_yn('New credential will be issued. Proceed?'):
+        holder, person_id, name, surname, subject = \
+            self.parse_issuance_params()
+        aliases = self._app.fetch_dids()
+        issuer = self.launch_choice('Choose issuer DID', aliases)
+        if not self.launch_yn('New credential will be issued. ' +
+                'Proceed?'):
             raise Abortion('Issuance aborted')
-        try:
-            holder = payload['holder']
-            vc_type = payload['vc_type']
-            content = payload['content']
-        except KeyError as err:
-            raise IssuanceError(err)
-        try:
-            content = self.normalize_diploma_content(content)
-        except KeyError as err:
-            raise SSIIssuanceError(err)
-        try:
-            out = self.app.issue_credential(holder, issuer, vc_type,
-                    content)
-        except SSIIssuanceError as err:
-            raise IssuanceError(err)
-        return out
-
-    def create_presentation(self, holder, credentials):
-        try:
-            out = self.app.generate_presentation(holder, credentials,
-                WALTDIR)
-        except SSIGenerationError as err:
-            err = 'Could not generate presentation: %s' % err
-            raise CreationError(err)
+        payload = self._app.prepare_issuance_payload(holder, person_id, 
+                name, surname, subject)
+        out = self._app.mock_issuer(issuer, payload)
         return out
 
     def present_credentials(self, line):
-        dids = self.app.fetch_aliases(Table.DID)
+        dids = self._app.fetch_aliases(Table.DID)
         if not dids:
-            err = 'No DIDs found. Must create at least one.'
-            raise PresentationError(err)
+            err = 'No DIDs found.'
+            raise NothingFound(err)
         holder = self.launch_choice('Choose holder DID', dids)
-        vc_choices = self.app.fetch_credentials_by_holder(holder)
+        vc_choices = self._app.fetch_credentials_by_holder(holder)
         if not vc_choices:
-            err = 'No credentials found for the provided holder DID'
-            raise PresentationError(err)
+            err = 'No credentials found for the provided holder.'
+            raise NothingFound(err)
         vc_selected = self.launch_selection(
             'Select credentials to present', vc_choices)
         if not vc_selected:
-            err = 'Presentation aborted: No credentials selected'
-            raise PresentationError(err)
+            err = 'No credentials selected'
+            raise Abortion(err)
         credentials = []
         for alias in vc_selected:
-            credential = self.app.fetch_credential(alias)
+            credential = self._app.fetch_credential(alias)
             vc_file = self.dump(credential, '%s.json' % alias)
             credentials += [vc_file,]
-        try:
-            out = self.create_presentation(holder, credentials)
-        except CreationError as err:
-            raise PresentationError(err)
-        return out
+        alias = self._app.create_presentation(holder, credentials)
+        return alias
 
     def select_presentation(self):
         match self.launch_choice('Select presentation to verify', [
             UI.CHOOSE, UI.IMPORT]):
             case UI.CHOOSE:
-                vps = self.app.fetch_presentations()
+                vps = self._app.fetch_presentations()
                 if not vps:
-                    err = 'Nothing found'
-                    raise Abortion(err)
+                    err = 'No presentation found'
+                    raise NothingFound(err)
                 alias = self.launch_choice('', vps)
-                out = self.app.fetch_presentation(alias)
+                out = self._app.fetch_presentation(alias)
             case UI.IMPORT:
-                try:
-                    out = self.import_object()
-                except WalletImportError:
-                    raise
+                out = self.import_object()
         return out
-
-    def verify_presentation(self, vp):
-        try:
-            results = self.app.verify_presentation(vp)
-        except SSIVerificationError as err:
-            raise VerificationError(err)
-        return results
 
     def export_object(self, entry):
         filename = ''
@@ -331,17 +214,60 @@ class WalletShell(cmd.Cmd, MenuHandler):
             with open(infile, 'r') as f:
                 out = json.load(f)
         except (FileNotFoundError, json.decoder.JSONDecodeError) as err:
-            err = 'Could not import: %s' % str(err)
-            raise WalletImportError(err)
+            raise BadImport(err)
         return out
+
+    def handle_issuance_response(self, resp):
+        code, body = self._app.parse_http_response(resp)
+        match code:
+            case 200:
+                credential = body['vc']
+            case 400 | 512 :
+                self.flush('Could not issue: %s' % body['err'])
+                return
+            case _:
+                self.flush('Could not issue: Response status code: %d'
+                        % _)
+                if self.launch_yn('Inspect response body?'):
+                    self.flush(body)
+                return
+        if self.launch_yn('Received credential. Inspect?'):
+            self.flush(credential)
+        if not self.launch_yn('Save to disk?'):
+            if self.launch_yn('Credential will be lost. '
+            + 'Are you sure?'):
+                del credential
+                return
+        alias = self._app.store_credential(credential)
+        self.flush('Credential was saved in disk:\n%s'
+                % alias)
+
+    def handle_verification_response(self, resp):
+        code, body = self._app.parse_http_response(resp)
+        match code:
+            case 200:
+                results = body['results']
+                verified = results['Verified']
+            case 400 | 512 :
+                self.flush('Could not verify: %s' % body['err'])
+                return
+            case _:
+                self.flush('Could not verify: Response status code: %d'
+                        % _)
+                if self.launch_yn('Inspect response body?'):
+                    self.flush(body)
+                return
+        self.flush('Presentation was %sverified:' % ('' if verified \
+                else 'NOT '))
+        self.flush(results)
 
     def do_list(self, line):
         try:
             table = self.resolve_table(line, prompt='Show list of')
-        except BadInputError as err:
+        except BadInput as err:
             self.flush(err)
             return
-        entries = self.app.fetch_aliases(table)
+        entries = self._app.fetch_aliases(table)
         if not entries:
             self.flush('Nothing found')
             return
@@ -350,24 +276,24 @@ class WalletShell(cmd.Cmd, MenuHandler):
     def do_count(self, line):
         try:
             table = self.resolve_table(line, prompt='Show number of')
-        except BadInputError as err:
+        except BadInput as err:
             self.flush(err)
             return
-        nr = self.app.fetch_nr(table)
+        nr = self._app.fetch_nr(table)
         self.flush(nr)
 
     def do_inspect(self, line):
         try:
             table = self.resolve_table(line, prompt='Inspect from')
-        except BadInputError as err:
+        except BadInput as err:
             self.flush(err)
             return
-        aliases = self.app.fetch_aliases(table)
+        aliases = self._app.fetch_aliases(table)
         if not aliases:
             self.flush('Nothing found')
             return
         alias = self.launch_choice('Choose', aliases)
-        entry = self.app.fetch_entry(alias, table)
+        entry = self._app.fetch_entry(alias, table)
         self.flush(entry)
 
     def do_create(self, line):
@@ -375,55 +301,40 @@ class WalletShell(cmd.Cmd, MenuHandler):
             UI.KEY,
             UI.DID,
         ])
-        match _mapping[ans]:
+        match self._mapping[ans]:
             case Table.KEY:
                 algo = self.launch_choice('Choose keygen algorithm', [
                         Ed25519,
                         Secp256k1,
                         RSA,
                     ])
-                if not self.launch_yn('Key will be save to disk. Proceed?'):
-                    self.flush('Key creation aborted')
-                    return
-                self.flush('Generating %s key (takes seconds) ...' % algo)
                 try:
                     alias = self.create_key(algo)
                 except CreationError as err:
                     self.flush('Could not create key: %s' % err)
                     return
-                self.flush('Created key: %s' % alias)
+                except Abortion as err:
+                    self.flush(err)
+                    return
+                self.flush('Saved key in database: %s' % alias)
             case Table.DID:
-                keys = self.fetch_keys()
-                if not keys:
+                aliases = self._app.fetch_keys()
+                if not aliases:
                     self.flush('No keys found. Must first create one.')
                     return
-                key = self.launch_choice('Choose key:', keys)
-                token = ''
-                if self.launch_yn('Do you want to provide an EBSI token?'):
-                    token = self.launch_input('Token:')
-                if not token and not self.launch_yn(
-                    'WARNING: No token provided. The newly created DID will\n' +
-                    'not be registered to the EBSI. Proceed?'):
-                    self.flush('DID creation aborted')
-                    return
-                onboard = False
-                if token:
-                    onboard = self.launch_yn(
-                        'Register the newly created DID to EBSI?')
-                if not self.launch_yn(
-                        'A new DID will be saved to disk. Proceed?'):
-                    self.flush('DID creation aborted')
-                    return
-                self.flush('Creating DID (takes seconds) ...')
+                key = self.launch_choice('Choose key:', aliases)
                 try:
-                    alias = self.create_did(key, token, onboard)
+                    alias = self.create_did(key)
                 except CreationError as err:
                     self.flush('Could not create DID: %s' % err)
                     return
-                self.flush('Created DID: %s' % alias)
+                except Abortion as err:
+                    self.flush(err)
+                    return
+                self.flush('Saved DID in database: %s' % alias)
 
     def do_register(self, line):
-        dids = self.app.fetch_dids()
+        dids = self._app.fetch_dids()
         if not dids:
             self.flush('No DIDs found')
             return
@@ -431,10 +342,9 @@ class WalletShell(cmd.Cmd, MenuHandler):
         token = self.launch_input('Token:')
         self.flush('Registering (takes seconds) ...')
         try:
-            self.app.register_did(alias, token)
-        except SSIRegistrationError as err:
-            err = 'Could not register: %s' % err
-            self.flush(err)
+            self._app.register_did(alias, token)
+        except RegistrationError as err:
+            self.flush('Could not register: %s' % err)
             return
         self.flush('Registered %s to the EBSI')
 
@@ -442,47 +352,52 @@ class WalletShell(cmd.Cmd, MenuHandler):
         alias = self.launch_input('Give DID:')
         self.flush('Resolving ...')
         try:
-            self.app.resolve_did(alias)
-        except SSIResolutionError as err:
+            self._app.resolve_did(alias)
+        except ResolutionError as err:
             self.flush('Could not resolve: %s' % err)
             return
-        did = self.retrieve_resolved_did(alias)
+        did = self._app.retrieve_resolved_did(alias)
         self.flush(did)
 
     def do_issue(self, line):
         try:
             vc = self.issue_credential(line)
-        except IssuanceError as err:
+        except (IssuanceError, NothingFound,) as err:
             self.flush('Could not issue: %s' % err)
             return
         except Abortion as err:
-            self.flush('Request aborted: %s' % err)
+            self.flush('Issuance aborted: %s' % err)
             return
         self.flush('Issued credential')
         if self.launch_yn('Inspect?'):
             self.flush(vc)
         if not self.launch_yn('Save to disk?'):
-            if self.launch_yn('Credential will be lost. Are you sure?'):
+            if self.launch_yn('Credential will be lost. ' +
+                    'Are you sure?'):
                 del vc
                 return
-        alias = self.app.store_credential(vc)
-        self.flush('Credential was saved to disk:\n%s' % alias)
+        alias = self._app.store_credential(vc)
+        self.flush('Credential was saved in disk:\n%s'
+                % alias)
 
     def do_present(self, line):
         try:
-            presentation = self.present_credentials(line)
-        except PresentationError as err:
+            alias = self.present_credentials(line)
+        except (NothingFound, CreationError,) as err:
             self.flush('Could not present: %s' % err)
             return
-        self.flush('Created presentation from selected credentials.')
+        except Abortion as err:
+            self.flush('Presentation aborted: %s' % err)
+            return
+        self.flush('Presentation was saved in disk: %s'
+                % alias)
         if self.launch_yn('Inspect?'):
-            self.flush(presentation)
-        if self.launch_yn('Save in disk?'):
-            alias = self.app.store_presentation(presentation)
-            self.flush('Presentation was saved to disk:\n%s' % alias)
+            vp = self._app.fetch_presentation(alias)
+            self.flush(vp)
         if self.launch_yn('Export?'):
+            vp = self._app.fetch_presentation(alias)
             try:
-                outfile = self.export_object(presentation)
+                outfile = self.export_object(vp)
             except Abortion:
                 self.flush('Aborted export')
                 return
@@ -491,16 +406,18 @@ class WalletShell(cmd.Cmd, MenuHandler):
     def do_verify(self, line):
         try:
             vp = self.select_presentation()
-        except (Abortion, WalletImportError,) as err:
+        except BadImport as err:
+            self.flush('Could not import: %s' % err)
+            return
+        except NothingFound as err:
             self.flush('Verification aborted: %s' % err)
             return
         self.flush('Verifying (takes seconds)...')
         try:
-            results = self.verify_presentation(vp)
+            results = self._app.verify_presentation(vp)
         except VerificationError as err:
             self.flush('Could not verify: %s' % err)
             return
-        # Flush results
         self.flush('Presentation was %sverified:' % ('' if \
             results['Verified'] else 'NOT '))
         self.flush(results)
@@ -509,99 +426,58 @@ class WalletShell(cmd.Cmd, MenuHandler):
         action = self.launch_choice('Request', [
             UI.ISSUE,
             UI.VERIFY,
+            UI.DISCARD,
         ])
-        match _mapping[action]:
+        match self._mapping[action]:
             case Action.ISSUE:
                 try:
-                    payload = self.prepare_issuance_payload()
-                except Abortion as err:
+                    holder, person_id, name, surname, subject = \
+                        self.parse_issuance_params()
+                except NothingFound as err:
                     self.flush('Request aborted: %s' % err)
                     return
-                # TODO: Choose from known registrar of issuers or reveive from
-                # user input
-                address = 'http://localhost:7000'
-                endpoint = 'api/v1/credentials/issue/'
+                self.flush('Waiting for response (takes seconds)...')
                 try:
-                    self.flush('Waiting for response (takes seconds)...')
-                    resp = HttpClient(address).post(endpoint, payload)
+                    resp = self._app.request_issuance(ISSUER_ADDRESS,
+                            ISSUE_ENDPOINT, holder, person_id, name, surname,
+                            subject)
                 except HttpConnectionError as err:
                     self.flush('Could not connect to issuer: %s' % err)
                     return
-                # TODO: This handling assumes that an API spec has been
-                # aedvertized on behalf of the issuer
-                match resp.status_code:
-                    case 200:
-                        vc = resp.json()['vc']
-                        self.flush('Credential received.')
-                        if self.launch_yn('Inspect?'):
-                            self.flush(vc)
-                        if not self.launch_yn('Save to disk?'):
-                            if self.launch_yn('Credential will be lost. '
-                            + 'Are you sure?'):
-                                del vc
-                                return
-                        alias = self.app.store_credential(vc)
-                        self.flush('Credential was saved to disk:\n%s' % alias)
-                    case 512:
-                        err = resp.json()['err']
-                        self.flush('Could not issue: %s' % err)
-                    case 400:
-                        err = resp.json()['err']
-                        self.flush('Could not issue: %s' % err)
-                    case _:
-                        self.flush('Could not issue:')
-                        self.flush(resp.json())             # TODO: Capture error
+                self.handle_issuance_response(resp)
             case Action.VERIFY:
                 try:
                     vp = self.select_presentation()
-                except (Abortion, WalletImportError,) as err:
-                    self.flush('Could not select: %s' % err)
+                except BadImport as err:
+                    self.flush('Could not import: %s' % err)
                     return
-                # TODO: Choose from known registrar of verifiers or reveive
-                # from user input
-                address = 'http://localhost:7001'
-                endpoint = 'api/v1/credentials/verify/'
+                except NothingFound as err:
+                    self.flush('Verification aborted: %s' % err)
+                    return
+                self.flush('Waiting for response (takes seconds)...')
                 try:
-                    self.flush('Waiting for response (takes seconds)...')
-                    resp = HttpClient(address).post(endpoint, {
-                        'vp': vp,
-                    })
+                    resp = self._app.request_verification(VERIFIER_ADDRESS,
+                            VERIFY_ENDPOINT, vp)
                 except HttpConnectionError as err:
-                    self.flush('Could not connect to issuer: %s' % err)
+                    self.flush('Could not connect to verifier: %s' % err)
                     return
-                # TODO: This handling assumes that an API spec has been
-                # aedvertized on behalf of the verifier
-                match resp.status_code:
-                    case 200:
-                        results = resp.json()['results']
-                        self.flush('Presentation was %sverified:' % ('' if \
-                            results['Verified'] else 'NOT '))
-                        self.flush(results)
-                    case 512:
-                        err = resp.json()['err']
-                        self.flush('Could not verify: %s' % err)
-                    case 400:
-                        err = resp.json()['err']
-                        self.flush('Could not verify: %s' % err)
-                    case _:
-                        self.flush('Could not verify:')
-                        self.flush(resp.json())             # TODO: Capture error
-                pass
+                self.handle_verification_response(resp)
             case Action.DISCARD:
                 self.flush('Request aborted')
+                return
 
     def do_export(self, line):
         try:
             table = self.resolve_table(line, prompt='Export from')
-        except BadInputError as err:
+        except BadInput as err:
             self.flush(err)
             return
-        aliases = self.app.fetch_aliases(table)
+        aliases = self._app.fetch_aliases(table)
         if not aliases:
             self.flush('Nothing found')
             return
         alias = self.launch_choice('Choose', aliases)
-        entry = self.app.fetch_entry(alias, table)
+        entry = self._app.fetch_entry(alias, table)
         try:
             outfile = self.export_object(entry)
         except Abortion:
@@ -626,15 +502,15 @@ class WalletShell(cmd.Cmd, MenuHandler):
         table = self.launch_choice('Saved as', [
             UI.KEY, UI.DID, UI.VC, UI.VP,
         ])
-        self.app.store(obj, _mapping[table])
+        self._app.store(obj, self._mapping[table])
 
     def do_remove(self, line):
         try:
             table = self.resolve_table(line, prompt='Remove from')
-        except BadInputError as err:
+        except BadInput as err:
             self.flush(err)
             return
-        aliases = self.app.fetch_aliases(table)
+        aliases = self._app.fetch_aliases(table)
         if not aliases:
             self.flush('Nothing found')
             return
@@ -644,20 +520,20 @@ class WalletShell(cmd.Cmd, MenuHandler):
             self.flush('Removal aborted')
             return
         for alias in selected:
-            self.app.remove(alias, table)
+            self._app.remove(alias, table)
             self.flush('Removed %s' % alias)
 
     def do_clear(self, line):
         try:
             table = self.resolve_table(line, prompt='Clear')
-        except BadInputError as err:
+        except BadInput as err:
             self.flush(err)
             return
         if not self.launch_yn('This cannot be undone. Proceed?'):
             self.flush('Aborted')
             return
-        nr_entries = self.app.fetch_nr(table)
-        self.app.clear(table)
+        nr_entries = self._app.fetch_nr(table)
+        self._app.clear(table)
         self.flush(f'Cleared %d %s%s' % (nr_entries, table, 's' if nr_entries
             != 1 else ''))
 
@@ -667,20 +543,3 @@ class WalletShell(cmd.Cmd, MenuHandler):
     do_exit = do_EOF
     do_quit = do_EOF
     do_q    = do_EOF
-
-    def help_list(self):
-        self.flush_help(
-            'list [key | did | credentials]',
-            'List objects of provided type',
-        )
-
-    def help_count(self):
-        self.flush_help(
-            'count [key | did | credentials]',
-            'Count objects of provided type',
-        )
-
-    # help_exit   = help_EOF
-    # help_quit   = help_EOF
-    # help_q      = help_EOF
-
