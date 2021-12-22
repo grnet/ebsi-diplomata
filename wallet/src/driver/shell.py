@@ -137,7 +137,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
         return out
 
     def create_key(self, algo):
-        if not self.launch_yn('Key will be save to disk. Proceed?'):
+        if not self.launch_yn('Key will be saved to disk. Proceed?'):
             err = 'Keygen aborted'
             raise Abortion(err)
         self.flush('Generating %s key (takes seconds) ...' % algo)
@@ -165,7 +165,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
         alias = self._app.create_did(key, token, onboard)
         return alias
 
-    def prepare_issuance_payload(self):
+    def parse_issuance_payload(self):
         choices = self._app.fetch_dids()
         if not choices:
             err = 'No DIDs found. Must first create one.'
@@ -196,7 +196,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
         return out
 
     def issue_credential(self, line):
-        payload = self.prepare_issuance_payload()
+        payload = self.parse_issuance_payload()
         dids = self._app.fetch_dids()
         issuer = self.launch_choice('Choose issuer DID', dids)
         if not self.launch_yn('New credential will be issued. Proceed?'):
@@ -274,6 +274,79 @@ class WalletShell(cmd.Cmd, MenuHandler):
         except (FileNotFoundError, json.decoder.JSONDecodeError) as err:
             raise BadImport(err)
         return out
+
+    def request_issuance(self, payload):
+        # TODO: Choose from known registrar of issuers or receive from
+        # user input
+        address = 'http://localhost:7000'
+        endpoint = 'api/v1/credentials/issue/'
+        self.flush('Waiting for response (takes seconds)...')
+        resp = HttpClient(address).post(endpoint, payload)
+        return resp
+
+    def request_verification(self, presentation):
+        # TODO: Choose from known registrar of issuers or receive from
+        # user input
+        address = 'http://localhost:7001'
+        endpoint = 'api/v1/credentials/verify/'
+        self.flush('Waiting for response (takes seconds)...')
+        resp = HttpClient(address).post(endpoint, {
+            'vp': presentation,
+        })
+        return resp
+
+    def parse_response(self, resp):
+        code = resp.status_code
+        body = resp.json()
+        return code, body
+
+    def handle_issuance_response(self, resp):
+        code, body = self.parse_response(resp)
+        match code:
+            # This handling assumes that an API has been advertized by the
+            # issuer
+            case 200:
+                credential = body['vc']
+            case 400 | 512 :
+                self.flush('Could not issue: %s' % body['err'])
+                return
+            case _:
+                self.flush('Could not issue: Response status code: %d'
+                        % _)
+                if self.launch_yn('Inspect response body?'):
+                    self.flush(body)
+                return
+        if self.launch_yn('Received credential. Inspect?'):
+            self.flush(credential)
+        if not self.launch_yn('Save to disk?'):
+            if self.launch_yn('Credential will be lost. '
+            + 'Are you sure?'):
+                del credential
+                return
+        alias = self._app.store_credential(credential)
+        self.flush('Credential was saved in disk:\n%s'
+                % alias)
+
+    def handle_verification_response(self, resp):
+        code, body = self.parse_response(resp)
+        match code:
+            # This handling assumes that an API has been advertized by the
+            # verifier
+            case 200:
+                results = body['results']
+                verified = results['Verified']
+            case 400 | 512 :
+                self.flush('Could not verify: %s' % body['err'])
+                return
+            case _:
+                self.flush('Could not verify: Response status code: %d'
+                        % _)
+                if self.launch_yn('Inspect response body?'):
+                    self.flush(body)
+                return
+        self.flush('Presentation was %sverified:' % ('' if verified \
+                else 'NOT '))
+        self.flush(results)
 
     def do_list(self, line):
         try:
@@ -358,8 +431,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
         try:
             self._app.register_did(alias, token)
         except RegistrationError as err:
-            err = 'Could not register: %s' % err
-            self.flush(err)
+            self.flush('Could not register: %s' % err)
             return
         self.flush('Registered %s to the EBSI')
 
@@ -387,11 +459,13 @@ class WalletShell(cmd.Cmd, MenuHandler):
         if self.launch_yn('Inspect?'):
             self.flush(vc)
         if not self.launch_yn('Save to disk?'):
-            if self.launch_yn('Credential will be lost. Are you sure?'):
+            if self.launch_yn('Credential will be lost. ' +
+                    'Are you sure?'):
                 del vc
                 return
         alias = self._app.store_credential(vc)
-        self.flush('Credential was saved to disk:\n%s' % alias)
+        self.flush('Credential was saved in disk:\n%s'
+                % alias)
 
     def do_present(self, line):
         try:
@@ -402,7 +476,8 @@ class WalletShell(cmd.Cmd, MenuHandler):
         except Abortion as err:
             self.flush('Presentation aborted: %s' % err)
             return
-        self.flush('Presentation saved in disk: %s' % alias)
+        self.flush('Presentation was saved in disk: %s'
+                % alias)
         if self.launch_yn('Inspect?'):
             vp = self._app.fetch_presentation(alias)
             self.flush(vp)
@@ -430,7 +505,6 @@ class WalletShell(cmd.Cmd, MenuHandler):
         except VerificationError as err:
             self.flush('Could not verify: %s' % err)
             return
-        # Flush results
         self.flush('Presentation was %sverified:' % ('' if \
             results['Verified'] else 'NOT '))
         self.flush(results)
@@ -444,44 +518,16 @@ class WalletShell(cmd.Cmd, MenuHandler):
         match self._mapping[action]:
             case Action.ISSUE:
                 try:
-                    payload = self.prepare_issuance_payload()
+                    payload = self.parse_issuance_payload()
                 except NothingFound as err:
                     self.flush('Request aborted: %s' % err)
                     return
-                # TODO: Choose from known registrar of issuers or reveive from
-                # user input
-                address = 'http://localhost:7000'
-                endpoint = 'api/v1/credentials/issue/'
                 try:
-                    self.flush('Waiting for response (takes seconds)...')
-                    resp = HttpClient(address).post(endpoint, payload)
+                    resp = self.request_issuance(payload)
                 except HttpConnectionError as err:
                     self.flush('Could not connect to issuer: %s' % err)
                     return
-                # TODO: This handling assumes that an API spec has been
-                # aedvertized on behalf of the issuer
-                match resp.status_code:
-                    case 200:
-                        vc = resp.json()['vc']
-                        self.flush('Credential received.')
-                        if self.launch_yn('Inspect?'):
-                            self.flush(vc)
-                        if not self.launch_yn('Save to disk?'):
-                            if self.launch_yn('Credential will be lost. '
-                            + 'Are you sure?'):
-                                del vc
-                                return
-                        alias = self._app.store_credential(vc)
-                        self.flush('Credential was saved to disk:\n%s' % alias)
-                    case 512:
-                        err = resp.json()['err']
-                        self.flush('Could not issue: %s' % err)
-                    case 400:
-                        err = resp.json()['err']
-                        self.flush('Could not issue: %s' % err)
-                    case _:
-                        self.flush('Could not issue:')
-                        self.flush(resp.json())             # TODO: Capture error
+                self.handle_issuance_response(resp)
             case Action.VERIFY:
                 try:
                     vp = self.select_presentation()
@@ -491,38 +537,15 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 except NothingFound as err:
                     self.flush('Verification aborted: %s' % err)
                     return
-                # TODO: Choose from known registrar of verifiers or reveive
-                # from user input
-                address = 'http://localhost:7001'
-                endpoint = 'api/v1/credentials/verify/'
                 try:
-                    self.flush('Waiting for response (takes seconds)...')
-                    resp = HttpClient(address).post(endpoint, {
-                        'vp': vp,
-                    })
+                    resp = self.request_verification(vp)
                 except HttpConnectionError as err:
-                    self.flush('Could not connect to issuer: %s' % err)
+                    self.flush('Could not connect to verifier: %s' % err)
                     return
-                # TODO: This handling assumes that an API spec has been
-                # aedvertized on behalf of the verifier
-                match resp.status_code:
-                    case 200:
-                        results = resp.json()['results']
-                        self.flush('Presentation was %sverified:' % ('' if \
-                            results['Verified'] else 'NOT '))
-                        self.flush(results)
-                    case 512:
-                        err = resp.json()['err']
-                        self.flush('Could not verify: %s' % err)
-                    case 400:
-                        err = resp.json()['err']
-                        self.flush('Could not verify: %s' % err)
-                    case _:
-                        self.flush('Could not verify:')
-                        self.flush(resp.json())             # TODO: Capture error
-                pass
+                self.handle_verification_response(resp)
             case Action.DISCARD:
                 self.flush('Request aborted')
+                return
 
     def do_export(self, line):
         try:
