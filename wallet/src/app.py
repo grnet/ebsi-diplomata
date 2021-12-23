@@ -3,8 +3,10 @@ import requests
 from ssi_lib import SSI, SSIGenerationError, SSIRegistrationError, \
     SSIResolutionError, SSIIssuanceError, SSIVerificationError, \
     Template, Vc
-from conf import EBSI_PRFX, RESOLVED, WALTDIR, Table
+from conf import TMPDIR, DBNAME, EBSI_PRFX, RESOLVED, WALTDIR, \
+    Table
 from db import DbConnector, DbConnectionError
+import conf
 
 
 class CreationError(BaseException):
@@ -63,6 +65,12 @@ class WalletApp(SSI, HttpClient):
             err = 'Could not connect to database: %s' % err
             raise RuntimeError(err)
         super().__init__(tmpdir)
+
+    @classmethod
+    def create(cls):
+        tmpdir = conf.TMPDIR
+        dbname = conf.DBNAME
+        return cls(tmpdir, dbname)
     
     def _fetch_key(self, alias):
         return self._db.fetch_entry(alias, Table.KEY)

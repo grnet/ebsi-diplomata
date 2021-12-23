@@ -21,8 +21,8 @@ class VerificationError(BaseException):
 
 
 VAULT = settings.STORAGE    # TOOD: Use an encrypted secure data vault
-KEYFILE = os.path.join(VAULT, 'jwk.json')   # TODO
-DIDFILE = os.path.join(VAULT, 'did.json')   # TODO
+KEYFILE = os.path.join(VAULT, 'jwk.json')
+DIDFILE = os.path.join(VAULT, 'did.json')
 
 _ssi = SSI(settings.TMPDIR)
 

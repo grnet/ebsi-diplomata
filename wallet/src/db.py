@@ -1,5 +1,5 @@
-"""This is an interface for making SQL queries to any database whose schema is
-defined by ../init-db.sql. Rough overview of tables:
+"""Interface for making SQL queries to any database whose schema is defined by
+../init-db.sql. Rough overview:
 
     key | alias(VARCHAR) | body(JSONB)
     did | alias(VARCHAR) | body(JSONB) | key(VARCHAR)    [fk to key(alias)]
