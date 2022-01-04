@@ -2,10 +2,10 @@ version: '3.8'
 
 services:
   issuer:
-    container_name: issuer
+    container_name: ebsi-issuer-dev
     build:
-      context: .
-      dockerfile: Dockerfile.web
+      context: ./web
+      dockerfile: Dockerfile.dev
     ports:
       - 7000:7000
     expose:
@@ -21,16 +21,16 @@ services:
       - SQL_HOST=diplomas-db
       - SQL_PORT=5432
     volumes:
-      - ./web:/home/web/app
+      - ./web:/home/dev/app
       - ./storage/issuer:/home/web/storage
       - ./ssi-lib/commands:/usr/local/sbin
     depends_on:
       - diplomas_postgres
   verifier:
-    container_name: verifier
+    container_name: ebsi-verifier-dev
     build:
-      context: .
-      dockerfile: Dockerfile.web
+      context: ./web
+      dockerfile: Dockerfile.dev
     ports:
       - 7001:7001
     expose:
@@ -46,7 +46,7 @@ services:
       - SQL_HOST=diplomas-db
       - SQL_PORT=5432
     volumes:
-      - ./web:/home/web/app
+      - ./web:/home/dev/app
       - ./storage/verifier:/home/web/storage
       - ./ssi-lib/commands:/usr/local/sbin
     depends_on:

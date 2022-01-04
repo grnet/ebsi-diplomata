@@ -1,0 +1,22 @@
+FROM ebsi-base-dev:local
+
+ENV TMPDIR ${HOMEDIR}/tmp
+ENV STORAGE ${HOMEDIR}/storage
+
+RUN apt-get update && apt-get install -y \
+    libpq-dev \
+    postgresql-client
+
+WORKDIR ${HOMEDIR}/app
+
+COPY ./requirements.txt .
+COPY ./requirements-dev.txt .
+
+RUN pip install -r requirements.txt
+RUN pip install -r requirements-dev.txt
+
+COPY . .
+
+RUN mkdir -p ${TMPDIR}
+
+ENTRYPOINT ["./entrypoint.dev.sh"]

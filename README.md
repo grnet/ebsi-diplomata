@@ -34,20 +34,13 @@ Make sure to initialize submodules when cloning the project:
 git clone git@gitlab.grnet.gr:devs/priviledge/ebsi-diplomata.git --recurse-submodules
 ```
 
-Assuming `docker` is installed, build the wallet application as follows:
+Assuming `docker` is installed, build for local use the base image:
 
 ```commandline
-./run-wallet.sh --only-build
+./build-base-image.sh --tag local
 ```
 
-Similarly, assuming `docker-compose` is available, build the issuer and verifier
-services with:
-
-```commandline
-docker-compose build
-```
-
-**Note**: Building the containers from zero takes several minutes due to the
+**Note**: Building the base image from zero takes several minutes due to the
 compilation time of the [`waltid-ssikit`](https://github.com/walt-id/waltid-ssikit)
 dependency.
 
@@ -56,7 +49,7 @@ dependency.
 Run the `issuer` and `verifier` services at `localhost:7000-1` respectively with:
 
 ```commandline
-docker-compose up
+docker-compose up [--build]
 ```
 
 Once both services are up, create a DID for each with:
@@ -74,7 +67,7 @@ DIDs fail to resolve and thus be effectively involved in protocol operations.
 Run the wallet inside a container called `holder` with:
 
 ```commandline
-./run-wallet.sh
+./run-wallet.sh [--build]
 ```
 
 You are ready to manage identities and interact via the wallet shell (command

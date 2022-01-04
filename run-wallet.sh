@@ -2,12 +2,12 @@
 
 usage_string="usage: ./$(basename "$0") [OPTIONS]
 
-Wallet driver script. TODO
+Run the wallet container and optionally build the image.
 
 Options:
-  --name        Container name. Defaults to holder.
-  --build       Build image before running the app 
-  --only-build  Build image without running app
+  --name        Container name. Defaults to \"holder\".
+  --build       Build wallet image before running the application (will also
+                re-build the base image)
   -h, --help    Display help message and exit
 
 Examples:
@@ -15,14 +15,13 @@ Examples:
 
 usage() { echo -n "$usage_string" 1>&2; }
 
-IMAGE=wallet
+IMAGE=ebsi-wallet-dev
 CONTAINER=holder
-WORKDIR=/home/wallet/app            # See Dockerfile.wallet
-STORAGE=/home/wallet/storage        # See Dockerfile.wallet
+WORKDIR=/home/dev/app
+STORAGE=/home/dev/storage
 DBNAME=${STORAGE}/${CONTAINER}.db
 
 DO_BUILD=false
-DO_RUN=true
 
 while [[ $# -gt 0 ]]
 do
@@ -35,11 +34,6 @@ do
             ;;
         --build)
             DO_BUILD=true
-            shift
-            ;;
-        --only-build)
-            DO_BUILD=true
-            DO_RUN=false
             shift
             ;;
         -h|--help)
@@ -55,22 +49,20 @@ do
 done
 
 if [ ${DO_BUILD} == true ]; then
+    ./build-base-image.sh --tag "local" --no-push
     docker image build \
         -t ${IMAGE} \
-        -f Dockerfile.wallet \
+        -f Dockerfile.wallet.dev \
         .
 fi
 
-if [ ${DO_RUN} == true ]; then
-    docker container rm "${CONTAINER}" >/dev/null
-    docker run \
-        --name ${CONTAINER} \
-        --network=host \
-        -v ${PWD}/wallet:/${WORKDIR} \
-        -v ${PWD}/storage/wallet:${STORAGE} \
-        -v ${PWD}/ssi-lib/commands:/usr/local/sbin \
-        -e DBNAME=${DBNAME} \
-        --interactive \
-        --tty \
-        ${IMAGE}:latest
-fi
+docker container rm "${CONTAINER}" >/dev/null
+docker run \
+    --name ${CONTAINER} \
+    --network=host \
+    -v ${PWD}/wallet:/${WORKDIR} \
+    -v ${PWD}/storage/wallet:${STORAGE} \
+    -v ${PWD}/ssi-lib/commands:/usr/local/sbin \
+    -e DBNAME=${DBNAME} \
+    -it \
+    ${IMAGE}:latest

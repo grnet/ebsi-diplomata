@@ -1,3 +1,5 @@
+import os
+import json
 from urllib.parse import urljoin
 import requests
 from ssi_lib import SSI, SSIGenerationError, SSIRegistrationError, \
