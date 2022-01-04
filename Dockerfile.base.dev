@@ -23,8 +23,8 @@ WORKDIR ${HOMEDIR}
 COPY ./ssi-lib/commands /usr/local/sbin
 
 COPY ./ssi-lib ./ssi-lib
-WORKDIR ssi-lib 
+WORKDIR ssi-lib
 RUN rm -rf build/ dist/ ssi_lib.egg-info
-RUN python3 setup.py install 
+RUN python3 setup.py install
 WORKDIR ${HOMEDIR}
 RUN rm -rf ./ssi-lib

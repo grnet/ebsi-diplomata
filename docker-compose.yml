@@ -22,7 +22,7 @@ services:
       - SQL_PORT=5432
     volumes:
       - ./web:/home/dev/app
-      - ./storage/issuer:/home/web/storage
+      - ./storage/issuer:/home/dev/storage
       - ./ssi-lib/commands:/usr/local/sbin
     depends_on:
       - diplomas_postgres
@@ -47,7 +47,7 @@ services:
       - SQL_PORT=5432
     volumes:
       - ./web:/home/dev/app
-      - ./storage/verifier:/home/web/storage
+      - ./storage/verifier:/home/dev/storage
       - ./ssi-lib/commands:/usr/local/sbin
     depends_on:
       - diplomas_postgres
