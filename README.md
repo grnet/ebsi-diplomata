@@ -13,7 +13,7 @@ Purpose of this project is the stabilization of issuer and verifier REST APIs
 along with implementing a reference wallet and a Python package to be used by
 all involved agents. To this end,
 [`waltid-ssikit`](https://github.com/walt-id/waltid-ssikit) has been chosen as
-a SSI/EBSI backend of acclaimed general general utility.
+a SSI/EBSI backend of acclaimed general utility.
 
 ### Components
 

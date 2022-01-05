@@ -15,74 +15,79 @@ def extract_payload(request):
 def show_did(request):
     out = {}
     try:
-        out['did'] = fetch_did()
-        status = 200
+        did = fetch_did()
     except IdentityError as err:
-        out['msg'] = '%s' % err
-        status = 200                                            # TODO
-    return JsonResponse(out, safe=False, status=status)
+        out['errors'] = ['%s' % err,]
+        status = 512
+        return JsonResponse(out, status=status)
+    out['data'] = { 'did': did }
+    status = 200
+    return JsonResponse(out, status=status)
 
 @csrf_exempt
 @require_http_methods(['PUT',])
 def do_create_did(request):
     out = {}
+    payload = extract_payload(request)
     try:
-        payload = extract_payload(request)
-        algo = payload['algo']
-        token = payload['token']
+        algo    = payload['algo']
+        token   = payload['token']
         onboard = payload.get('onboard', True)
-    except (JSONDecodeError, KeyError,) as err:
-        out['err'] = 'Bad request'
-        status = 400                                            # TODO
-        return JsonResponse(out, safe=False, status=status)
+    except KeyError as err:
+        out['errors'] = ['Bad request',]
+        status = 400
+        return JsonResponse(out, status=status)
     try:
         alias = create_did(token, algo, onboard)
-        out['did'] = alias
-        status = 201
     except CreationError as err:
-        out['err'] = '%s' % err
-        status = 512                                            # TODO
-    return JsonResponse(out, safe=True, status=status)
+        out['errors'] = ['%s' % err,]
+        status = 512
+        return JsonResponse(out, status=status)
+    out['data'] = { 'did': alias }
+    status = 201
+    return JsonResponse(out, status=status)
 
 @csrf_exempt
 @require_http_methods(['POST',])
 def do_issue_credential(request):
     out = {}
+    payload = extract_payload(request)
     try:
-        payload = extract_payload(request)
-        holder = payload['holder']
+        holder  = payload['holder']
         vc_type = payload['vc_type']
         content = payload['content']
-    except (JSONDecodeError, KeyError,) as err:
-        out['err'] = 'Bad request'
-        status = 400                                            # TODO
-        return JsonResponse(out, safe=False, status=status)
+    except KeyError as err:
+        out['errors'] = ['Bad request',]
+        status = 400
+        return JsonResponse(out, status=status)
     try:
-        vc = issue_credential(holder, vc_type,
+        credential = issue_credential(holder, vc_type,
                 content)
-        out['vc'] = vc
-        status = 200
     except IssuanceError as err:
-        out['err'] = '%s' % err
-        status = 512                                            # TODO
-    return JsonResponse(out, safe=False, status=status)
+        out['errors'] = ['%s' % err,]
+        status = 512
+        return JsonResponse(out, status=status)
+    out['data'] = { 'credential': credential, }
+    status = 200
+    return JsonResponse(out, status=status)
 
 @csrf_exempt
 @require_http_methods(['POST',])
 def do_verify_credentials(request):
     out = {}
+    payload = extract_payload(request)
     try:
-        payload = extract_payload(request)
-        vp = payload['vp']
+        presentation = payload['presentation']
     except (JSONDecodeError, KeyError,) as err:
-        out['err'] = 'Bad request'
-        status = 400                                            # TODO
-        return JsonResponse(out, safe=False, status=status)
+        out['errors'] = ['Bad request',]
+        status = 400
+        return JsonResponse(out, status=status)
     try:
-        rslts = verify_presentation(vp)
-        out['results'] = rslts
-        status = 200
+        results = verify_presentation(presentation)
     except VerificationError as err:
-        out['err'] = '%s' % err
-        status = 512                                            # TODO
-    return JsonResponse(out, safe=False, status=status)
+        out['errors'] = ['%s' % err,]
+        status = 512
+        return JsonResponse(out, status=status)
+    out['data'] = { 'results': results }
+    status = 200
+    return JsonResponse(out, status=status)

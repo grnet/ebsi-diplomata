@@ -42,9 +42,11 @@ class HttpClient(object):
             raise HttpConnectionError(err)
         return resp
 
-    def http_get(self, remote, endpoint):
+    def http_get(self, remote, endpoint, querystring={}):
         url = self._create_url(remote, endpoint)
-        resp = self._do_request('get', url)
+        resp = self._do_request('get', url, json={
+            'params': querystring,
+        })
         return resp
 
     def http_post(self, remote, endpoint, payload):
@@ -265,5 +267,5 @@ class WalletApp(SSI, HttpClient):
         payload = {
             'vp': presentation,
         }
-        resp = self.http_post(payload)
+        resp = self.http_post(remote, endpoint, payload)
         return resp

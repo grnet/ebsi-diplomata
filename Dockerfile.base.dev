@@ -10,7 +10,6 @@ ENV WALTDIR ${HOMEDIR}/waltid-ssikit
 RUN chmod 1777 /tmp
 RUN apt-get update && apt-get install -y \
     gcc \
-    openjdk-17-jre \
     openjdk-17-jdk
 
 COPY ./waltid-ssikit ${WALTDIR}

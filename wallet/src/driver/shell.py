@@ -221,9 +221,9 @@ class WalletShell(cmd.Cmd, MenuHandler):
         code, body = self._app.parse_http_response(resp)
         match code:
             case 200:
-                credential = body['vc']
+                credential = body['data']['credential']
             case 400 | 512 :
-                self.flush('Could not issue: %s' % body['err'])
+                self.flush('Could not issue: %s' % body['errors'][0])
                 return
             case _:
                 self.flush('Could not issue: Response status code: %d'
@@ -246,10 +246,10 @@ class WalletShell(cmd.Cmd, MenuHandler):
         code, body = self._app.parse_http_response(resp)
         match code:
             case 200:
-                results = body['results']
+                results = body['data']['results']
                 verified = results['Verified']
             case 400 | 512 :
-                self.flush('Could not verify: %s' % body['err'])
+                self.flush('Could not verify: %s' % body['errors'][0])
                 return
             case _:
                 self.flush('Could not verify: Response status code: %d'

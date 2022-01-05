@@ -2,10 +2,10 @@
 
 **Reference implementation of EBSI-diplomas wallet**
 
-![Python >= 3.10](https://img.shields.io/badge/python-%3E%3D%203.10-blue.svg)
+**DISCLAIMER: This is only a prototype and not currently intended for
+production. Private keys are stored as plaintext in the wallet's database.**
 
-**DISCLAIMER:** This is only a prototype and not currently intended for
-production. Private keys are stored as plaintext in the wallet's database.
+![Python >= 3.10](https://img.shields.io/badge/python-%3E%3D%203.10-blue.svg)
 
 Local application for managing multiple identities (keys and DIDs), storing
 verifiable credentials and interacting with online issuers and verifiers.

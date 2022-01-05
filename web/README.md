@@ -2,6 +2,9 @@
 
 **Web service for online EBSI-diplomas agents**
 
+**DISCLAIMER: This is only a prototype and not currently intended for
+production. Private keys are stored as plaintext in a file.**
+
 ![Python >= 3.10](https://img.shields.io/badge/python-%3E%3D%203.10-blue.svg)
 
 Django application capable of issuing and verifying diplomas upon request from
