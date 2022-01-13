@@ -265,7 +265,7 @@ class WalletApp(SSI, HttpClient):
 
     def request_verification(self, remote, endpoint, presentation):
         payload = {
-            'vp': presentation,
+            'presentation': presentation,
         }
         resp = self.http_post(remote, endpoint, payload)
         return resp
