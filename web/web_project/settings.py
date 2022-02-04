@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 ] + [
     'ssi.apps.SSIConfig',
+    'oauth.apps.OauthConfig',
 ]
 
 MIDDLEWARE = [
