@@ -4,18 +4,24 @@ from django.conf import settings
 from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from oauth.logic import authlib
+
+from authlib.integrations.django_client import OAuth
+from .login.google import GoogleLoginHandler
+
+oauth = OAuth()
+google = GoogleLoginHandler(oauth)
+
 
 @require_http_methods(['GET',])
 def google_login(request):
     out = {}
-    out['data'] = { 'message': 'dummy google login' }
+    out['data'] = google.login(request)
     status = 200
     return JsonResponse(out, status=status)
 
 @require_http_methods(['GET',])
 def google_callback(request):
     out = {}
-    out['data'] = { 'message': 'dummy google callback' }
+    out['data'] = google.callback(request)
     status = 200
     return JsonResponse(out, status=status)
