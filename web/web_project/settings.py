@@ -80,6 +80,32 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'web_project.wsgi.application'
 
+# Oauth
+
+PN_GOOGLE = 'google'
+
+AUTHLIB_OAUTH_CLIENTS = {
+    PN_GOOGLE: {
+        'client_id': os.environ.get('GOOGLE_CLIENT_ID', ''),
+        'client_secret': os.environ.get('GOOGLE_CLIENT_SECRET', ''),
+        'access_token_url': os.environ.get('GOOGLE_TOKEN_URL', ''),
+        'authorize_url': os.environ.get('GOOGLE_AUTHORIZE_URL', ''),
+        'api_base_url': os.environ.get('GOOGLE_API_BASE_URL', ''),
+        'server_metadata_url': os.environ.get(
+            'GOOGLE_SERVER_METADATA_URL', None
+        ),
+        'client_kwargs': {
+            'scope': os.environ.get(
+                'GOOGLE_SCOPE', 'openid profile email'
+            ),
+        }
+    },
+    # Put here further oauth clients
+    # ...
+}
+
+AUTH_STATE_PREFIX= os.environ.get('AUTH_STATE_PREFIX', default='')
+
 
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
