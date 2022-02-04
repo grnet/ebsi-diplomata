@@ -13,7 +13,8 @@ ssi_urls = [
 ]
 
 oauth_urls = [
-    path('login/', login),
+    path('google/login/', google_login, name='google_login'),
+    path('google/callback/', google_callback, name='google_callback'),
 ]
 
 urlpatterns = [
