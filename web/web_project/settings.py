@@ -106,6 +106,13 @@ AUTHLIB_OAUTH_CLIENTS = {
 
 AUTH_STATE_PREFIX= os.environ.get('AUTH_STATE_PREFIX', default='')
 
+CODE_EXPIRES_AFTER_SECS = int(os.environ.get(
+    'EBSI_DIPLOMAS_CODE_EXPIRES_AFTER_SECS', 12))
+TOKEN_EXPIRES_AFTER_SECS = 3600 * 24 * 365 if DEBUG else int(os.environ.get(
+    'EBSI_DIPLOMAS_TOKEN_EXPIRES_AFTER_SECS', 20 * 60))
+TOKEN_REFRESH_AFTER_SECS = int(os.environ.get(
+    'EBSI_DIPLOMAS_API_TOKEN_REFRESH_AFTER_SECS', 2 * 60))
+
 
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
