@@ -24,8 +24,10 @@ def _get_redirect_uri(request, login_handler, callback):
 @require_http_methods(['GET',])
 def google_callback(request):
     profile = google.retrieve_profile_from_token(request)
+    user = google.retrieve_user(profile)
+    out = user
     status = 200
-    return JsonResponse(profile, status=status)
+    return JsonResponse(out, status=status)
 
 @require_http_methods(['GET',])
 def google_login(request):

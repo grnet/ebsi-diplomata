@@ -30,6 +30,7 @@ class OAuthLoginHandler(object):
         return token
 
     def retrieve_profile_from_token(self, request):
+        # TODO: handle oauth exceptions
         token = self._oauth.provider.retrieve_access_token(request)
         profile = self._oauth.provider.parse_access_token(request, token)
         return profile
@@ -50,8 +51,8 @@ class OAuthLoginHandler(object):
         """
         """
 
-    def retrieve_user(self, *args):
-        info = self._extract_user_info(*args)
+    def retrieve_user(self, profile):
+        info = self._extract_user_info(profile)
         data = self._extract_user_data(info)
         user = self._get_or_create_user(data)
         return user
