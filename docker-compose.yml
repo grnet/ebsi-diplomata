@@ -33,31 +33,31 @@ services:
       - ./ssi-lib/commands:/usr/local/sbin
     depends_on:
       - diplomas_postgres
-  verifier:
-    container_name: ebsi-verifier-dev
-    build:
-      context: ./web
-      dockerfile: Dockerfile.dev
-    ports:
-      - 7001:7001
-    expose:
-      - 7001
-    environment:
-      DEBUG: 1
-      HTTP_PORT: 7001
-      DATABASE: postgres
-      SQL_DATABASE: diplomas_db
-      SQL_USER: diplomas_db_user
-      SQL_PASSWORD: diplomas_db_password
-      SQL_ENGINE: django.db.backends.postgresql
-      SQL_HOST: diplomas-db
-      SQL_PORT: 5432
-    volumes:
-      - ./web:/home/dev/app
-      - ./storage/verifier:/home/dev/storage
-      - ./ssi-lib/commands:/usr/local/sbin
-    depends_on:
-      - diplomas_postgres
+        # verifier:
+        #   container_name: ebsi-verifier-dev
+        #   build:
+        #     context: ./web
+        #     dockerfile: Dockerfile.dev
+        #   ports:
+        #     - 7001:7001
+        #   expose:
+        #     - 7001
+        #   environment:
+        #     DEBUG: 1
+        #     HTTP_PORT: 7001
+        #     DATABASE: postgres
+        #     SQL_DATABASE: diplomas_db
+        #     SQL_USER: diplomas_db_user
+        #     SQL_PASSWORD: diplomas_db_password
+        #     SQL_ENGINE: django.db.backends.postgresql
+        #     SQL_HOST: diplomas-db
+        #     SQL_PORT: 5432
+        #   volumes:
+        #     - ./web:/home/dev/app
+        #     - ./storage/verifier:/home/dev/storage
+        #     - ./ssi-lib/commands:/usr/local/sbin
+        #   depends_on:
+        #     - diplomas_postgres
   diplomas_postgres:
     container_name: diplomas-db
     image: postgres:14.0-alpine
