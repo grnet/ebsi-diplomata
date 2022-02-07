@@ -45,13 +45,8 @@ if [ ${DO_BUILD} == true ]; then
 fi
 
 # TODO: Give values after google oauth setup
-export EBSI_DIPLOMAS_GOOGLE_CLIENT_ID=
-export EBSI_DIPLOMAS_GOOGLE_CLIENT_SECRET=
-export EBSI_DIPLOMAS_GOOGLE_TOKEN_URL=
-export EBSI_DIPLOMAS_GOOGLE_AUTHORIZE_URL=
-export EBSI_DIPLOMAS_GOOGLE_API_BASE_URL=
-export EBSI_DIPLOMAS_GOOGLE_SERVER_METADATA_URL=
-export EBSI_DIPLOMAS_GOOGLE_SCOPE=
+export EBSI_DIPLOMAS_GOOGLE_CLIENT_ID="405148207611-0vgte96mpvsn3aa7cnl444odeot1c43q.apps.googleusercontent.com"
+export EBSI_DIPLOMAS_GOOGLE_CLIENT_SECRET="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"
 
 docker-compose up $compose_args \
     --remove-orphans

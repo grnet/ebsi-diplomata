@@ -22,11 +22,11 @@ services:
       SQL_PORT: 5432
       GOOGLE_CLIENT_ID: ${EBSI_DIPLOMAS_GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${EBSI_DIPLOMAS_GOOGLE_CLIENT_SECRET}
-      GOOGLE_TOKEN_URL: ${EBSI_DIPLOMAS_GOOGLE_TOKEN_URL}
-      GOOGLE_AUTHORIZE_URL: ${EBSI_DIPLOMAS_GOOGLE_AUTHORIZE_URL}
-      GOOGLE_API_BASE_URL: ${EBSI_DIPLOMAS_GOOGLE_API_BASE_URL}
-      GOOGLE_SERVER_METADATA_URL: ${EBSI_DIPLOMAS_GOOGLE_SERVER_METADATA_URL}
-      GOOGLE_SCOPE: ${EBSI_DIPLOMAS_GOOGLE_SCOPE}
+      GOOGLE_TOKEN_URL: 'https://www.googleapis.com/oauth2/v4/token'
+      GOOGLE_AUTHORIZE_URL: 'https://accounts.google.com/o/oauth2/v2/auth'
+      GOOGLE_API_BASE_URL: 'https://www.googleapis.com/'
+      GOOGLE_SERVER_METADATA_URL: 'https://accounts.google.com/.well-known/openid-configuration'
+      GOOGLE_SCOPE: 'openid profile email'
     volumes:
       - ./web:/home/dev/app
       - ./storage/issuer:/home/dev/storage

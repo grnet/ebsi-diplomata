@@ -2,12 +2,16 @@
 
 from abc import ABCMeta, abstractmethod
 from django.db import transaction
+from authlib.common.security import generate_token
 
 
 class OAuthWrapper(object):
 
     def __init__(self, oauth, backend_cls, **kw):
-        self._oauth = backend_cls(oauth, **kw)
+        self.provider = backend_cls(oauth, **kw)
+
+    def generate_state(self):
+        return self.provider.generate_state()
 
 
 class OAuthLoginHandler(object):
@@ -16,14 +20,28 @@ class OAuthLoginHandler(object):
         self._login_checks = login_checks
         self._oauth = OAuthWrapper(oauth, backend_cls)
 
+    @property
+    def name(self):
+        return self._oauth.provider.name
+
+    def generate_state(self):
+        # TODO: Use auth prefix from settings, if given
+        token = generate_token()
+        return token
+
+    def retrieve_profile_from_token(self, request):
+        token = self._oauth.provider.retrieve_access_token(request)
+        profile = self._oauth.provider.parse_access_token(request, token)
+        return profile
+
     @abstractmethod
-    def _extract_user_info(self, *args):
-        """
+    def _extract_user_info(self, profile):
+        """Define here how to extract user info from profile
         """
 
     @abstractmethod
     def _extract_user_data(self, info):
-        """
+        """Define here how to transform user info to data
         """
 
     @transaction.atomic
