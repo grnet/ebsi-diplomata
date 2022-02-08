@@ -5,11 +5,17 @@ from django.db import transaction
 from django.conf import settings
 from django.urls import reverse
 from django.core.cache import cache
-from authlib.common.security import generate_token
+from authlib.common.security import generate_token as generate_randomness
 import uuid
 from oauth.models import UserToken
+from oauth.providers.base import  OAuthException
 
 CODE_EXPIRES_AFTER_SECS = settings.CODE_EXPIRES_AFTER_SECS
+
+
+class OAuthLoginFailure(BaseException):
+    pass
+
 
 class OAuthWrapper(object):
 
@@ -39,7 +45,7 @@ class OAuthLoginHandler(object):
         return redirect_uri
 
     def _generate_state(self):
-        return settings.AUTH_STATE_PREFIX + generate_token()
+        return settings.AUTH_STATE_PREFIX + generate_randomness()
 
     def redirect_to_provider(self, request, callback):
         redirect_uri = self._get_redirect_uri(request, callback)
@@ -50,8 +56,11 @@ class OAuthLoginHandler(object):
 
     def retrieve_profile_from_token(self, request):
         # TODO: handle oauth exceptions
-        token = self._oauth.provider.retrieve_access_token(request)
-        profile = self._oauth.provider.parse_access_token(request, token)
+        try:
+            token = self._oauth.provider.retrieve_access_token(request)
+            profile = self._oauth.provider.parse_access_token(request, token)
+        except OAuthException as err:
+            raise OAuthLoginFailure
         return profile
 
     @abstractmethod
@@ -71,10 +80,10 @@ class OAuthLoginHandler(object):
         """
 
     def _generate_token_value(self, nr_bytes=32):
-        return generate_token(nr_bytes)
+        return generate_randomness(nr_bytes)
 
     def _generate_session_code(self, nr_bytes=32):
-        return generate_token(nr_bytes)
+        return generate_randomness(nr_bytes)
 
     def retrieve_user(self, profile):
         info = self._extract_user_info(profile)
