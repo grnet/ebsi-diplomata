@@ -150,3 +150,13 @@ def show_alumni(request):
     out['data'] = [a.serialize() for a in Alumnus.objects.all()]
     status = 200
     return JsonResponse(out, status=status)
+
+from oauth.util import token_auth
+
+@require_http_methods(['GET',])
+@token_auth
+def show_sample(request):
+    out = {}
+    out['data'] = 'sample'
+    status = 200
+    return JsonResponse(out, status=status)
