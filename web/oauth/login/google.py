@@ -1,6 +1,6 @@
 from oauth.login.base import OAuthLoginHandler
 from oauth.providers.google import GoogleIdProvider
-from ssi.models import User
+from ssi.models import User, Alumnus
 
 
 class GoogleLoginHandler(OAuthLoginHandler):
@@ -37,5 +37,15 @@ class GoogleLoginHandler(OAuthLoginHandler):
         return data
 
     def _get_or_create_user(self, data):
-        # TODO: Create database entry
-        return data
+        try:
+            alumnus = Alumnus.objects.get(extern_id=data['extern_id'])
+        except Alumnus.DoesNotExist:
+            user = User.objects.create(
+                auth_provider=self.name,
+                role=User.ALUMNUS
+            )
+            alumnus = Alumnus.objects.create(user=user, **data)
+        else:
+            user = alumnus.user
+        return user
+

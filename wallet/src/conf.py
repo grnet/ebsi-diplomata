@@ -20,7 +20,6 @@ class Table:
 
 ISSUER_ADDRESS      = 'http://localhost:7000'
 ISSUE_ENDPOINT      = 'api/v1/credentials/issue/'
+LOGIN_ENDPOINT      = 'api/v1/google/login/'
 VERIFIER_ADDRESS    = 'http://localhost:7001'
 VERIFY_ENDPOINT     = 'api/v1/credentials/verify/'
-
-

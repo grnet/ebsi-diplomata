@@ -2,7 +2,7 @@ import os
 import cmd, sys
 import json
 from conf import STORAGE, TMPDIR, Table, Ed25519, Secp256k1, RSA, \
-        ISSUER_ADDRESS, ISSUE_ENDPOINT, \
+        ISSUER_ADDRESS, ISSUE_ENDPOINT, LOGIN_ENDPOINT, \
         VERIFIER_ADDRESS, VERIFY_ENDPOINT
 from app import CreationError, RegistrationError, ResolutionError, \
         IssuanceError, VerificationError, HttpConnectionError
@@ -465,6 +465,12 @@ class WalletShell(cmd.Cmd, MenuHandler):
             case Action.DISCARD:
                 self.flush('Request aborted')
                 return
+
+    def do_login(self, line):
+        # resp = self._app.http_get(ISSUER_ADDRESS, LOGIN_ENDPOINT)
+        # with open(STORAGE + '/callback', 'w+') as f:
+        #     f.write(resp.history[1].url)
+        print('dummy login')
 
     def do_export(self, line):
         try:

@@ -28,8 +28,8 @@ class User(AbstractBaseUser):
     ADMIN = 'admin'
 
     ROLES = [
-        (STUDENT, 'Student'),
         (ALUMNUS, 'Alumnus'),
+        (STUDENT, 'Student'),
         (HELPDESK, 'Helpdesk'),
         (ADMIN, 'Admin'),
     ]
@@ -62,3 +62,48 @@ class User(AbstractBaseUser):
             pass
         elif self._is_admin():
             pass
+
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, null=True, on_delete=models.CASCADE)
+    email = models.EmailField(null=True)
+    phone = models.CharField(max_length=10, null=True)
+
+    class Meta:
+        abstract = True
+
+
+class Alumnus(UserProfile):
+    created_by = models.ForeignKey(
+        User, related_name='created_by', null=True, on_delete=models.PROTECT
+    )
+    extern_id = models.CharField(max_length=255, null=True)
+    first_name = models.CharField(max_length=2048)
+    last_name = models.CharField(max_length=2048)
+    father_name = models.CharField(max_length=2048, null=True)
+    mother_name = models.CharField(max_length=2048, null=True)
+    birthyear = models.CharField(max_length=4, null=True)
+    birthdate = models.CharField(max_length=64, null=True)
+    afm = models.CharField(max_length=64)
+
+    @property
+    def full_name(self):
+        return self.first_name + ' ' + self.last_name
+
+    def serialize(self):
+        out = {}
+        out['id'] = self.id
+        out['extern_id'] = self.extern_id
+        out['first_name'] = self.first_name
+        out['last_name'] = self.last_name
+        out['father_name'] = self.father_name
+        out['mother_name'] = self.mother_name
+        out['birthyear'] = self.birthyear
+        out['birthdate'] = self.birthdate
+        out['email'] = self.email
+        out['phone'] = self.phone
+        out['afm'] = self.afm
+        creator = self.created_by
+        if creator:
+            out['created_by'] = show_user(creator)
+        return out

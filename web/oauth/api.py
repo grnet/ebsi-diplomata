@@ -13,8 +13,13 @@ google = GoogleLoginHandler(oauth)
 def google_callback(request):
     profile = google.retrieve_profile_from_token(request)
     user = google.retrieve_user(profile)
-    out = user
+    # out = user
+
+    tmp_code = google.create_session(user)
     status = 200
+    out = {}
+    out['code'] = tmp_code
+
     return JsonResponse(out, status=status)
 
 @require_http_methods(['GET',])

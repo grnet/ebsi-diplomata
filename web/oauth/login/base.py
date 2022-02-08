@@ -5,6 +5,8 @@ from django.db import transaction
 from django.conf import settings
 from django.urls import reverse
 from authlib.common.security import generate_token
+import uuid
+from oauth.models import UserToken
 
 
 class OAuthWrapper(object):
@@ -66,3 +68,12 @@ class OAuthLoginHandler(object):
         data = self._extract_user_data(info)
         user = self._get_or_create_user(data)
         return user
+
+    def create_session(self, user, nr_bytes=32):
+        token = generate_token(nr_bytes)
+        UserToken.objects.create(
+            user=user,
+            token=token,
+            session_id=str(uuid.uuid4()).replace('-', ''),
+        )
+        return token

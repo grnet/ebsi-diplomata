@@ -28,3 +28,13 @@ class UserToken(models.Model):
         if self.last_used_at + refresh_rate <= current_time:
             self.last_used_at = current_time
             self.save()
+
+    def serialize(self):
+        out = {}
+        out['user_id'] = self.user.id
+        out['value'] = self.token
+        out['session_id'] = self.session_id
+        out['created_at'] = self.created_at
+        out['last_used_at'] = self.last_used_at
+        out['is_active'] = self.is_active
+        return out

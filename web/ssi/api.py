@@ -2,11 +2,14 @@ import json
 from json.decoder import JSONDecodeError
 from django.conf import settings
 from django.views.decorators.http import require_http_methods
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404
+from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from ssi.logic import fetch_did, create_did, issue_credential, \
     verify_presentation, IdentityError, CreationError, IssuanceError, \
     VerificationError
+from ssi.models import User, Alumnus
+from oauth.models import UserToken
 
 def extract_payload(request):
     return json.loads(request.body)
@@ -89,5 +92,70 @@ def do_verify_credentials(request):
         status = 512
         return JsonResponse(out, status=status)
     out['data'] = { 'results': results }
+    status = 200
+    return JsonResponse(out, status=status)
+
+@require_http_methods(['GET',])
+def show_tokens(request):
+    tokens = UserToken.objects.all()
+    sort_by = request.GET.get('sort_by', None)
+    if sort_by in ('user_id', 'token',):
+        tokens = tokens.order_by(sort_by)
+    out = {}
+    out['data'] = [t.serialize() for t in tokens],
+    status = 200
+    return JsonResponse(out, status=status, safe=False)
+
+# @require_http_methods(['GET',])
+# def token_from_code(request):
+#     code = request.GET.get('code')
+#     token = consume_code_token(code)
+#     if token:
+#         return JsonResponse({'token': token}, **JSON_KW)
+#     raise faults.BadRequest('Code invalid')
+
+@require_http_methods(['GET',])
+def show_tokens_by_user(request, id):
+    out = {}
+    try:
+        user = get_object_or_404(User, id=id)
+    except Http404 as err:
+        out['errors'] = ['%s' % err,]
+        status = 404
+        return JsonResponse(out, status=status)
+    tokens = UserToken.objects.filter(user=user)
+    out['data'] = [t.serialize() for t in tokens]
+    status = 200
+    return JsonResponse(out, status=status, safe=False)
+
+@require_http_methods(['GET',])
+def show_alumnus(request, id):
+    out = {}
+    try:
+        alumnus = get_object_or_404(Alumnus, id=id)
+    except Http404 as err:
+        out['errors'] = ['%s' % err,]
+        status = 404
+        return JsonResponse(out, status=status)
+    out['data'] = alumnus.serialize()
+    status = 200
+    return JsonResponse(out, status=status, safe=False)
+
+@require_http_methods(['GET',])
+def show_alumni(request):
+    alumni = Alumnus.objects.all()
+    sort_by = request.GET.get('sort_by', None)
+    if sort_by in (
+        'id',
+        'email',
+        'phone',
+        'extern_id',
+        'last_name',
+        'birthdate',
+        'afm',
+    ):
+        alumni = alumni.order_by(sort_by)
+    out = {}
+    out['data'] = [a.serialize() for a in alumni]
     status = 200
     return JsonResponse(out, status=status)

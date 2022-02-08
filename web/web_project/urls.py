@@ -10,6 +10,10 @@ ssi_urls = [
     path('did/create/', do_create_did),
     path('credentials/issue/', do_issue_credential),
     path('credentials/verify/', do_verify_credentials),
+    path('alumni/', show_alumni),
+    path('alumni/<int:id>/', show_alumnus),
+    path('tokens/', show_tokens),
+    path('tokens/<int:id>/', show_tokens_by_user),
 ]
 
 oauth_urls = [
