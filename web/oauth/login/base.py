@@ -2,6 +2,8 @@
 
 from abc import ABCMeta, abstractmethod
 from django.db import transaction
+from django.conf import settings
+from django.urls import reverse
 from authlib.common.security import generate_token
 
 
@@ -23,6 +25,14 @@ class OAuthLoginHandler(object):
     @property
     def name(self):
         return self._oauth.provider.name
+
+    def get_redirect_uri(self, request, callback):
+        redirect_uri = getattr(settings, '%s_REDIRECT_URI' % self.name.upper(),
+            None)
+        if not redirect_uri:
+            redirect_uri = request.build_absolute_uri(
+                reverse(callback).rstrip('/'))
+        return redirect_uri
 
     def generate_state(self):
         # TODO: Use auth prefix from settings, if given
