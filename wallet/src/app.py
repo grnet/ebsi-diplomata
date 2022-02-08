@@ -68,6 +68,7 @@ class WalletApp(SSI, HttpClient):
         except DbConnectionError as err:
             err = 'Could not connect to database: %s' % err
             raise RuntimeError(err)
+        self.auth_token = None          # TODO: Use secure cache
         super().__init__(tmpdir)
 
     @classmethod
@@ -146,6 +147,15 @@ class WalletApp(SSI, HttpClient):
         alias = self.extract_alias_from_vp(entry)
         holder = self.extract_holder_from_vp(entry)
         return self._db.store_vp(alias, holder, entry)
+
+    def store_auth_token(self, token):
+        self.auth_token = token         # TODO: Use secure cache
+
+    def get_auth_token(self):
+        return self.auth_token          # TODO: Use secure cache
+
+    def clear_auth_token(self):
+        self.auth_token = None          # TODO: Use secure cache
 
     def remove(self, alias, table):
         self._db.remove(alias, table)
@@ -268,4 +278,8 @@ class WalletApp(SSI, HttpClient):
             'presentation': presentation,
         }
         resp = self.http_post(remote, endpoint, payload)
+        return resp
+
+    def request_auth_token(self, remote, code):
+        resp = self.http_get(remote, 'api/v1/token/?code=%s' % str(code))
         return resp

@@ -467,10 +467,28 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 return
 
     def do_login(self, line):
-        # resp = self._app.http_get(ISSUER_ADDRESS, LOGIN_ENDPOINT)
-        # with open(STORAGE + '/callback', 'w+') as f:
-        #     f.write(resp.history[1].url)
-        print('dummy login')
+        tmp_code = self.launch_input('Give retrieval code:')
+        resp = self._app.request_auth_token(ISSUER_ADDRESS, tmp_code)
+        code, body = self._app.parse_http_response(resp)
+        match code:
+            case 200:
+                token = body['data']['token']
+            case 400:
+                self.flush('Could not retrieve token: %s' % body['errors'][0])
+                return
+            case _:
+                self.flush('Could not retrieve token: Response status code: %d'
+                        % _)
+                if self.launch_yn('Inspect response body?'):
+                    self.flush(body)
+                return
+        if self.launch_yn('Received authorization token. Inspect?'):
+            self.flush(token)
+        self._app.store_auth_token(token)
+        self.flush('Authorization token was saved in cache')
+
+    def do_token(self, line):
+        self.flush(self._app.get_auth_token())
 
     def do_export(self, line):
         try:
