@@ -14,18 +14,15 @@ google = GoogleLoginHandler(oauth)
 def google_callback(request):
     out = {}
     try:
-        profile = google.retrieve_profile_from_token(request)
+        code = google.create_session(request)
     except OAuthLoginFailure:
         out['errors'] = ['Unauthorized',]
         status = 401
         return JsonResponse(out, status=status)
-    user = google.retrieve_user(profile)
-    tmp_code = google.create_session(user)
-    out['session'] = tmp_code
+    out['session'] = code
     status = 200
     return JsonResponse(out, status=status)
 
 @require_http_methods(['GET',])
 def google_login(request):
-    resp = google.redirect_to_provider(request, google_callback)
-    return resp
+    return google.redirect_to_provider(request, google_callback)

@@ -22,9 +22,6 @@ class OAuthWrapper(object):
     def __init__(self, oauth, backend_cls, **kw):
         self.provider = backend_cls(oauth, **kw)
 
-    def generate_state(self):
-        return self.provider.generate_state()
-
 
 class OAuthLoginHandler(object):
 
@@ -44,21 +41,26 @@ class OAuthLoginHandler(object):
                 reverse(callback).rstrip('/'))
         return redirect_uri
 
-    def _generate_state(self):
-        return settings.AUTH_STATE_PREFIX + generate_randomness()
+    def _generate_auth_state(self, prefix=''):
+        return prefix + generate_randomness()
 
     def redirect_to_provider(self, request, callback):
         redirect_uri = self._get_redirect_uri(request, callback)
-        state = self._generate_state()
+        state = self._generate_auth_state(prefix=settings.AUTH_STATE_PREFIX)
         resp = self._oauth.provider.oauth.authorize_redirect(request,
                 redirect_uri, state=state)
         return resp
 
-    def retrieve_profile_from_token(self, request):
-        # TODO: handle oauth exceptions
+    def _retrieve_access_token(self, request):
+        return self._oauth.provider.retrieve_access_token(request)
+
+    def _parse_access_token(self, request, token):
+        return self._oauth.provider.parse_access_token(request, token)
+
+    def _extract_profile_from_access_token(self, request):
         try:
-            token = self._oauth.provider.retrieve_access_token(request)
-            profile = self._oauth.provider.parse_access_token(request, token)
+            token = self._retrieve_access_token(request)
+            profile = self._parse_access_token(request, token)
         except OAuthException as err:
             raise OAuthLoginFailure
         return profile
@@ -79,25 +81,28 @@ class OAuthLoginHandler(object):
         """Define here how to create user from data
         """
 
-    def _generate_token_value(self, nr_bytes=32):
-        return generate_randomness(nr_bytes)
-
-    def _generate_session_code(self, nr_bytes=32):
-        return generate_randomness(nr_bytes)
-
-    def retrieve_user(self, profile):
+    def _retrieve_user(self, profile):
         info = self._extract_user_info(profile)
         data = self._extract_user_data(info)
         user = self._get_or_create_user(data)
         return user
 
-    def create_session(self, user, nr_bytes=32):
-        token = self._generate_token_value(nr_bytes)
-        UserToken.objects.create(
-            user=user,
-            token=token,
-            session_id=str(uuid.uuid4()).replace('-', ''),
-        )
-        tmp_code = self._generate_session_code(nr_bytes)
-        cache.set('session:%s' % tmp_code, CODE_EXPIRES_AFTER_SECS)
-        return tmp_code
+    def _generate_token_value(self, nr_bytes=32):
+        return generate_randomness(nr_bytes)
+
+    def _generate_session_id(self):
+        return str(uuid.uuid4()).replace('-', ''),
+
+    def _generate_session_code(self, nr_bytes=32):
+        return generate_randomness(nr_bytes)
+
+    def create_session(self, request):
+        profile = self._extract_profile_from_access_token(
+            request)
+        user = self._retrieve_user(profile)
+        token = self._generate_token_value()
+        UserToken.objects.create(user=user, token=token,
+            session_id=self._generate_session_id())
+        code = self._generate_session_code()
+        cache.set('session:%s' % code, token, CODE_EXPIRES_AFTER_SECS)
+        return code
