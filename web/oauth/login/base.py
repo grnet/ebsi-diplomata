@@ -4,10 +4,12 @@ from abc import ABCMeta, abstractmethod
 from django.db import transaction
 from django.conf import settings
 from django.urls import reverse
+from django.core.cache import cache
 from authlib.common.security import generate_token
 import uuid
 from oauth.models import UserToken
 
+CODE_EXPIRES_AFTER_SECS = settings.CODE_EXPIRES_AFTER_SECS
 
 class OAuthWrapper(object):
 
@@ -28,7 +30,7 @@ class OAuthLoginHandler(object):
     def name(self):
         return self._oauth.provider.name
 
-    def get_redirect_uri(self, request, callback):
+    def _get_redirect_uri(self, request, callback):
         redirect_uri = getattr(settings, '%s_REDIRECT_URI' % self.name.upper(),
             None)
         if not redirect_uri:
@@ -36,10 +38,15 @@ class OAuthLoginHandler(object):
                 reverse(callback).rstrip('/'))
         return redirect_uri
 
-    def generate_state(self):
-        # TODO: Use auth prefix from settings, if given
-        token = generate_token()
-        return token
+    def _generate_state(self):
+        return settings.AUTH_STATE_PREFIX + generate_token()
+
+    def redirect_to_provider(self, request, callback):
+        redirect_uri = self._get_redirect_uri(request, callback)
+        state = self._generate_state()
+        resp = self._oauth.provider.oauth.authorize_redirect(request,
+                redirect_uri, state=state)
+        return resp
 
     def retrieve_profile_from_token(self, request):
         # TODO: handle oauth exceptions
@@ -60,8 +67,14 @@ class OAuthLoginHandler(object):
     @transaction.atomic
     @abstractmethod
     def _get_or_create_user(self, data):
+        """Define here how to create user from data
         """
-        """
+
+    def _generate_token_value(self, nr_bytes=32):
+        return generate_token(nr_bytes)
+
+    def _generate_session_code(self, nr_bytes=32):
+        return generate_token(nr_bytes)
 
     def retrieve_user(self, profile):
         info = self._extract_user_info(profile)
@@ -70,10 +83,12 @@ class OAuthLoginHandler(object):
         return user
 
     def create_session(self, user, nr_bytes=32):
-        token = generate_token(nr_bytes)
+        token = self._generate_token_value(nr_bytes)
         UserToken.objects.create(
             user=user,
             token=token,
             session_id=str(uuid.uuid4()).replace('-', ''),
         )
-        return token
+        tmp_code = self._generate_session_code(nr_bytes)
+        cache.set('session:%s' % tmp_code, CODE_EXPIRES_AFTER_SECS)
+        return tmp_code

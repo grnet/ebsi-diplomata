@@ -13,18 +13,13 @@ google = GoogleLoginHandler(oauth)
 def google_callback(request):
     profile = google.retrieve_profile_from_token(request)
     user = google.retrieve_user(profile)
-    # out = user
-
     tmp_code = google.create_session(user)
-    status = 200
     out = {}
-    out['code'] = tmp_code
-
+    out['session'] = tmp_code
+    status = 200
     return JsonResponse(out, status=status)
 
 @require_http_methods(['GET',])
 def google_login(request):
-    redirect_uri = google.get_redirect_uri(request, google_callback)
-    state = google.generate_state()
-    return google._oauth.provider.oauth.authorize_redirect(request,
-        redirect_uri, state=state)
+    resp = google.redirect_to_provider(request, google_callback)
+    return resp
