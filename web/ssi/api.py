@@ -97,22 +97,25 @@ def do_verify_credentials(request):
 
 @require_http_methods(['GET',])
 def show_tokens(request):
-    tokens = UserToken.objects.all()
-    sort_by = request.GET.get('sort_by', None)
-    if sort_by in ('user_id', 'token',):
-        tokens = tokens.order_by(sort_by)
     out = {}
-    out['data'] = [t.serialize() for t in tokens],
+    out['data'] = [t.serialize() for t in UserToken.objects.all()]
     status = 200
     return JsonResponse(out, status=status, safe=False)
 
-# @require_http_methods(['GET',])
-# def token_from_code(request):
-#     code = request.GET.get('code')
-#     token = consume_code_token(code)
-#     if token:
-#         return JsonResponse({'token': token}, **JSON_KW)
-#     raise faults.BadRequest('Code invalid')
+@require_http_methods(['GET',])
+def show_token_by_code(request):
+    out = {}
+    code = request.GET.get('code')
+    from django.core.cache import cache
+    token = cache.get('session:%s' % code)
+    cache.delete('session:%s' % code)
+    if not token:
+        out['errors'] = ['Code invalid',]
+        status = 400    # Bad request
+        return JsonResponse(out, status=status)
+    out['data'] = { 'token': token }
+    status = 200
+    return JsonResponse(out, status=status, safe=False)
 
 @require_http_methods(['GET',])
 def show_tokens_by_user(request, id):
@@ -143,19 +146,7 @@ def show_alumnus(request, id):
 
 @require_http_methods(['GET',])
 def show_alumni(request):
-    alumni = Alumnus.objects.all()
-    sort_by = request.GET.get('sort_by', None)
-    if sort_by in (
-        'id',
-        'email',
-        'phone',
-        'extern_id',
-        'last_name',
-        'birthdate',
-        'afm',
-    ):
-        alumni = alumni.order_by(sort_by)
     out = {}
-    out['data'] = [a.serialize() for a in alumni]
+    out['data'] = [a.serialize() for a in Alumnus.objects.all()]
     status = 200
     return JsonResponse(out, status=status)

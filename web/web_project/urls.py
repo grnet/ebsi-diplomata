@@ -14,6 +14,7 @@ ssi_urls = [
     path('alumni/<int:id>/', show_alumnus),
     path('tokens/', show_tokens),
     path('tokens/<int:id>/', show_tokens_by_user),
+    path("token/", show_token_by_code),         # /api/v1/token/?code=<tmp_code>
 ]
 
 oauth_urls = [
