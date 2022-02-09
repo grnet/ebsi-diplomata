@@ -36,6 +36,11 @@ class OAuthClient(object, metaclass=ABCMeta):
         """Extra params used for oauth client registration
         """
 
+    def authorize_redirect(self, request, redirect_uri, state):
+        resp = self.oauth.authorize_redirect(request, redirect_uri,
+                state=state)
+        return resp
+
     def _check_error_param(self, request):
         # Check for error query param in request, after ensuring proper state
         # parameter (this is the only param required according to RFC6749)

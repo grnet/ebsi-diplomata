@@ -41,8 +41,7 @@ class OAuthLoginHandler(object):
     def redirect_to_provider(self, request, callback):
         redirect_uri = self._get_redirect_uri(request, callback)
         state = self._generate_auth_state(prefix=settings.AUTH_STATE_PREFIX)
-        resp = self._client.oauth.authorize_redirect(request, redirect_uri,
-                state=state)
+        resp = self._client.authorize_redirect(request, redirect_uri, state)
         return resp
 
     def _retrieve_access_token(self, request):
