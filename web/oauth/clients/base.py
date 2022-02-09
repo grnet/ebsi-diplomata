@@ -16,7 +16,9 @@ class OAuthClient(object, metaclass=ABCMeta):
     def __init__(self, name, oauth, **kw):
         self._name = name
         self._oauth = oauth
-        self._register()
+        params = self._extra_oauth_params()
+        self._oauth.register(name=self._name, overwrite=True,
+                **params)
 
     @property
     def name(self):
@@ -26,13 +28,8 @@ class OAuthClient(object, metaclass=ABCMeta):
     def oauth(self):
         return getattr(self._oauth, self._name)
 
-    def _register(self):
-        extras = self._extra_oauth()
-        self._oauth.register(name=self._name, overwrite=True,
-                **extras)
-
     @abstractmethod
-    def _extra_oauth(self):
+    def _extra_oauth_params(self):
         """Extra params used for oauth client registration
         """
 

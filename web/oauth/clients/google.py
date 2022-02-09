@@ -9,7 +9,7 @@ class GoogleOAuthClient(OAuthClient):
     def __init__(self, oauth, **kw):
         super().__init__(settings.PN_GOOGLE, oauth, **kw)
 
-    def _extra_oauth(self):
+    def _extra_oauth_params(self):
         return {
             # 'compliance_fix': requests_with_retries,
         }
