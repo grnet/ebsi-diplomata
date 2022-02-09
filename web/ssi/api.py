@@ -10,6 +10,7 @@ from ssi.logic import fetch_did, create_did, issue_credential, \
     VerificationError
 from ssi.models import User, Alumnus
 from oauth.models import UserToken
+from oauth.util import token_auth
 
 def extract_payload(request):
     return json.loads(request.body)
@@ -148,5 +149,13 @@ def show_alumnus(request, id):
 def show_alumni(request):
     out = {}
     out['data'] = [a.serialize() for a in Alumnus.objects.all()]
+    status = 200
+    return JsonResponse(out, status=status)
+
+@require_http_methods(['GET',])
+@token_auth
+def show_sample(request):
+    out = {}
+    out['data'] = 'sample'
     status = 200
     return JsonResponse(out, status=status)

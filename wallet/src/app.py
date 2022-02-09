@@ -42,16 +42,16 @@ class HttpClient(object):
             raise HttpConnectionError(err)
         return resp
 
-    def http_get(self, remote, endpoint, querystring={}):
+    def http_get(self, remote, endpoint, querystring={}, headers={}):
         url = self._create_url(remote, endpoint)
         resp = self._do_request('get', url, json={
             'params': querystring,
-        })
+        }, headers=headers)
         return resp
 
-    def http_post(self, remote, endpoint, payload):
+    def http_post(self, remote, endpoint, payload, headers={}):
         url = self._create_url(remote, endpoint)
-        resp = self._do_request('post', url, json=payload)
+        resp = self._do_request('post', url, json=payload, headers=headers)
         return resp
 
     def parse_http_response(self, resp):
@@ -282,4 +282,11 @@ class WalletApp(SSI, HttpClient):
 
     def request_auth_token(self, remote, code):
         resp = self.http_get(remote, 'api/v1/token/?code=%s' % str(code))
+        return resp
+
+    def request_sample(self, remote):
+        token = self.get_auth_token()
+        resp = self.http_get(remote, 'api/v1/sample/', headers={
+            'Authorization': 'Token %s' % token,
+        })
         return resp
