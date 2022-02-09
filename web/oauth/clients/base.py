@@ -74,7 +74,21 @@ class OAuthClient(object, metaclass=ABCMeta):
             raise OAuthException(err)
         return token
 
-    @abstractmethod
     def parse_access_token(self, request, token):
-        """Define here how to extract profile from token
+        """Override here profile extraction from token if needed
         """
+        try:
+            profile = self.oauth.parse_id_token(request, token)
+        except JoseError as err:
+            # Captures multiple cases of bad encoding, or insufficient
+            # crypto, or low or wrong security standards:
+            # https://github.com/lepture/authlib/blob/master/authlib/jose/errors.py
+            err = "JWT error getting profile: %s" % err
+            raise OAuthException(err)
+        except OAuthError as err:
+            err = "OAuth error getting profile: %s" % err
+            raise OAuthException(err)
+        except Exception as err:
+            err = "Something wrong happened: %s" % err
+            raise OAuthException(err)
+        return profile
