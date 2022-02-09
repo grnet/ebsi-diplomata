@@ -12,8 +12,17 @@ from ssi.models import User, Alumnus
 from oauth.models import UserToken
 from oauth.util import token_auth
 
-def extract_payload(request):
+def _extract_payload(request):
     return json.loads(request.body)
+
+def _extract_user_data(request):
+    data = {}
+    if request.user:
+        data['id'] = request.user.id
+        if request.user.is_alumnus():
+            alumnus = Alumnus.objects.get(user=request.user)
+            data.update(alumnus.serialize())
+    return data
 
 @require_http_methods(['GET',])
 def show_did(request):
@@ -32,7 +41,7 @@ def show_did(request):
 @require_http_methods(['PUT',])
 def do_create_did(request):
     out = {}
-    payload = extract_payload(request)
+    payload = _extract_payload(request)
     try:
         algo    = payload['algo']
         token   = payload['token']
@@ -56,7 +65,7 @@ def do_create_did(request):
 @token_auth
 def do_issue_credential(request):
     out = {}
-    payload = extract_payload(request)
+    payload = _extract_payload(request)
     try:
         holder  = payload['holder']
         vc_type = payload['vc_type']
@@ -80,7 +89,7 @@ def do_issue_credential(request):
 @require_http_methods(['POST',])
 def do_verify_credentials(request):
     out = {}
-    payload = extract_payload(request)
+    payload = _extract_payload(request)
     try:
         presentation = payload['presentation']
     except (JSONDecodeError, KeyError,) as err:
@@ -156,11 +165,6 @@ def show_alumni(request):
 @require_http_methods(['GET',])
 @token_auth
 def show_current_user(request):
-    data = {}
-    data['id'] = request.user.id
-    if request.user.is_alumnus():
-        alumnus = Alumnus.objects.get(user=request.user)
-        data.update(alumnus.serialize())
-    out = { 'data': data }
+    out = { 'data': _extract_user_data(request) }
     status = 200
     return JsonResponse(out, status=status)
