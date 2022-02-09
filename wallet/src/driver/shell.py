@@ -467,7 +467,9 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 return
 
     def do_login(self, line):
-        tmp_code = self.launch_input('Give retrieval code:')
+        self.flush(f'Visit {ISSUER_ADDRESS}/{LOGIN_ENDPOINT} in order to' + \
+                ' sign in via google and get a token retrieval code')
+        tmp_code = self.launch_input('Give token retrieval code:')
         resp = self._app.request_auth_token(ISSUER_ADDRESS, tmp_code)
         code, body = self._app.parse_http_response(resp)
         match code:
@@ -482,8 +484,6 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 if self.launch_yn('Inspect response body?'):
                     self.flush(body)
                 return
-        if self.launch_yn('Received authorization token. Inspect?'):
-            self.flush(token)
         self._app.store_auth_token(token)
         self.flush('Authorization token was saved in cache')
 
@@ -568,14 +568,15 @@ class WalletShell(cmd.Cmd, MenuHandler):
     def do_EOF(self, line):
         return True
 
-    def do_sample(self, line):
-        resp = self._app.request_sample(ISSUER_ADDRESS)
+    def do_user(self, line):
+        resp = self._app.request_user(ISSUER_ADDRESS)
         code, body = self._app.parse_http_response(resp)
         match code:
             case 200:
                 data = body['data']
             case 401:
                 self.flush(body['errors'][0])
+                self.flush('Type `login` in order to sign in your wallet')
                 return
             case _:
                 self.flush('Something wrong: Response status code: %d'% _)

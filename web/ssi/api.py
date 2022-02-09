@@ -154,8 +154,12 @@ def show_alumni(request):
 
 @require_http_methods(['GET',])
 @token_auth
-def show_sample(request):
-    out = {}
-    out['data'] = 'sample'
+def show_current_user(request):
+    data = {}
+    data['id'] = request.user.id
+    if request.user.is_alumnus():
+        alumnus = Alumnus.objects.get(user=request.user)
+        data.update(alumnus.serialize())
+    out = { 'data': data }
     status = 200
     return JsonResponse(out, status=status)

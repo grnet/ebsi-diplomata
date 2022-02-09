@@ -253,7 +253,10 @@ class WalletApp(SSI, HttpClient):
             name, surname, subject):
         payload = self.prepare_issuance_payload(holder, person_id, name,
                 surname, subject)
-        resp = self.http_post(remote, endpoint, payload)
+        token = self.get_auth_token()
+        resp = self.http_post(remote, endpoint, payload, headers={
+            'Authorization': 'Token %s' % token,
+        })
         return resp
 
     def create_presentation(self, holder, credentials,
@@ -283,9 +286,9 @@ class WalletApp(SSI, HttpClient):
         resp = self.http_get(remote, f'{API_PREFIX}/token/?code=%s' % str(code))
         return resp
 
-    def request_sample(self, remote):
+    def request_user(self, remote):
         token = self.get_auth_token()
-        resp = self.http_get(remote, f'{API_PREFIX}/sample/', headers={
+        resp = self.http_get(remote, f'{API_PREFIX}/users/current/', headers={
             'Authorization': 'Token %s' % token,
         })
         return resp
