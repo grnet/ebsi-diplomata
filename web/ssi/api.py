@@ -53,6 +53,7 @@ def do_create_did(request):
 
 @csrf_exempt
 @require_http_methods(['POST',])
+@token_auth
 def do_issue_credential(request):
     out = {}
     payload = extract_payload(request)

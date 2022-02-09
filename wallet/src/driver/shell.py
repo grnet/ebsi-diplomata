@@ -222,8 +222,10 @@ class WalletShell(cmd.Cmd, MenuHandler):
         match code:
             case 200:
                 credential = body['data']['credential']
-            case 400 | 512 :
+            case 400 | 401 | 512 :
                 self.flush('Could not issue: %s' % body['errors'][0])
+                if code == 401:
+                    self.flush('Type `login` in order to sign in your wallet')
                 return
             case _:
                 self.flush('Could not issue: Response status code: %d'
