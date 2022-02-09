@@ -487,6 +487,10 @@ class WalletShell(cmd.Cmd, MenuHandler):
         self._app.store_auth_token(token)
         self.flush('Authorization token was saved in cache')
 
+    def do_logout(self, line):
+        self._app.clear_auth_token()
+        self.flush('Authorization token was cleared from cache')
+
     def do_token(self, line):
         self.flush(self._app.get_auth_token())
 
