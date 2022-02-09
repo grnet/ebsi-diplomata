@@ -1,4 +1,4 @@
-"""Generic OAuth2 flow"""
+"""Generic OAuth2 client"""
 
 import requests
 import logging
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 class OAuthException(BaseException):
     pass
 
-class BaseIdProvider(object, metaclass=ABCMeta):
+class OAuthClient(object, metaclass=ABCMeta):
 
     def __init__(self, name, oauth, **kw):
         self._name = name

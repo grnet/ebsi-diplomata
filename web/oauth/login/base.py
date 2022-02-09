@@ -8,7 +8,7 @@ from django.core.cache import cache
 from authlib.common.security import generate_token as generate_randomness
 import uuid
 from oauth.models import UserToken
-from oauth.providers.base import  OAuthException
+from oauth.clients.base import  OAuthException
 
 CODE_EXPIRES_AFTER_SECS = settings.CODE_EXPIRES_AFTER_SECS
 
