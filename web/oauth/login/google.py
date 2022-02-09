@@ -1,12 +1,12 @@
 from oauth.login.base import OAuthLoginHandler
-from oauth.providers.google import GoogleIdProvider
+from oauth.clients.google import GoogleOAuthClient
 from ssi.models import User, Alumnus
 
 
 class GoogleLoginHandler(OAuthLoginHandler):
 
     def __init__(self, oauth):
-        super().__init__(oauth, GoogleIdProvider)
+        super().__init__(oauth, GoogleOAuthClient)
 
     def _extract_user_info(self, profile):
         sub = profile['sub']

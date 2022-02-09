@@ -8,7 +8,7 @@ from django.core.cache import cache
 from authlib.common.security import generate_token as generate_randomness
 import uuid
 from oauth.models import UserToken
-from oauth.providers.base import  OAuthException
+from oauth.clients.base import  OAuthException
 
 CODE_EXPIRES_AFTER_SECS = settings.CODE_EXPIRES_AFTER_SECS
 
@@ -17,21 +17,15 @@ class OAuthLoginFailure(BaseException):
     pass
 
 
-class OAuthWrapper(object):
-
-    def __init__(self, oauth, backend_cls, **kw):
-        self.provider = backend_cls(oauth, **kw)
-
-
 class OAuthLoginHandler(object):
 
-    def __init__(self, oauth, backend_cls, login_checks=None):
+    def __init__(self, oauth, client_cls, login_checks=None):
         self._login_checks = login_checks
-        self._oauth = OAuthWrapper(oauth, backend_cls)
+        self._client = client_cls(oauth)
 
     @property
     def name(self):
-        return self._oauth.provider.name
+        return self._client.name
 
     def _get_redirect_uri(self, request, callback):
         redirect_uri = getattr(settings, '%s_REDIRECT_URI' % self.name.upper(),
@@ -47,15 +41,14 @@ class OAuthLoginHandler(object):
     def redirect_to_provider(self, request, callback):
         redirect_uri = self._get_redirect_uri(request, callback)
         state = self._generate_auth_state(prefix=settings.AUTH_STATE_PREFIX)
-        resp = self._oauth.provider.oauth.authorize_redirect(request,
-                redirect_uri, state=state)
+        resp = self._client.authorize_redirect(request, redirect_uri, state)
         return resp
 
     def _retrieve_access_token(self, request):
-        return self._oauth.provider.retrieve_access_token(request)
+        return self._client.retrieve_access_token(request)
 
     def _parse_access_token(self, request, token):
-        return self._oauth.provider.parse_access_token(request, token)
+        return self._client.parse_access_token(request, token)
 
     def _extract_profile_from_access_token(self, request):
         try:

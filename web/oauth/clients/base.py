@@ -1,4 +1,4 @@
-"""Generic OAuth2 flow"""
+"""Generic OAuth2 client"""
 
 import requests
 import logging
@@ -11,12 +11,14 @@ logger = logging.getLogger(__name__)
 class OAuthException(BaseException):
     pass
 
-class BaseIdProvider(object, metaclass=ABCMeta):
+class OAuthClient(object, metaclass=ABCMeta):
 
     def __init__(self, name, oauth, **kw):
         self._name = name
         self._oauth = oauth
-        self._register()
+        params = self._extra_oauth_params()
+        self._oauth.register(name=self._name, overwrite=True,
+                **params)
 
     @property
     def name(self):
@@ -26,15 +28,15 @@ class BaseIdProvider(object, metaclass=ABCMeta):
     def oauth(self):
         return getattr(self._oauth, self._name)
 
-    def _register(self):
-        extras = self._extra_oauth()
-        self._oauth.register(name=self._name, overwrite=True,
-                **extras)
-
     @abstractmethod
-    def _extra_oauth(self):
+    def _extra_oauth_params(self):
         """Extra params used for oauth client registration
         """
+
+    def authorize_redirect(self, request, redirect_uri, state):
+        resp = self.oauth.authorize_redirect(request, redirect_uri,
+                state=state)
+        return resp
 
     def _check_error_param(self, request):
         # Check for error query param in request, after ensuring proper state
@@ -74,7 +76,21 @@ class BaseIdProvider(object, metaclass=ABCMeta):
             raise OAuthException(err)
         return token
 
-    @abstractmethod
     def parse_access_token(self, request, token):
-        """Define here how to extract profile from token
+        """Override here profile extraction from token if needed
         """
+        try:
+            profile = self.oauth.parse_id_token(request, token)
+        except JoseError as err:
+            # Captures multiple cases of bad encoding, or insufficient
+            # crypto, or low or wrong security standards:
+            # https://github.com/lepture/authlib/blob/master/authlib/jose/errors.py
+            err = "JWT error getting profile: %s" % err
+            raise OAuthException(err)
+        except OAuthError as err:
+            err = "OAuth error getting profile: %s" % err
+            raise OAuthException(err)
+        except Exception as err:
+            err = "Something wrong happened: %s" % err
+            raise OAuthException(err)
+        return profile
