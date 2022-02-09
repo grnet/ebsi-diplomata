@@ -220,15 +220,11 @@ class WalletApp(SSI, HttpClient):
             did = json.load(f)
         return did
 
-    def prepare_issuance_payload(self, holder, person_id, name,
-            surname, subject):
+    def prepare_issuance_payload(self, holder, subject):
         return {
             'holder': holder,
             'vc_type': Vc.DIPLOMA,
             'content': {
-                'person_id': person_id,
-                'name': name,
-                'surname': surname,
                 'subject': subject,
             }
         }
@@ -249,10 +245,8 @@ class WalletApp(SSI, HttpClient):
                 content)
         return out
 
-    def request_issuance(self, remote, endpoint, holder, person_id,
-            name, surname, subject):
-        payload = self.prepare_issuance_payload(holder, person_id, name,
-                surname, subject)
+    def request_issuance(self, remote, endpoint, holder, subject):
+        payload = self.prepare_issuance_payload(holder, subject)
         token = self.get_auth_token()
         resp = self.http_post(remote, endpoint, payload, headers={
             'Authorization': 'Token %s' % token,

@@ -5,7 +5,7 @@ from conf import STORAGE, TMPDIR, Table, Ed25519, Secp256k1, RSA, \
         ISSUER_ADDRESS, ISSUE_ENDPOINT, LOGIN_ENDPOINT, \
         VERIFIER_ADDRESS, VERIFY_ENDPOINT
 from app import CreationError, RegistrationError, ResolutionError, \
-        IssuanceError, VerificationError, HttpConnectionError
+        IssuanceError, VerificationError, HttpConnectionError, Vc
 from driver.conf import INTRO, PROMPT, INDENT, Action, UI
 from driver.ui import MenuHandler
 from __init__ import __version__
@@ -131,30 +131,40 @@ class WalletShell(cmd.Cmd, MenuHandler):
         alias = self._app.create_did(key, token, onboard)
         return alias
 
-    def parse_issuance_params(self):
+    def parse_issuance_params(self, local=True):
         aliases = self._app.fetch_dids()
         if not aliases:
             err = 'No DIDs found. Must first create one.'
             raise NothingFound(err)
         holder = self.launch_choice('Choose holder DID', aliases)
-        # TODO: Select credential content via user input
-        person_id = '0x666'
-        name = 'Lucrezia'
-        surname = 'Borgia'
-        subject = 'POISONING'
-        return holder, person_id, name, surname, subject
+        subject = self.launch_input('Subject:')
+        if not local:
+            # In this case, user data will be specified via authentication.
+            return (holder, subject,)
+        person_id = self.launch_input('Person ID:')
+        name = self.launch_input('Given name:')
+        surname = self.launch_input('Surname:')
+        return (holder, person_id, name, surname, subject,)
 
     def issue_credential(self, line):
         holder, person_id, name, surname, subject = \
-            self.parse_issuance_params()
+            self.parse_issuance_params(local=True)
         aliases = self._app.fetch_dids()
         issuer = self.launch_choice('Choose issuer DID', aliases)
         if not self.launch_yn('New credential will be issued. ' +
                 'Proceed?'):
             raise Abortion('Issuance aborted')
-        payload = self._app.prepare_issuance_payload(holder, person_id, 
-                name, surname, subject)
-        out = self._app.mock_issuer(issuer, payload)
+        out = self._app.mock_issuer(issuer, {
+            'holder': holder,
+            'vc_type': Vc.DIPLOMA,
+            'content': {
+                'holder': holder,
+                'name': name,
+                'surname': surname,
+                'person_id': person_id,
+                'subject': subject,
+            }
+        })
         return out
 
     def present_credentials(self, line):
@@ -433,16 +443,14 @@ class WalletShell(cmd.Cmd, MenuHandler):
         match self._mapping[action]:
             case Action.ISSUE:
                 try:
-                    holder, person_id, name, surname, subject = \
-                        self.parse_issuance_params()
+                    holder, subject = self.parse_issuance_params(local=False)
                 except NothingFound as err:
                     self.flush('Request aborted: %s' % err)
                     return
                 self.flush('Waiting for response (takes seconds)...')
                 try:
                     resp = self._app.request_issuance(ISSUER_ADDRESS,
-                            ISSUE_ENDPOINT, holder, person_id, name, surname,
-                            subject)
+                            ISSUE_ENDPOINT, holder, subject)
                 except HttpConnectionError as err:
                     self.flush('Could not connect to issuer: %s' % err)
                     return

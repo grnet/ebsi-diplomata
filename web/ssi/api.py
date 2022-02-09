@@ -74,9 +74,10 @@ def do_issue_credential(request):
         out['errors'] = ['Bad request',]
         status = 400
         return JsonResponse(out, status=status)
+    user_data = _extract_user_data(request)
     try:
         credential = issue_credential(holder, vc_type,
-                content)
+                content, user_data)
     except IssuanceError as err:
         out['errors'] = ['%s' % err,]
         status = 512
