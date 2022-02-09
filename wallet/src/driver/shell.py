@@ -564,6 +564,23 @@ class WalletShell(cmd.Cmd, MenuHandler):
     def do_EOF(self, line):
         return True
 
+    def do_sample(self, line):
+        resp = self._app.request_sample(ISSUER_ADDRESS)
+        code, body = self._app.parse_http_response(resp)
+        match code:
+            case 200:
+                data = body['data']
+            case 401:
+                self.flush(body['errors'][0])
+                return
+            case _:
+                self.flush('Something wrong: Response status code: %d'% _)
+                if self.launch_yn('Inspect response body?'):
+                    self.flush(body)
+                return
+        self.flush(data)
+
+
     do_exit = do_EOF
     do_quit = do_EOF
     do_q    = do_EOF
