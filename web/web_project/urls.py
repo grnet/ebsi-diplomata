@@ -3,7 +3,8 @@ from django.urls import include, path
 from ssi.api import *
 from oauth.api import *
 
-api_endpoint = 'api/v1/'
+api_prefix = settings.API_PREFIX + ('/' if not
+        settings.API_PREFIX.endswith('/') else '')
 
 ssi_urls = [
     path('did/', show_did),
@@ -14,7 +15,7 @@ ssi_urls = [
     path('alumni/<int:id>/', show_alumnus),
     path('tokens/', show_tokens),
     path('tokens/<int:id>/', show_tokens_by_user),
-    path("token/", show_token_by_code),         # /api/v1/token/?code=<tmp_code>
+    path('token/', show_token_by_code),         # /api/v1/token/?code=<tmp_code>
     path('sample/', show_sample),
 ]
 
@@ -25,6 +26,6 @@ oauth_urls = [
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path(api_endpoint, include(ssi_urls)),
-    path(api_endpoint, include(oauth_urls)),
+    path(api_prefix, include(ssi_urls)),
+    path(api_prefix, include(oauth_urls)),
 ]

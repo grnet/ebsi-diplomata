@@ -28,6 +28,8 @@ DEBUG = int(os.environ.get('DEBUG', default=0))
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 APPEND_SLASH = True
 
+API_PREFIX = 'api/v1'
+
 # SSI configuration
 WALTDIR = os.environ.get('WALTDIR')
 APPDIR = os.environ.get('APPDIR')

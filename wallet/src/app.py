@@ -8,6 +8,7 @@ from ssi_lib import SSI, SSIGenerationError, SSIRegistrationError, \
 from conf import TMPDIR, DBNAME, EBSI_PRFX, RESOLVED, WALTDIR, \
     Table
 from db import DbConnector, DbConnectionError
+from conf import API_PREFIX
 import conf
 
 
@@ -274,19 +275,17 @@ class WalletApp(SSI, HttpClient):
         return results
 
     def request_verification(self, remote, endpoint, presentation):
-        payload = {
-            'presentation': presentation,
-        }
+        payload = { 'presentation': presentation }
         resp = self.http_post(remote, endpoint, payload)
         return resp
 
     def request_auth_token(self, remote, code):
-        resp = self.http_get(remote, 'api/v1/token/?code=%s' % str(code))
+        resp = self.http_get(remote, f'{API_PREFIX}/token/?code=%s' % str(code))
         return resp
 
     def request_sample(self, remote):
         token = self.get_auth_token()
-        resp = self.http_get(remote, 'api/v1/sample/', headers={
+        resp = self.http_get(remote, f'{API_PREFIX}/sample/', headers={
             'Authorization': 'Token %s' % token,
         })
         return resp
