@@ -11,15 +11,22 @@ services:
     expose:
       - 7000
     environment:
-      - DEBUG=1
-      - HTTP_PORT=7000
-      - DATABASE=postgres
-      - SQL_DATABASE=diplomas_db
-      - SQL_USER=diplomas_db_user
-      - SQL_PASSWORD=diplomas_db_password
-      - SQL_ENGINE=django.db.backends.postgresql
-      - SQL_HOST=diplomas-db
-      - SQL_PORT=5432
+      DEBUG: 1
+      HTTP_PORT: 7000
+      DATABASE: postgres
+      SQL_DATABASE: diplomas_db
+      SQL_USER: diplomas_db_user
+      SQL_PASSWORD: diplomas_db_password
+      SQL_ENGINE: django.db.backends.postgresql
+      SQL_HOST: diplomas-db
+      SQL_PORT: 5432
+      GOOGLE_CLIENT_ID: ${EBSI_DIPLOMAS_GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${EBSI_DIPLOMAS_GOOGLE_CLIENT_SECRET}
+      GOOGLE_TOKEN_URL: 'https://www.googleapis.com/oauth2/v4/token'
+      GOOGLE_AUTHORIZE_URL: 'https://accounts.google.com/o/oauth2/v2/auth'
+      GOOGLE_API_BASE_URL: 'https://www.googleapis.com/'
+      GOOGLE_SERVER_METADATA_URL: 'https://accounts.google.com/.well-known/openid-configuration'
+      GOOGLE_SCOPE: 'openid profile email'
     volumes:
       - ./web:/home/dev/app
       - ./storage/issuer:/home/dev/storage
@@ -36,15 +43,15 @@ services:
     expose:
       - 7001
     environment:
-      - DEBUG=1
-      - HTTP_PORT=7001
-      - DATABASE=postgres
-      - SQL_DATABASE=diplomas_db
-      - SQL_USER=diplomas_db_user
-      - SQL_PASSWORD=diplomas_db_password
-      - SQL_ENGINE=django.db.backends.postgresql
-      - SQL_HOST=diplomas-db
-      - SQL_PORT=5432
+      DEBUG: 1
+      HTTP_PORT: 7001
+      DATABASE: postgres
+      SQL_DATABASE: diplomas_db
+      SQL_USER: diplomas_db_user
+      SQL_PASSWORD: diplomas_db_password
+      SQL_ENGINE: django.db.backends.postgresql
+      SQL_HOST: diplomas-db
+      SQL_PORT: 5432
     volumes:
       - ./web:/home/dev/app
       - ./storage/verifier:/home/dev/storage
@@ -57,8 +64,8 @@ services:
     volumes:
       - diplomas_postgres_data:/var/lib/postgresql/data/
     environment:
-      - POSTGRES_DB=diplomas_db
-      - POSTGRES_USER=diplomas_db_user
-      - POSTGRES_PASSWORD=diplomas_db_password
+      POSTGRES_DB: diplomas_db
+      POSTGRES_USER: diplomas_db_user
+      POSTGRES_PASSWORD: diplomas_db_password
 volumes:
   diplomas_postgres_data:

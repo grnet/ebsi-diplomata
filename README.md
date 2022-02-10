@@ -49,7 +49,7 @@ dependency.
 Run the `issuer` and `verifier` services at `localhost:7000-1` respectively with:
 
 ```commandline
-docker-compose up [--build]
+./run-services.sh [--build]
 ```
 
 Once both services are up, create a DID for each with:

@@ -8,6 +8,7 @@ from ssi_lib import SSI, SSIGenerationError, SSIRegistrationError, \
 from conf import TMPDIR, DBNAME, EBSI_PRFX, RESOLVED, WALTDIR, \
     Table
 from db import DbConnector, DbConnectionError
+from conf import API_PREFIX
 import conf
 
 
@@ -42,16 +43,16 @@ class HttpClient(object):
             raise HttpConnectionError(err)
         return resp
 
-    def http_get(self, remote, endpoint, querystring={}):
+    def http_get(self, remote, endpoint, querystring={}, headers={}):
         url = self._create_url(remote, endpoint)
         resp = self._do_request('get', url, json={
             'params': querystring,
-        })
+        }, headers=headers)
         return resp
 
-    def http_post(self, remote, endpoint, payload):
+    def http_post(self, remote, endpoint, payload, headers={}):
         url = self._create_url(remote, endpoint)
-        resp = self._do_request('post', url, json=payload)
+        resp = self._do_request('post', url, json=payload, headers=headers)
         return resp
 
     def parse_http_response(self, resp):
@@ -68,6 +69,7 @@ class WalletApp(SSI, HttpClient):
         except DbConnectionError as err:
             err = 'Could not connect to database: %s' % err
             raise RuntimeError(err)
+        self.auth_token = None          # TODO: Use secure cache
         super().__init__(tmpdir)
 
     @classmethod
@@ -147,6 +149,15 @@ class WalletApp(SSI, HttpClient):
         holder = self.extract_holder_from_vp(entry)
         return self._db.store_vp(alias, holder, entry)
 
+    def store_auth_token(self, token):
+        self.auth_token = token         # TODO: Use secure cache
+
+    def get_auth_token(self):
+        return self.auth_token          # TODO: Use secure cache
+
+    def clear_auth_token(self):
+        self.auth_token = None          # TODO: Use secure cache
+
     def remove(self, alias, table):
         self._db.remove(alias, table)
 
@@ -209,15 +220,11 @@ class WalletApp(SSI, HttpClient):
             did = json.load(f)
         return did
 
-    def prepare_issuance_payload(self, holder, person_id, name,
-            surname, subject):
+    def prepare_issuance_payload(self, holder, subject):
         return {
             'holder': holder,
             'vc_type': Vc.DIPLOMA,
             'content': {
-                'person_id': person_id,
-                'name': name,
-                'surname': surname,
                 'subject': subject,
             }
         }
@@ -238,11 +245,12 @@ class WalletApp(SSI, HttpClient):
                 content)
         return out
 
-    def request_issuance(self, remote, endpoint, holder, person_id,
-            name, surname, subject):
-        payload = self.prepare_issuance_payload(holder, person_id, name,
-                surname, subject)
-        resp = self.http_post(remote, endpoint, payload)
+    def request_issuance(self, remote, endpoint, holder, subject):
+        payload = self.prepare_issuance_payload(holder, subject)
+        token = self.get_auth_token()
+        resp = self.http_post(remote, endpoint, payload, headers={
+            'Authorization': 'Token %s' % token,
+        })
         return resp
 
     def create_presentation(self, holder, credentials,
@@ -264,8 +272,17 @@ class WalletApp(SSI, HttpClient):
         return results
 
     def request_verification(self, remote, endpoint, presentation):
-        payload = {
-            'presentation': presentation,
-        }
+        payload = { 'presentation': presentation }
         resp = self.http_post(remote, endpoint, payload)
+        return resp
+
+    def request_auth_token(self, remote, code):
+        resp = self.http_get(remote, f'{API_PREFIX}/token/?code=%s' % str(code))
+        return resp
+
+    def request_user(self, remote):
+        token = self.get_auth_token()
+        resp = self.http_get(remote, f'{API_PREFIX}/users/current/', headers={
+            'Authorization': 'Token %s' % token,
+        })
         return resp

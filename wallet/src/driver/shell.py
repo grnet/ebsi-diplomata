@@ -2,10 +2,10 @@ import os
 import cmd, sys
 import json
 from conf import STORAGE, TMPDIR, Table, Ed25519, Secp256k1, RSA, \
-        ISSUER_ADDRESS, ISSUE_ENDPOINT, \
+        ISSUER_ADDRESS, ISSUE_ENDPOINT, LOGIN_ENDPOINT, \
         VERIFIER_ADDRESS, VERIFY_ENDPOINT
 from app import CreationError, RegistrationError, ResolutionError, \
-        IssuanceError, VerificationError, HttpConnectionError
+        IssuanceError, VerificationError, HttpConnectionError, Vc
 from driver.conf import INTRO, PROMPT, INDENT, Action, UI
 from driver.ui import MenuHandler
 from __init__ import __version__
@@ -131,30 +131,40 @@ class WalletShell(cmd.Cmd, MenuHandler):
         alias = self._app.create_did(key, token, onboard)
         return alias
 
-    def parse_issuance_params(self):
+    def parse_issuance_params(self, local=True):
         aliases = self._app.fetch_dids()
         if not aliases:
             err = 'No DIDs found. Must first create one.'
             raise NothingFound(err)
         holder = self.launch_choice('Choose holder DID', aliases)
-        # TODO: Select credential content via user input
-        person_id = '0x666'
-        name = 'Lucrezia'
-        surname = 'Borgia'
-        subject = 'POISONING'
-        return holder, person_id, name, surname, subject
+        subject = self.launch_input('Subject:')
+        if not local:
+            # In this case, user data will be specified via authentication.
+            return (holder, subject,)
+        person_id = self.launch_input('Person ID:')
+        name = self.launch_input('Given name:')
+        surname = self.launch_input('Surname:')
+        return (holder, person_id, name, surname, subject,)
 
     def issue_credential(self, line):
         holder, person_id, name, surname, subject = \
-            self.parse_issuance_params()
+            self.parse_issuance_params(local=True)
         aliases = self._app.fetch_dids()
         issuer = self.launch_choice('Choose issuer DID', aliases)
         if not self.launch_yn('New credential will be issued. ' +
                 'Proceed?'):
             raise Abortion('Issuance aborted')
-        payload = self._app.prepare_issuance_payload(holder, person_id, 
-                name, surname, subject)
-        out = self._app.mock_issuer(issuer, payload)
+        out = self._app.mock_issuer(issuer, {
+            'holder': holder,
+            'vc_type': Vc.DIPLOMA,
+            'content': {
+                'holder': holder,
+                'name': name,
+                'surname': surname,
+                'person_id': person_id,
+                'subject': subject,
+            }
+        })
         return out
 
     def present_credentials(self, line):
@@ -222,8 +232,10 @@ class WalletShell(cmd.Cmd, MenuHandler):
         match code:
             case 200:
                 credential = body['data']['credential']
-            case 400 | 512 :
+            case 400 | 401 | 512 :
                 self.flush('Could not issue: %s' % body['errors'][0])
+                if code == 401:
+                    self.flush('Type `login` in order to sign in your wallet')
                 return
             case _:
                 self.flush('Could not issue: Response status code: %d'
@@ -431,16 +443,14 @@ class WalletShell(cmd.Cmd, MenuHandler):
         match self._mapping[action]:
             case Action.ISSUE:
                 try:
-                    holder, person_id, name, surname, subject = \
-                        self.parse_issuance_params()
+                    holder, subject = self.parse_issuance_params(local=False)
                 except NothingFound as err:
                     self.flush('Request aborted: %s' % err)
                     return
                 self.flush('Waiting for response (takes seconds)...')
                 try:
                     resp = self._app.request_issuance(ISSUER_ADDRESS,
-                            ISSUE_ENDPOINT, holder, person_id, name, surname,
-                            subject)
+                            ISSUE_ENDPOINT, holder, subject)
                 except HttpConnectionError as err:
                     self.flush('Could not connect to issuer: %s' % err)
                     return
@@ -465,6 +475,34 @@ class WalletShell(cmd.Cmd, MenuHandler):
             case Action.DISCARD:
                 self.flush('Request aborted')
                 return
+
+    def do_login(self, line):
+        self.flush(f'Visit {ISSUER_ADDRESS}/{LOGIN_ENDPOINT} in order to' + \
+                ' sign in via google and get a token retrieval code')
+        tmp_code = self.launch_input('Give token retrieval code:')
+        resp = self._app.request_auth_token(ISSUER_ADDRESS, tmp_code)
+        code, body = self._app.parse_http_response(resp)
+        match code:
+            case 200:
+                token = body['data']['token']
+            case 400:
+                self.flush('Could not retrieve token: %s' % body['errors'][0])
+                return
+            case _:
+                self.flush('Could not retrieve token: Response status code: %d'
+                        % _)
+                if self.launch_yn('Inspect response body?'):
+                    self.flush(body)
+                return
+        self._app.store_auth_token(token)
+        self.flush('Authorization token was saved in cache')
+
+    def do_logout(self, line):
+        self._app.clear_auth_token()
+        self.flush('Authorization token was cleared from cache')
+
+    def do_token(self, line):
+        self.flush(self._app.get_auth_token())
 
     def do_export(self, line):
         try:
@@ -539,6 +577,24 @@ class WalletShell(cmd.Cmd, MenuHandler):
 
     def do_EOF(self, line):
         return True
+
+    def do_user(self, line):
+        resp = self._app.request_user(ISSUER_ADDRESS)
+        code, body = self._app.parse_http_response(resp)
+        match code:
+            case 200:
+                data = body['data']
+            case 401:
+                self.flush(body['errors'][0])
+                self.flush('Type `login` in order to sign in your wallet')
+                return
+            case _:
+                self.flush('Something wrong: Response status code: %d'% _)
+                if self.launch_yn('Inspect response body?'):
+                    self.flush(body)
+                return
+        self.flush(data)
+
 
     do_exit = do_EOF
     do_quit = do_EOF

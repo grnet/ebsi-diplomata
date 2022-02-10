@@ -28,6 +28,8 @@ DEBUG = int(os.environ.get('DEBUG', default=0))
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 APPEND_SLASH = True
 
+API_PREFIX = 'api/v1'
+
 # SSI configuration
 WALTDIR = os.environ.get('WALTDIR')
 APPDIR = os.environ.get('APPDIR')
@@ -47,6 +49,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 ] + [
     'ssi.apps.SSIConfig',
+    'oauth.apps.OauthConfig',
 ]
 
 MIDDLEWARE = [
@@ -78,6 +81,39 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'web_project.wsgi.application'
+
+# Oauth
+
+PN_GOOGLE = 'google'
+
+AUTHLIB_OAUTH_CLIENTS = {
+    PN_GOOGLE: {
+        'client_id': os.environ.get('GOOGLE_CLIENT_ID', ''),
+        'client_secret': os.environ.get('GOOGLE_CLIENT_SECRET', ''),
+        'access_token_url': os.environ.get('GOOGLE_TOKEN_URL', ''),
+        'authorize_url': os.environ.get('GOOGLE_AUTHORIZE_URL', ''),
+        'api_base_url': os.environ.get('GOOGLE_API_BASE_URL', ''),
+        'server_metadata_url': os.environ.get(
+            'GOOGLE_SERVER_METADATA_URL', None
+        ),
+        'client_kwargs': {
+            'scope': os.environ.get(
+                'GOOGLE_SCOPE', 'openid profile email'
+            ),
+        }
+    },
+    # Put here further oauth clients
+    # ...
+}
+
+AUTH_STATE_PREFIX= os.environ.get('AUTH_STATE_PREFIX', default='')
+
+CODE_EXPIRES_AFTER_SECS = int(os.environ.get(
+    'EBSI_DIPLOMAS_CODE_EXPIRES_AFTER_SECS', 3600))
+TOKEN_EXPIRES_AFTER_SECS = 3600 * 24 * 365 if DEBUG else int(os.environ.get(
+    'EBSI_DIPLOMAS_TOKEN_EXPIRES_AFTER_SECS', 20 * 60))
+TOKEN_REFRESH_AFTER_SECS = int(os.environ.get(
+    'EBSI_DIPLOMAS_API_TOKEN_REFRESH_AFTER_SECS', 2 * 60))
 
 
 # Database
