@@ -44,9 +44,5 @@ if [ ${DO_BUILD} == true ]; then
         --no-push
 fi
 
-# TODO: Give values after google oauth setup
-export EBSI_DIPLOMAS_GOOGLE_CLIENT_ID="405148207611-0vgte96mpvsn3aa7cnl444odeot1c43q.apps.googleusercontent.com"
-export EBSI_DIPLOMAS_GOOGLE_CLIENT_SECRET="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"
-
-docker-compose up $compose_args \
-    --remove-orphans
+docker-compose --env-file .env-google up \
+    $compose_args --remove-orphans

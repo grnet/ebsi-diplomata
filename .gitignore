@@ -6,6 +6,7 @@ dist/
 build/
 *.egg-info/
 env/
+.env-google
 TODOS*
 NOTES*
 *.db
