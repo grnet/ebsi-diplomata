@@ -6,6 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 from authlib.integrations.django_client import OAuth
 from oauth.login.base import OAuthLoginFailure
 from oauth.login.google import GoogleLoginHandler
+from util import render_200_OK, render_401_UNAUTHORIZED
 
 oauth = OAuth()
 google = GoogleLoginHandler(oauth)
@@ -13,16 +14,11 @@ google = GoogleLoginHandler(oauth)
 
 @require_http_methods(['GET', ])
 def google_callback(request):
-    out = {}
     try:
         code = google.create_session(request)
     except OAuthLoginFailure:
-        out['errors'] = ['Unauthorized', ]
-        status = 401
-        return JsonResponse(out, status=status)
-    out['session'] = code
-    status = 200
-    return JsonResponse(out, status=status)
+        return render_401_UNAUTHORIZED()
+    return render_200_OK({'session': code})
 
 
 @require_http_methods(['GET', ])
