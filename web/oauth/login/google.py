@@ -48,4 +48,3 @@ class GoogleLoginHandler(OAuthLoginHandler):
         else:
             user = alumnus.user
         return user
-

@@ -8,12 +8,12 @@ from django.core.cache import cache
 from authlib.common.security import generate_token as generate_randomness
 import uuid
 from oauth.models import UserToken
-from oauth.clients.base import  OAuthException
+from oauth.clients.base import OAuthException
 
 CODE_EXPIRES_AFTER_SECS = settings.CODE_EXPIRES_AFTER_SECS
 
 
-class OAuthLoginFailure(BaseException):
+class OAuthLoginFailure(Exception):
     pass
 
 
@@ -29,7 +29,7 @@ class OAuthLoginHandler(object):
 
     def _get_redirect_uri(self, request, callback):
         redirect_uri = getattr(settings, '%s_REDIRECT_URI' % self.name.upper(),
-            None)
+                               None)
         if not redirect_uri:
             redirect_uri = request.build_absolute_uri(
                 reverse(callback).rstrip('/'))
@@ -95,7 +95,7 @@ class OAuthLoginHandler(object):
         user = self._retrieve_user(profile)
         token = self._generate_token_value()
         UserToken.objects.create(user=user, token=token,
-            session_id=self._generate_session_id())
+                                 session_id=self._generate_session_id())
         code = self._generate_session_code()
         cache.set('session:%s' % code, token, CODE_EXPIRES_AFTER_SECS)
         return code

@@ -10,19 +10,21 @@ from oauth.login.google import GoogleLoginHandler
 oauth = OAuth()
 google = GoogleLoginHandler(oauth)
 
-@require_http_methods(['GET',])
+
+@require_http_methods(['GET', ])
 def google_callback(request):
     out = {}
     try:
         code = google.create_session(request)
     except OAuthLoginFailure:
-        out['errors'] = ['Unauthorized',]
+        out['errors'] = ['Unauthorized', ]
         status = 401
         return JsonResponse(out, status=status)
     out['session'] = code
     status = 200
     return JsonResponse(out, status=status)
 
-@require_http_methods(['GET',])
+
+@require_http_methods(['GET', ])
 def google_login(request):
     return google.redirect_to_provider(request, google_callback)

@@ -1,32 +1,36 @@
 import os
-import cmd, sys
+import cmd
+import sys
 import json
 from conf import STORAGE, TMPDIR, Table, Ed25519, Secp256k1, RSA, \
-        ISSUER_ADDRESS, ISSUE_ENDPOINT, LOGIN_ENDPOINT, \
-        VERIFIER_ADDRESS, VERIFY_ENDPOINT
+    ISSUER_ADDRESS, ISSUE_ENDPOINT, LOGIN_ENDPOINT, \
+    VERIFIER_ADDRESS, VERIFY_ENDPOINT
 from app import CreationError, RegistrationError, ResolutionError, \
-        IssuanceError, VerificationError, HttpConnectionError, Vc
+    IssuanceError, VerificationError, HttpConnectionError, Vc
 from driver.conf import INTRO, PROMPT, INDENT, Action, UI
 from driver.ui import MenuHandler
 from __init__ import __version__
 
 
-class NothingFound(BaseException):
+class NothingFound(Exception):
     pass
 
-class BadImport(BaseException):
+
+class BadImport(Exception):
     pass
 
-class BadInput(BaseException):
+
+class BadInput(Exception):
     pass
 
-class Abortion(BaseException):
+
+class Abortion(Exception):
     pass
 
 
 class WalletShell(cmd.Cmd, MenuHandler):
-    intro   = INTRO.format(__version__)
-    prompt  = PROMPT
+    intro = INTRO.format(__version__)
+    prompt = PROMPT
 
     def __init__(self, app):
         self._app = app
@@ -58,15 +62,16 @@ class WalletShell(cmd.Cmd, MenuHandler):
 
     def flush(self, buff):
         buff = json.dumps(buff, indent=INDENT) if type(buff) \
-                in (dict, list,) else str(buff)
+            in (dict, list,) else str(buff)
         sys.stdout.write(buff + '\n')
 
     def flush_list(self, lst):
-        for _ in lst: self.flush(_)
+        for _ in lst:
+            self.flush(_)
 
     def dump(self, obj, filename):
-        filename = filename + ('.json' \
-            if not filename.endswith('.json') else '')
+        filename = filename + ('.json'
+                               if not filename.endswith('.json') else '')
         tmpfile = os.path.join(TMPDIR, filename)
         with open(tmpfile, 'w+') as f:
             json.dump(obj, f)
@@ -83,19 +88,19 @@ class WalletShell(cmd.Cmd, MenuHandler):
                     UI.VPS,
                 ])
                 out = self._mapping[ans]
-            case (
-                    UI.KEY |
-                    UI.DID |
-                    UI.VC  |
-                    UI.VP
-                ):
+            case(
+                UI.KEY |
+                UI.DID |
+                UI.VC |
+                UI.VP
+            ):
                 out = self._mapping[line]
-            case (
-                    Table.KEY |
-                    Table.DID |
-                    Table.VC  |
-                    Table.VP
-                ):
+            case(
+                Table.KEY |
+                Table.DID |
+                Table.VC |
+                Table.VP
+            ):
                 out = line
             case _:
                 err = 'Bad input: %s' % line
@@ -116,7 +121,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
             token = self.launch_input('Token:')
         if not token and not self.launch_yn(
             'WARNING: No token provided. The newly created DID will\n' +
-            'not be registered to the EBSI. Proceed?'):
+                'not be registered to the EBSI. Proceed?'):
             err = 'DID creation aborted'
             raise Abortion(err)
         onboard = False
@@ -152,7 +157,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
         aliases = self._app.fetch_dids()
         issuer = self.launch_choice('Choose issuer DID', aliases)
         if not self.launch_yn('New credential will be issued. ' +
-                'Proceed?'):
+                              'Proceed?'):
             raise Abortion('Issuance aborted')
         out = self._app.mock_issuer(issuer, {
             'holder': holder,
@@ -186,13 +191,13 @@ class WalletShell(cmd.Cmd, MenuHandler):
         for alias in vc_selected:
             credential = self._app.fetch_credential(alias)
             vc_file = self.dump(credential, '%s.json' % alias)
-            credentials += [vc_file,]
+            credentials += [vc_file, ]
         alias = self._app.create_presentation(holder, credentials)
         return alias
 
     def select_presentation(self):
         match self.launch_choice('Select presentation to verify', [
-            UI.CHOOSE, UI.IMPORT]):
+                UI.CHOOSE, UI.IMPORT]):
             case UI.CHOOSE:
                 vps = self._app.fetch_presentations()
                 if not vps:
@@ -232,14 +237,14 @@ class WalletShell(cmd.Cmd, MenuHandler):
         match code:
             case 200:
                 credential = body['data']['credential']
-            case 400 | 401 | 512 :
+            case 400 | 401 | 512:
                 self.flush('Could not issue: %s' % body['errors'][0])
                 if code == 401:
                     self.flush('Type `login` in order to sign in your wallet')
                 return
             case _:
                 self.flush('Could not issue: Response status code: %d'
-                        % _)
+                           % _)
                 if self.launch_yn('Inspect response body?'):
                     self.flush(body)
                 return
@@ -247,12 +252,12 @@ class WalletShell(cmd.Cmd, MenuHandler):
             self.flush(credential)
         if not self.launch_yn('Save to disk?'):
             if self.launch_yn('Credential will be lost. '
-            + 'Are you sure?'):
+                              + 'Are you sure?'):
                 del credential
                 return
         alias = self._app.store_credential(credential)
         self.flush('Credential was saved in disk:\n%s'
-                % alias)
+                   % alias)
 
     def handle_verification_response(self, resp):
         code, body = self._app.parse_http_response(resp)
@@ -260,17 +265,17 @@ class WalletShell(cmd.Cmd, MenuHandler):
             case 200:
                 results = body['data']['results']
                 verified = results['Verified']
-            case 400 | 512 :
+            case 400 | 512:
                 self.flush('Could not verify: %s' % body['errors'][0])
                 return
             case _:
                 self.flush('Could not verify: Response status code: %d'
-                        % _)
+                           % _)
                 if self.launch_yn('Inspect response body?'):
                     self.flush(body)
                 return
-        self.flush('Presentation was %sverified:' % ('' if verified \
-                else 'NOT '))
+        self.flush('Presentation was %sverified:' % ('' if verified
+                                                     else 'NOT '))
         self.flush(results)
 
     def do_list(self, line):
@@ -316,10 +321,10 @@ class WalletShell(cmd.Cmd, MenuHandler):
         match self._mapping[ans]:
             case Table.KEY:
                 algo = self.launch_choice('Choose keygen algorithm', [
-                        Ed25519,
-                        Secp256k1,
-                        RSA,
-                    ])
+                    Ed25519,
+                    Secp256k1,
+                    RSA,
+                ])
                 try:
                     alias = self.create_key(algo)
                 except CreationError as err:
@@ -385,12 +390,12 @@ class WalletShell(cmd.Cmd, MenuHandler):
             self.flush(vc)
         if not self.launch_yn('Save to disk?'):
             if self.launch_yn('Credential will be lost. ' +
-                    'Are you sure?'):
+                              'Are you sure?'):
                 del vc
                 return
         alias = self._app.store_credential(vc)
         self.flush('Credential was saved in disk:\n%s'
-                % alias)
+                   % alias)
 
     def do_present(self, line):
         try:
@@ -402,7 +407,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
             self.flush('Presentation aborted: %s' % err)
             return
         self.flush('Presentation was saved in disk: %s'
-                % alias)
+                   % alias)
         if self.launch_yn('Inspect?'):
             vp = self._app.fetch_presentation(alias)
             self.flush(vp)
@@ -430,8 +435,8 @@ class WalletShell(cmd.Cmd, MenuHandler):
         except VerificationError as err:
             self.flush('Could not verify: %s' % err)
             return
-        self.flush('Presentation was %sverified:' % ('' if \
-            results['Verified'] else 'NOT '))
+        self.flush('Presentation was %sverified:' % ('' if
+                                                     results['Verified'] else 'NOT '))
         self.flush(results)
 
     def do_request(self, line):
@@ -450,7 +455,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 self.flush('Waiting for response (takes seconds)...')
                 try:
                     resp = self._app.request_issuance(ISSUER_ADDRESS,
-                            ISSUE_ENDPOINT, holder, subject)
+                                                      ISSUE_ENDPOINT, holder, subject)
                 except HttpConnectionError as err:
                     self.flush('Could not connect to issuer: %s' % err)
                     return
@@ -467,7 +472,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 self.flush('Waiting for response (takes seconds)...')
                 try:
                     resp = self._app.request_verification(VERIFIER_ADDRESS,
-                            VERIFY_ENDPOINT, vp)
+                                                          VERIFY_ENDPOINT, vp)
                 except HttpConnectionError as err:
                     self.flush('Could not connect to verifier: %s' % err)
                     return
@@ -477,8 +482,8 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 return
 
     def do_login(self, line):
-        self.flush(f'Visit {ISSUER_ADDRESS}/{LOGIN_ENDPOINT} in order to' + \
-                ' sign in via google and get a token retrieval code')
+        self.flush(f'Visit {ISSUER_ADDRESS}/{LOGIN_ENDPOINT} in order to' +
+                   ' sign in via google and get a token retrieval code')
         tmp_code = self.launch_input('Give token retrieval code:')
         resp = self._app.request_auth_token(ISSUER_ADDRESS, tmp_code)
         code, body = self._app.parse_http_response(resp)
@@ -490,7 +495,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 return
             case _:
                 self.flush('Could not retrieve token: Response status code: %d'
-                        % _)
+                           % _)
                 if self.launch_yn('Inspect response body?'):
                     self.flush(body)
                 return
@@ -553,7 +558,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
             self.flush('Nothing found')
             return
         selected = self.launch_selection('Select entries to remove',
-            aliases)
+                                         aliases)
         if not self.launch_yn('This cannot be undone. Proceed?'):
             self.flush('Removal aborted')
             return
@@ -573,7 +578,7 @@ class WalletShell(cmd.Cmd, MenuHandler):
         nr_entries = self._app.fetch_nr(table)
         self._app.clear(table)
         self.flush(f'Cleared %d %s%s' % (nr_entries, table, 's' if nr_entries
-            != 1 else ''))
+                                         != 1 else ''))
 
     def do_EOF(self, line):
         return True
@@ -589,13 +594,12 @@ class WalletShell(cmd.Cmd, MenuHandler):
                 self.flush('Type `login` in order to sign in your wallet')
                 return
             case _:
-                self.flush('Something wrong: Response status code: %d'% _)
+                self.flush('Something wrong: Response status code: %d' % _)
                 if self.launch_yn('Inspect response body?'):
                     self.flush(body)
                 return
         self.flush(data)
 
-
     do_exit = do_EOF
     do_quit = do_EOF
-    do_q    = do_EOF
+    do_q = do_EOF

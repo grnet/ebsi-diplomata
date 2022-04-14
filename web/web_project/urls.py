@@ -5,7 +5,7 @@ import ssi.api as api
 import oauth.api as auth
 
 api_prefix = settings.API_PREFIX + ('/' if not
-        settings.API_PREFIX.endswith('/') else '')
+                                    settings.API_PREFIX.endswith('/') else '')
 
 ssi_urls = [
     path('did/', api.show_did),
@@ -16,7 +16,7 @@ ssi_urls = [
     path('alumni/<int:id>/', api.show_alumnus),
     path('tokens/', api.show_tokens),
     path('tokens/<int:id>/', api.show_tokens_by_user),
-    path('token/', api.show_token_by_code), # /api/v1/token/?code=<code>
+    path('token/', api.show_token_by_code),  # /api/v1/token/?code=<code>
     path('users/current/', api.show_current_user),
 ]
 

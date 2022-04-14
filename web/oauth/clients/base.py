@@ -8,8 +8,9 @@ from authlib.integrations.django_client import OAuthError
 logger = logging.getLogger(__name__)
 
 
-class OAuthException(BaseException):
+class OAuthException(Exception):
     pass
+
 
 class OAuthClient(object, metaclass=ABCMeta):
 
@@ -18,7 +19,7 @@ class OAuthClient(object, metaclass=ABCMeta):
         self._oauth = oauth
         params = self._extra_oauth_params()
         self._oauth.register(name=self._name, overwrite=True,
-                **params)
+                             **params)
 
     @property
     def name(self):
@@ -35,7 +36,7 @@ class OAuthClient(object, metaclass=ABCMeta):
 
     def authorize_redirect(self, request, redirect_uri, state):
         resp = self.oauth.authorize_redirect(request, redirect_uri,
-                state=state)
+                                             state=state)
         return resp
 
     def _check_error_param(self, request):

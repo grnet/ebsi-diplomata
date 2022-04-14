@@ -12,22 +12,27 @@ from conf import API_PREFIX
 import conf
 
 
-class CreationError(BaseException):
+class CreationError(Exception):
     pass
 
-class RegistrationError(BaseException):
+
+class RegistrationError(Exception):
     pass
 
-class ResolutionError(BaseException):
+
+class ResolutionError(Exception):
     pass
 
-class HttpConnectionError(BaseException):
+
+class HttpConnectionError(Exception):
     pass
 
-class IssuanceError(BaseException):
+
+class IssuanceError(Exception):
     pass
 
-class VerificationError(BaseException):
+
+class VerificationError(Exception):
     pass
 
 
@@ -77,7 +82,7 @@ class WalletApp(SSI, HttpClient):
         tmpdir = conf.TMPDIR
         dbname = conf.DBNAME
         return cls(tmpdir, dbname)
-    
+
     def _fetch_key(self, alias):
         return self._db.fetch_entry(alias, Table.KEY)
 
@@ -214,8 +219,8 @@ class WalletApp(SSI, HttpClient):
         return alias
 
     def retrieve_resolved_did(self, alias):
-        resolved = os.path.join(RESOLVED, 'did-ebsi-%s.json' % \
-            alias.lstrip(EBSI_PRFX))
+        resolved = os.path.join(RESOLVED, 'did-ebsi-%s.json' %
+                                alias.lstrip(EBSI_PRFX))
         with open(resolved, 'r') as f:
             did = json.load(f)
         return did
@@ -242,7 +247,7 @@ class WalletApp(SSI, HttpClient):
         content['awarding_opportunity_identifier'] = aux['subject']
         # Issue and return diploma
         out = self.issue_credential(holder, issuer, vc_type,
-                content)
+                                    content)
         return out
 
     def request_issuance(self, remote, endpoint, holder, subject):
@@ -254,10 +259,10 @@ class WalletApp(SSI, HttpClient):
         return resp
 
     def create_presentation(self, holder, credentials,
-            waltdir=WALTDIR):
+                            waltdir=WALTDIR):
         try:
             vp = self.generate_presentation(holder, credentials,
-                    waltdir)
+                                            waltdir)
         except SSIGenerationError as err:
             err = 'Could not generate presentation: %s' % err
             raise CreationError(err)
@@ -272,12 +277,13 @@ class WalletApp(SSI, HttpClient):
         return results
 
     def request_verification(self, remote, endpoint, presentation):
-        payload = { 'presentation': presentation }
+        payload = {'presentation': presentation}
         resp = self.http_post(remote, endpoint, payload)
         return resp
 
     def request_auth_token(self, remote, code):
-        resp = self.http_get(remote, f'{API_PREFIX}/token/?code=%s' % str(code))
+        resp = self.http_get(
+            remote, f'{API_PREFIX}/token/?code=%s' % str(code))
         return resp
 
     def request_user(self, remote):

@@ -5,7 +5,8 @@ from ssi.models import User
 from django.utils import timezone
 from django.http import JsonResponse
 
-class Unauthorized(BaseException):
+
+class Unauthorized(Exception):
     pass
 
 
@@ -63,7 +64,7 @@ def token_auth(func):
             request.user_token = _load_session(token)
             request.user = _load_user_from_session(request.user_token)
         except Unauthorized as err:
-            return JsonResponse({ 'errors': ['%s' % err,] }, status=401)
+            return JsonResponse({'errors': ['%s' % err, ]}, status=401)
         resp = func(request, *args, **kwargs)
         return resp
     return csrf.csrf_exempt(_wrapper)

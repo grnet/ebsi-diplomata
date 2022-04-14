@@ -4,10 +4,12 @@ from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, UserManager
 from django.utils import timezone
 
+
 class Did(models.Model):
     """DID (body not NULL indicates resolved DID)"""
     alias = models.CharField(max_length=256, primary_key=True)
     body = JSONField(null=True)
+
 
 class Credential(models.Model):
     """Verifiable credential"""
@@ -15,11 +17,13 @@ class Credential(models.Model):
     holder = models.ForeignKey(Did, on_delete=models.DO_NOTHING)
     body = JSONField(null=False)
 
+
 class Presentation(models.Model):
     """Verifiable presentation"""
     alias = models.CharField(max_length=256)
     holder = models.ForeignKey(Did, on_delete=models.DO_NOTHING)
     body = JSONField(null=False)
+
 
 class User(AbstractBaseUser):
     STUDENT = 'student'

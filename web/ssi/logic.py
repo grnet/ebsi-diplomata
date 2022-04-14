@@ -7,16 +7,19 @@ from ssi_lib import SSI, SSIGenerationError, SSIRegistrationError, \
     Template, Vc
 
 
-class IdentityError(BaseException):
+class IdentityError(Exception):
     pass
 
-class CreationError(BaseException):
+
+class CreationError(Exception):
     pass
 
-class IssuanceError(BaseException):
+
+class IssuanceError(Exception):
     pass
 
-class VerificationError(BaseException):
+
+class VerificationError(Exception):
     pass
 
 
@@ -26,6 +29,7 @@ DIDFILE = os.path.join(VAULT, 'did.json')
 
 _ssi = SSI(settings.TMPDIR)
 
+
 def _fetch_key():
     try:
         with open(KEYFILE, 'r') as f:
@@ -34,6 +38,7 @@ def _fetch_key():
         return None
     return out
 
+
 def _fetch_did(full=False):
     try:
         with open(DIDFILE, 'r') as f:
@@ -41,8 +46,9 @@ def _fetch_did(full=False):
     except FileNotFoundError:
         return None
     out = _ssi.extract_alias_from_did(did) if not full \
-            else did
+        else did
     return out
+
 
 def _store_key(entry):
     alias = _ssi.extract_alias_from_key(entry)
@@ -50,11 +56,13 @@ def _store_key(entry):
         json.dump(entry, f, indent=4)
     return alias
 
+
 def _store_did(entry):
     alias = _ssi.extract_alias_from_did(entry)
     with open(DIDFILE, 'w+') as f:
         json.dump(entry, f, indent=4)
     return alias
+
 
 def _generate_key(algo):
     logging.info('Generating %s key (takes seconds) ...' % algo)
@@ -64,11 +72,12 @@ def _generate_key(algo):
         raise
     return key
 
+
 def _generate_did(key, token, onboard=True):
     logging.info('Generating DID (takes seconds) ...')
     try:
-        did = _ssi.generate_did(key, token, onboard, 
-                load_key=False) # TODO
+        did = _ssi.generate_did(key, token, onboard,
+                                load_key=False)  # TODO
     except SSIGenerationError as err:
         raise
     if onboard:
@@ -80,6 +89,7 @@ def _generate_did(key, token, onboard=True):
             raise
         logging.info('DID registered to EBSI')
     return did
+
 
 def _normalize_diploma_content(user_data, content):
     # Issuer should here compare the submitted content and retrieved user data
@@ -100,12 +110,14 @@ def _normalize_diploma_content(user_data, content):
     out['awarding_opportunity_identifier'] = content['subject']
     return out
 
+
 def fetch_did():
     alias = _fetch_did(full=False)
     if not alias:
         err = 'No DID found'
         raise IdentityError(err)
     return alias
+
 
 def create_did(token, algo, onboard):
     try:
@@ -127,6 +139,7 @@ def create_did(token, algo, onboard):
     logging.info('Created DID %s' % alias)
     return alias
 
+
 def issue_credential(holder, vc_type, content, user_data):
     issuer = _fetch_did(full=False)
     if not issuer:
@@ -139,10 +152,11 @@ def issue_credential(holder, vc_type, content, user_data):
         raise IssuanceError(err)
     try:
         out = _ssi.issue_credential(holder, issuer, vc_type,
-                content)
+                                    content)
     except SSIIssuanceError as err:
         raise IssuanceError(err)
     return out
+
 
 def verify_presentation(vp):
     try:

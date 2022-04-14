@@ -26,11 +26,12 @@ _style = {
     },
 }
 
+
 class MenuHandler(object):
 
     def _normalize_prompt(self, prompt):
-        return prompt + (' ' if not prompt.endswith(' ') \
-            else '')
+        return prompt + (' ' if not prompt.endswith(' ')
+                         else '')
 
     def _mk_yn(self, prompt):
         prompt = self._normalize_prompt(prompt)
@@ -47,12 +48,12 @@ class MenuHandler(object):
     def _mk_choice(self, prompt, choices):
         prompt = self._normalize_prompt(prompt)
         return Bullet(prompt=prompt, choices=choices,
-            **_style['bullet'],)
+                      **_style['bullet'],)
 
     def _mk_selection(self, prompt, choices):
         prompt = self._normalize_prompt(prompt)
         return Check(prompt=prompt, choices=choices,
-            **_style['check'],)
+                     **_style['check'],)
 
     def launch_yn(self, prompt):
         return self._mk_yn(prompt).launch()
@@ -80,15 +81,15 @@ class MenuHandler(object):
         for key, params in config.items():
             match key:
                 case 'yn':
-                    steps += [self._mk_yn(params),]
+                    steps += [self._mk_yn(params), ]
                 case 'input':
-                    steps += [self._mk_input(params),]
+                    steps += [self._mk_input(params), ]
                 case 'number':
-                    steps += [self._mk_number(params),]
+                    steps += [self._mk_number(params), ]
                 case 'single':
-                    steps += [self._mk_choice(**params),]
+                    steps += [self._mk_choice(**params), ]
                 case 'selection':
-                    steps += [self._mk_selection(**params),]
+                    steps += [self._mk_selection(**params), ]
         res = SlidePrompt(steps).launch()
         out = []
         for cur, key in zip(res, config.keys()):
@@ -103,4 +104,4 @@ class MenuHandler(object):
                     out += [cur[1][0]]
                 case 'selection':
                     out += [cur[1][0]]
-        return out         
+        return out

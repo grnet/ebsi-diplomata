@@ -106,7 +106,7 @@ AUTHLIB_OAUTH_CLIENTS = {
     # ...
 }
 
-AUTH_STATE_PREFIX= os.environ.get('AUTH_STATE_PREFIX', default='')
+AUTH_STATE_PREFIX = os.environ.get('AUTH_STATE_PREFIX', default='')
 
 CODE_EXPIRES_AFTER_SECS = int(os.environ.get(
     'EBSI_DIPLOMAS_CODE_EXPIRES_AFTER_SECS', 3600))
@@ -135,12 +135,12 @@ DATABASES = {
 
 LOGGING = {
     'version': 1,
-        'disable_existing_loggers': False,
-        'handlers': {
-            'console': {
-                'class': 'logging.StreamHandler',
-            },
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
         },
+    },
     'root': {
         'handlers': ['console'],
         'level': 'DEBUG',           # TODO

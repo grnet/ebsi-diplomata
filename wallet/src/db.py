@@ -15,10 +15,11 @@ import sqlite3 as _orm
 import json
 
 
-class DbConnectionError(BaseException):
+class DbConnectionError(Exception):
     pass
 
-class DbQueryError(BaseException):
+
+class DbQueryError(Exception):
     pass
 
 
@@ -29,7 +30,7 @@ class DbConnector(object):
         self.db = db
 
     def _create_connection(self, db=None):
-        if not db: 
+        if not db:
             db = self.db
         try:
             con = _orm.connect(db)
@@ -75,7 +76,7 @@ class DbConnector(object):
         con.close()
         out = self._load_dict(body)
         return out
- 
+
     def fetch_nr(self, table):
         con = self._create_connection()
         cur = con.cursor()

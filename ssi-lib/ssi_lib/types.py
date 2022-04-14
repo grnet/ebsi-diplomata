@@ -1,6 +1,7 @@
 class Vc:
     DIPLOMA = 'DIPLOMA'
 
+
 class Template:
     DIPLOMA = {
         'person_identifier': '',

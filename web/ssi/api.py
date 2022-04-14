@@ -12,8 +12,10 @@ from ssi.models import User, Alumnus
 from oauth.models import UserToken
 from oauth.util import token_auth
 
+
 def _extract_payload(request):
     return json.loads(request.body)
+
 
 def _extract_user_data(request):
     data = {}
@@ -24,97 +26,103 @@ def _extract_user_data(request):
             data.update(alumnus.serialize())
     return data
 
-@require_http_methods(['GET',])
+
+@require_http_methods(['GET', ])
 def show_did(request):
     out = {}
     try:
         did = fetch_did()
     except IdentityError as err:
-        out['errors'] = ['%s' % err,]
+        out['errors'] = ['%s' % err, ]
         status = 512
         return JsonResponse(out, status=status)
-    out['data'] = { 'did': did }
+    out['data'] = {'did': did}
     status = 200
     return JsonResponse(out, status=status)
 
+
 @csrf_exempt
-@require_http_methods(['PUT',])
+@require_http_methods(['PUT', ])
 def do_create_did(request):
     out = {}
     payload = _extract_payload(request)
     try:
-        algo    = payload['algo']
-        token   = payload['token']
+        algo = payload['algo']
+        token = payload['token']
         onboard = payload.get('onboard', True)
     except KeyError as err:
-        out['errors'] = ['Bad request',]
+        out['errors'] = ['Bad request', ]
         status = 400
         return JsonResponse(out, status=status)
     try:
         alias = create_did(token, algo, onboard)
     except CreationError as err:
-        out['errors'] = ['%s' % err,]
+        out['errors'] = ['%s' % err, ]
         status = 512
         return JsonResponse(out, status=status)
-    out['data'] = { 'did': alias }
+    out['data'] = {'did': alias}
     status = 201
     return JsonResponse(out, status=status)
 
+
 @csrf_exempt
-@require_http_methods(['POST',])
+@require_http_methods(['POST', ])
 @token_auth
 def do_issue_credential(request):
     out = {}
     payload = _extract_payload(request)
     try:
-        holder  = payload['holder']
+        holder = payload['holder']
         vc_type = payload['vc_type']
         content = payload['content']
     except KeyError as err:
-        out['errors'] = ['Bad request',]
+        out['errors'] = ['Bad request', ]
         status = 400
         return JsonResponse(out, status=status)
     user_data = _extract_user_data(request)
     try:
         credential = issue_credential(holder, vc_type,
-                content, user_data)
+                                      content, user_data)
     except IssuanceError as err:
-        out['errors'] = ['%s' % err,]
+        out['errors'] = ['%s' % err, ]
         status = 512
         return JsonResponse(out, status=status)
-    out['data'] = { 'credential': credential, }
+    out['data'] = {'credential': credential, }
     status = 200
     return JsonResponse(out, status=status)
 
+
 @csrf_exempt
-@require_http_methods(['POST',])
+@require_http_methods(['POST', ])
 def do_verify_credentials(request):
     out = {}
     payload = _extract_payload(request)
     try:
         presentation = payload['presentation']
     except (JSONDecodeError, KeyError,) as err:
-        out['errors'] = ['Bad request',]
+        out['errors'] = ['Bad request', ]
         status = 400
         return JsonResponse(out, status=status)
     try:
         results = verify_presentation(presentation)
     except VerificationError as err:
-        out['errors'] = ['%s' % err,]
+        out['errors'] = ['%s' % err, ]
         status = 512
         return JsonResponse(out, status=status)
-    out['data'] = { 'results': results }
+    out['data'] = {'results': results}
     status = 200
     return JsonResponse(out, status=status)
 
-@require_http_methods(['GET',])
+
+@require_http_methods(['GET', ])
 def show_tokens(request):
     out = {}
     out['data'] = [t.serialize() for t in UserToken.objects.all()]
     status = 200
     return JsonResponse(out, status=status, safe=False)
 
-@require_http_methods(['GET',])
+
+@require_http_methods(['GET', ])
 def show_token_by_code(request):
     out = {}
     code = request.GET.get('code')
@@ -122,20 +130,21 @@ def show_token_by_code(request):
     token = cache.get('session:%s' % code)
     cache.delete('session:%s' % code)
     if not token:
-        out['errors'] = ['Code invalid',]
+        out['errors'] = ['Code invalid', ]
         status = 400    # Bad request
         return JsonResponse(out, status=status)
-    out['data'] = { 'token': token }
+    out['data'] = {'token': token}
     status = 200
     return JsonResponse(out, status=status, safe=False)
 
-@require_http_methods(['GET',])
+
+@require_http_methods(['GET', ])
 def show_tokens_by_user(request, id):
     out = {}
     try:
         user = get_object_or_404(User, id=id)
     except Http404 as err:
-        out['errors'] = ['%s' % err,]
+        out['errors'] = ['%s' % err, ]
         status = 404
         return JsonResponse(out, status=status)
     tokens = UserToken.objects.filter(user=user)
@@ -143,29 +152,32 @@ def show_tokens_by_user(request, id):
     status = 200
     return JsonResponse(out, status=status, safe=False)
 
-@require_http_methods(['GET',])
+
+@require_http_methods(['GET', ])
 def show_alumnus(request, id):
     out = {}
     try:
         alumnus = get_object_or_404(Alumnus, id=id)
     except Http404 as err:
-        out['errors'] = ['%s' % err,]
+        out['errors'] = ['%s' % err, ]
         status = 404
         return JsonResponse(out, status=status)
     out['data'] = alumnus.serialize()
     status = 200
     return JsonResponse(out, status=status, safe=False)
 
-@require_http_methods(['GET',])
+
+@require_http_methods(['GET', ])
 def show_alumni(request):
     out = {}
     out['data'] = [a.serialize() for a in Alumnus.objects.all()]
     status = 200
     return JsonResponse(out, status=status)
 
-@require_http_methods(['GET',])
+
+@require_http_methods(['GET', ])
 @token_auth
 def show_current_user(request):
-    out = { 'data': _extract_user_data(request) }
+    out = {'data': _extract_user_data(request)}
     status = 200
     return JsonResponse(out, status=status)

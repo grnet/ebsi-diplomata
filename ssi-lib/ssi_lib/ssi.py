@@ -5,19 +5,23 @@ from abc import ABCMeta, abstractmethod
 from .types import Vc, Template
 
 
-class SSIGenerationError(BaseException):
+class SSIGenerationError(Exception):
     pass
 
-class SSIRegistrationError(BaseException):
+
+class SSIRegistrationError(Exception):
     pass
 
-class SSIResolutionError(BaseException):
+
+class SSIResolutionError(Exception):
     pass
 
-class SSIIssuanceError(BaseException):
+
+class SSIIssuanceError(Exception):
     pass
 
-class SSIVerificationError(BaseException):
+
+class SSIVerificationError(Exception):
     pass
 
 
@@ -53,7 +57,7 @@ class SSI(object):
         if entry:
             with open(outfile, 'w+') as f:
                 json.dump(entry, f)
-            res, code = self._run_cmd(['load-key', '--file', outfile,])
+            res, code = self._run_cmd(['load-key', '--file', outfile, ])
             os.remove(outfile)
         else:
             res = 'No key found'
@@ -71,13 +75,13 @@ class SSI(object):
         with open(token_file, 'w+') as f:
             f.write(token)
         res, code = self._run_cmd(['register-did', '--did', alias,
-            '--token', token_file, '--resolve',
-        ])
+                                   '--token', token_file, '--resolve',
+                                   ])
         os.remove(token_file)
         return res, code
 
     def _resolve_did(self, alias):
-        res, code = self._run_cmd(['resolve-did', '--did', alias,])
+        res, code = self._run_cmd(['resolve-did', '--did', alias, ])
         return res, code
 
     def _resolve_template(self, vc_type):
@@ -103,9 +107,9 @@ class SSI(object):
         return res, code
 
     def _present_credentials(self, holder, credentials):
-        args = ['present-credentials', '--holder', holder,]
+        args = ['present-credentials', '--holder', holder, ]
         for credential in credentials:
-            args += ['-c', credential,]
+            args += ['-c', credential, ]
         res, code = self._run_cmd(args)
         return res, code
 
@@ -121,7 +125,7 @@ class SSI(object):
         with open(tmpfile, 'w+') as f:
             json.dump(presentation, f)
         res, code = self._run_cmd([
-            'verify-credentials', '--presentation', tmpfile,])
+            'verify-credentials', '--presentation', tmpfile, ])
         os.remove(tmpfile)
         return res, code
 
@@ -165,7 +169,7 @@ class SSI(object):
 
     def generate_did(self, key, token, onboard=True, load_key=True):
         if load_key:
-            # TODO: Investigate how necessary this step is 
+            # TODO: Investigate how necessary this step is
             # with respect to EBSI onboarding
             res, code = self._load_key(key)
             if code != 0:
@@ -199,7 +203,7 @@ class SSI(object):
             raise SSIIssuanceError(err)
         outfile = os.path.join(self.tmpdir, 'vc.json')
         res, code = self._issue_vc(holder, issuer, vc_type, content,
-                outfile)
+                                   outfile)
         if code != 0:
             raise SSIIssuanceError(res)
         with open(outfile, 'r') as f:
