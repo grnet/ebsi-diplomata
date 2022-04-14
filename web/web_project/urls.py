@@ -3,6 +3,7 @@ from django.urls import include, path
 from django.conf import settings
 import ssi.api as api
 import oauth.api as auth
+import docs.api
 
 api_prefix = settings.API_PREFIX + ('/' if not
                                     settings.API_PREFIX.endswith('/') else '')
@@ -25,8 +26,14 @@ oauth_urls = [
     path('google/callback/', auth.google_callback),
 ]
 
+docs_urls = [
+    path('', docs.api.swagger),
+    path('swagger/', docs.api.swagger),
+]
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path(api_prefix, include(ssi_urls)),
     path(api_prefix, include(oauth_urls)),
+    path(api_prefix, include(docs_urls)),
 ]
