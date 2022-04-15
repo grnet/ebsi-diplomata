@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-drw6!*s_ril1+bg*2y)0)sl7y#g_7s1uev$p1m$ce=xu7ahf3%
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = int(os.environ.get('DEBUG', default=0))
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'snf-21517.ok-kno.grnetcloud.net', ]
 APPEND_SLASH = True
 
 API_PREFIX = 'api/v1'

@@ -13,3 +13,6 @@ NOTES*
 *local*
 migrations/
 demo.py
+
+docker-compose.prod.yml
+run-prod.sh

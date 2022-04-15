@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.core.cache import cache
 from authlib.common.security import generate_token as generate_randomness
 import uuid
-from oauth.models import UserToken
+from ssi.models import UserToken
 from oauth.clients.base import OAuthException
 
 CODE_EXPIRES_AFTER_SECS = settings.CODE_EXPIRES_AFTER_SECS
@@ -53,7 +53,8 @@ class OAuthLoginHandler(object):
     def _extract_profile_from_access_token(self, request):
         try:
             token = self._retrieve_access_token(request)
-            profile = self._parse_access_token(request, token)
+            # profile = self._parse_access_token(request, token)
+            profile = token['userinfo']
         except OAuthException as err:
             raise OAuthLoginFailure
         return profile
