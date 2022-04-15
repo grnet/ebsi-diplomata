@@ -12,7 +12,7 @@ services:
       - 7000
     environment:
       DEBUG: 1
-      HTTP_PORT: 7000
+      PORT: 7000
       DATABASE: postgres
       SQL_DATABASE: diplomas_db
       SQL_USER: diplomas_db_user
@@ -44,7 +44,7 @@ services:
       - 7001
     environment:
       DEBUG: 1
-      HTTP_PORT: 7001
+      PORT: 7001
       DATABASE: postgres
       SQL_DATABASE: diplomas_db
       SQL_USER: diplomas_db_user
