@@ -39,7 +39,7 @@ do
 done
 
 if [ ${DO_BUILD} == true ]; then
-    ./build-base-images.sh \
+    ./build-base-image.sh \
         --tag "local" \
         --no-push
 fi
