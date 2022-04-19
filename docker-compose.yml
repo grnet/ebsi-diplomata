@@ -67,5 +67,15 @@ services:
       POSTGRES_DB: diplomas_db
       POSTGRES_USER: diplomas_db_user
       POSTGRES_PASSWORD: diplomas_db_password
+  nginx:
+    container_name: nginx-dev
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile.dev
+    ports:
+      - "1337:80"
+    depends_on:
+      - issuer
+      # - ui
 volumes:
   diplomas_postgres_data:

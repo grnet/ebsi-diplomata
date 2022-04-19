@@ -10,7 +10,7 @@ TEMPLATE = """
       name="description"
       content="SwaggerIU"
     />
-    <title>SwaggerUI</title>
+    <title>GRNET e-Diplomas REST API</title>
     <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@4.5.0/swagger-ui.css" />
   </head>
   <body>
