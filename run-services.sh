@@ -5,9 +5,10 @@ usage_string="usage: ./$(basename "$0") [OPTIONS]
 Run the issuer and verifier services at localhost:7000-1 respectively.
 
 Options:
-  --build       Build web image before running the application (will also
-                re-build the base image)
-  -h, --help    Display help message and exit
+  --build           Build web image before running the application (will also
+                    re-build the base image)
+  --force-recreate  Recreate containers
+  -h, --help        Display help message and exit
 
 Examples:
 "
@@ -15,6 +16,7 @@ Examples:
 usage() { echo -n "$usage_string" 1>&2; }
 
 DO_BUILD=false
+DO_RECREATE=false
 compose_args=()
 
 while [[ $# -gt 0 ]]
@@ -23,6 +25,11 @@ do
     case $arg in
         --build)
             DO_BUILD=true
+            compose_args+=($arg)
+            shift
+            ;;
+        --force-recreate)
+            DO_RECREATE=true
             compose_args+=($arg)
             shift
             ;;

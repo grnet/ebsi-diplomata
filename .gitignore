@@ -11,7 +11,6 @@ TODOS*
 NOTES*
 *.db
 *local*
-migrations/
 demo.py
 
 docker-compose.prod.yml
