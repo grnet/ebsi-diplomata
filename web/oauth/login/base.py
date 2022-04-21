@@ -98,5 +98,5 @@ class OAuthLoginHandler(object):
         UserToken.objects.create(user=user, token=token,
                                  session_id=self._generate_session_id())
         code = self._generate_session_code()
-        cache.set('session:%s' % code, token, CODE_EXPIRES_AFTER_SECS)
+        cache.set(code, token, CODE_EXPIRES_AFTER_SECS)
         return code

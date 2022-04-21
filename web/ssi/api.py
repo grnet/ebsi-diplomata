@@ -99,8 +99,8 @@ def show_tokens(request):
 @require_http_methods(['GET', ])
 def show_token_by_code(request):
     code = request.GET.get('code')
-    token = cache.get('session:%s' % code)
-    cache.delete('session:%s' % code)
+    token = cache.get(code)
+    cache.delete(code)
     if not token:
         return render_400_BAD_REQUEST('Code invalid')
     return render_200_OK({'token': token})
