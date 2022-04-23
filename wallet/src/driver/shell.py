@@ -373,8 +373,6 @@ class WalletShell(cmd.Cmd, MenuHandler):
         except ResolutionError as err:
             self.flush('Could not resolve: %s' % err)
             return
-        did = self._app.retrieve_resolved_did(alias)
-        self.flush(did)
 
     def do_issue(self, line):
         try:

@@ -51,7 +51,7 @@ fi
 
 cd ${WALTDIR}
 
-resp=$(./ssikit.sh did resolve --did ${DID})
+resp=$(./ssikit.sh did resolve --did ${DID} | tee /dev/tty)
 
 if echo $resp | grep -qi "not found" ; then
     echo "DID not found"

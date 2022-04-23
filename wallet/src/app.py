@@ -218,13 +218,6 @@ class WalletApp(SSI, HttpClient):
         alias = self.store_did(did)
         return alias
 
-    def retrieve_resolved_did(self, alias):
-        resolved = os.path.join(RESOLVED, 'did-ebsi-%s.json' %
-                                alias.lstrip(EBSI_PRFX))
-        with open(resolved, 'r') as f:
-            did = json.load(f)
-        return did
-
     def prepare_issuance_payload(self, holder, subject):
         return {
             'holder': holder,
