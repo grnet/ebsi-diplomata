@@ -115,6 +115,17 @@ TOKEN_EXPIRES_AFTER_SECS = 3600 * 24 * 365 if DEBUG else int(os.environ.get(
 TOKEN_REFRESH_AFTER_SECS = int(os.environ.get(
     'EBSI_DIPLOMAS_API_TOKEN_REFRESH_AFTER_SECS', 2 * 60))
 
+# Cache
+
+CACHE_HOST = os.environ.get('CACHE_HOST', 'localhost')
+CACHE_PORT = os.environ.get('CACHE_PORT', '11211')
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.memcached.PyMemcacheCache',
+        'LOCATION': f'{CACHE_HOST}:{CACHE_PORT}',
+    }
+}
+
 
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases

@@ -20,6 +20,8 @@ services:
       SQL_ENGINE: django.db.backends.postgresql
       SQL_HOST: diplomas-db
       SQL_PORT: 5432
+      CACHE_HOST: diplomas_cache
+      CACHE_PORT: 11211
       GOOGLE_CLIENT_ID: ${EBSI_DIPLOMAS_GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${EBSI_DIPLOMAS_GOOGLE_CLIENT_SECRET}
       GOOGLE_TOKEN_URL: 'https://www.googleapis.com/oauth2/v4/token'
@@ -33,6 +35,7 @@ services:
       - ./ssi-lib/commands:/usr/local/sbin
     depends_on:
       - diplomas_postgres
+      - memcached
   verifier:
     container_name: ebsi-verifier-dev
     build:
@@ -52,12 +55,15 @@ services:
       SQL_ENGINE: django.db.backends.postgresql
       SQL_HOST: diplomas-db
       SQL_PORT: 5432
+      CACHE_HOST: memcached
+      CACHE_PORT: 11211
     volumes:
       - ./web:/home/dev/app
       - ./storage/verifier:/home/dev/storage
       - ./ssi-lib/commands:/usr/local/sbin
     depends_on:
       - diplomas_postgres
+      - memcached
   diplomas_postgres:
     container_name: diplomas-db
     image: postgres:14.0-alpine
@@ -67,6 +73,14 @@ services:
       POSTGRES_DB: diplomas_db
       POSTGRES_USER: diplomas_db_user
       POSTGRES_PASSWORD: diplomas_db_password
+  memcached:
+    container_name: diplomas_cache
+    image: memcached:1.6
+    ports:
+      - "127.0.0.1:11211:11211"
+    entrypoint:
+      - memcached
+      - -m 64
   nginx:
     container_name: nginx-dev
     build:
