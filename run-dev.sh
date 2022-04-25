@@ -51,5 +51,8 @@ if [ ${DO_BUILD} == true ]; then
         --no-push
 fi
 
-docker-compose --env-file .env-google up \
-    $compose_args --remove-orphans
+docker-compose \
+    --env-file .env-google \
+    up \
+    $compose_args \
+    --remove-orphans
