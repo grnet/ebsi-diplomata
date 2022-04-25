@@ -57,7 +57,7 @@ Create or update DID.
 
 ```json
 {
-    "algo": "Ed25519",
+    "algo": "Secp256k1",
     "token": "eyJhbGciOiJFUzI1NksiLCJ0eXAiOiJKV1QifQ.eyJleHAiOjE2NDE0MDQyMzUsImlhdCI6MTY0MTQwMzMzNSwiaXNzIjoiZGlkOmVic2k6emNHdnFnWlRIQ3Rramd0Y0tSTDdIOGsiLCJvbmJvYXJkaW5nIjoicmVjYXB0Y2hhIiwidmFsaWRhdGVkSW5mbyI6eyJhY3Rpb24iOiJsb2dpbiIsImNoYWxsZW5nZV90cyI6IjIwMjItMDEtMDVUMTc6MjI6MTRaIiwiaG9zdG5hbWUiOiJhcHAucHJlcHJvZC5lYnNpLmV1Iiwic2NvcmUiOjAuOSwic3VjY2VzcyI6dHJ1ZX19.5XtFq7bAagG9fgAYw1nHxZES7htRnl_froU1-KPTOEQsOPXBngQRsAnjh-h_EpjUVv4kq6XXtiMiaB6X_aTe2g",
     "onboard": true
 }

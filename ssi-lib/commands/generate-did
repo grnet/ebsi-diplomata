@@ -10,6 +10,11 @@ Arguments:
   --key ALIAS           Specific key to use
   --export OUTFILE      File to export DID after generation
 
+IMPORTANT: Currently only keys of type Secp256k1 are capable of signing ETH
+transactions. Consequently, DIDs generated over keys of another type cannot
+properly register to the EBSI, will not be resolved and thus cannot be
+effectively invovled in protocol operations.
+
 Examples
   $ $(basename "$0") --key d7080431b17f4adea29e50181115d810 --export tmp.json
 "

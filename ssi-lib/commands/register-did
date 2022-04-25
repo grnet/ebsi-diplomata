@@ -93,6 +93,6 @@ fi
 ./ssikit.sh essif did register --did ${DID}
 # TODO: Check response for error
 
-if [ ${DO_RESOLVE} == true ]; then
-    resolve-did --did ${DID}  >/dev/null  # exit with 1 if not resolved
-fi
+# if [ ${DO_RESOLVE} == true ]; then
+#     resolve-did --did ${DID}  >/dev/null  # exit with 1 if not resolved
+# fi

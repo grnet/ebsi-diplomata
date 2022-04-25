@@ -19,7 +19,7 @@ WARNING: non-registered DIDs fail to be resolved by interested parties and
 thus be effectively involved in protocol operations.
 
 Options:
-  -a, --algo [Ed25519|Secp256k1|RSA]  Keygen algorithm. Default: Ed25519
+  -a, --algo [Ed25519|Secp256k1|RSA]  Keygen algorithm. Default: Secp256k1
   --no-register                       Force creation of DIDs without
                                       registering them to the EBIS. See WARNING
                                       above.
@@ -52,13 +52,13 @@ do_put_request() {
     payload="{\"token\": \"${EBSI_TOKEN}\", \"algo\": \"${ALGO}\", 
       \"onboard\": ${ONBOARD}}"
     echo -ne "\nWaiting response from ${addr} ...\n"
-    curl -X PUT "${addr}/api/v1/did/create/" \
+    curl -vX PUT "${addr}/api/v1/did/create/" \
         -H "Content-Type: application/json" \
         -d "${payload}"
 }
 
 EBSI_TOKEN=
-ALGO=Ed25519
+ALGO=Secp256k1
 ONBOARD=true
 
 while [[ $# -gt 0 ]]
@@ -110,5 +110,5 @@ if [ ${ONBOARD} == true ] && [ -z ${EBSI_TOKEN} ]; then
 fi
 
 do_put_request 7000
-do_put_request 7001
+# do_put_request 7001
 echo

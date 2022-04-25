@@ -10,7 +10,7 @@ Arguments:
   --export OUTFILE                    File to export key after generation
 
 Options:
-  -a, --algo [Ed25519|Secp256k1|RSA]  Keygen algorithm. Default: Ed25519
+  -a, --algo [Ed25519|Secp256k1|RSA]  Keygen algorithm. Default: Secp256k1
 
 Examples
   $ $(basename "$0") --algo Secp256k1 --export tmp.json
@@ -20,7 +20,7 @@ usage() { echo -n "$usage_string" 1>&2; }
 
 set -e
 
-ALGO=Ed25519
+ALGO=Secp256k1
 OUTFILE=
 
 while [[ $# -gt 0 ]]
