@@ -6,13 +6,22 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.core.cache import cache
-from core.logic import fetch_did, create_did, issue_credential, \
-    verify_presentation, IdentityError, CreationError, IssuanceError, \
-    VerificationError
 from core.models import User, Alumnus, UserToken
+from core import logic
+from core.logic import (
+    IdentityError,
+    CreationError,
+    IssuanceError,
+    VerificationError,
+)
 from oauth.util import token_auth
-from util import render_200_OK, render_201_CREATED, render_400_BAD_REQUEST, \
-    render_404_NOT_FOUND, render_errors
+from util import (
+    render_200_OK,
+    render_201_CREATED,
+    render_400_BAD_REQUEST,
+    render_404_NOT_FOUND,
+    render_errors,
+)
 
 
 def _extract_payload(request):
@@ -32,7 +41,7 @@ def _extract_user_data(request):
 @require_http_methods(['GET', ])
 def show_did(request):
     try:
-        did = fetch_did()
+        did = logic.fetch_did()
     except IdentityError as err:
         return render_errors(['%s' % err], 512)  # TODO
     return render_200_OK({'did': did})
@@ -40,7 +49,7 @@ def show_did(request):
 
 @csrf_exempt
 @require_http_methods(['PUT', ])
-def do_create_did(request):
+def create_did(request):
     payload = _extract_payload(request)
     try:
         algo = payload['algo']
@@ -49,7 +58,7 @@ def do_create_did(request):
     except KeyError as err:
         return render_400_BAD_REQUEST()
     try:
-        alias = create_did(token, algo, onboard)
+        alias = logic.create_did(token, algo, onboard)
     except CreationError as err:
         return render_errors(['%s' % err, ], 512)
     return render_201_CREATED({'did': alias})
@@ -58,7 +67,7 @@ def do_create_did(request):
 @csrf_exempt
 @require_http_methods(['POST', ])
 @token_auth
-def do_issue_credential(request):
+def issue_credential(request):
     payload = _extract_payload(request)
     try:
         holder = payload['holder']
@@ -68,8 +77,8 @@ def do_issue_credential(request):
         return render_400_BAD_REQUEST()
     user_data = _extract_user_data(request)
     try:
-        credential = issue_credential(holder, vc_type,
-                                      content, user_data)
+        credential = logic.issue_credential(holder, vc_type,
+                                            content, user_data)
     except IssuanceError as err:
         return render_errors(['%s' % err, ], 512)
     return render_200_OK({'credential': credential})
@@ -77,14 +86,14 @@ def do_issue_credential(request):
 
 @csrf_exempt
 @require_http_methods(['POST', ])
-def do_verify_credentials(request):
+def verify_credentials(request):
     payload = _extract_payload(request)
     try:
         presentation = payload['presentation']
     except (JSONDecodeError, KeyError,) as err:
         return render_400_BAD_REQUEST()
     try:
-        results = verify_presentation(presentation)
+        results = logic.verify_presentation(presentation)
     except VerificationError as err:
         return render_errors(['%s' % err, ], 512)
     return render_200_OK({'results': results})
