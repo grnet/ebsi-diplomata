@@ -5,7 +5,7 @@ usage_string="usage: ./$(basename "$0") [OPTIONS]
 Trigger DID creation for the service running at the provided address.
 
 You will be asked to pass an EBSI token needed for DID registration. EBSI
-tokens tokens are taken from https://app.preprod.ebsi.eu/users-onboarding and
+tokens are taken from https://app.preprod.ebsi.eu/users-onboarding and
 expire after 15 mins.
 
 Options:

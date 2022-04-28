@@ -55,14 +55,11 @@ Run the `issuer` and `verifier` services at `localhost:7000-1` respectively with
 Once both services are up, create a DID for each with:
 
 ```commandline
-./create-dids
+./create-did.sh
 ```
 
-**WARNING**: You will be asked to provide an EBSI token for onboarding the newly
-created DIDs. If an invalid or expired token is provided, DIDs will fail to
-onboard and will not be stored. Run with `--no-register` if you want to create
-DIDs without registering them to the EBSI, but remember that non-registered
-DIDs fail to resolve and thus be effectively involved in protocol operations.
+**Note**: You will be asked to provide an EBSI token for onboarding the newly
+created issuer DID to the EBSI.
 
 Run the wallet inside a container called `holder` with:
 
