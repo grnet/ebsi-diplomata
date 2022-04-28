@@ -1,6 +1,6 @@
 from functools import wraps
 from django.views.decorators import csrf
-from ssi.models import User, UserToken
+from core.models import User, UserToken
 from django.utils import timezone
 from django.http import JsonResponse
 

@@ -1,6 +1,6 @@
 from oauth.login.base import OAuthLoginHandler
 from oauth.clients.google import GoogleOAuthClient
-from ssi.models import User, Alumnus
+from core.models import User, Alumnus
 
 
 class GoogleLoginHandler(OAuthLoginHandler):

@@ -6,10 +6,10 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.core.cache import cache
-from ssi.logic import fetch_did, create_did, issue_credential, \
+from core.logic import fetch_did, create_did, issue_credential, \
     verify_presentation, IdentityError, CreationError, IssuanceError, \
     VerificationError
-from ssi.models import User, Alumnus, UserToken
+from core.models import User, Alumnus, UserToken
 from oauth.util import token_auth
 from util import render_200_OK, render_201_CREATED, render_400_BAD_REQUEST, \
     render_404_NOT_FOUND, render_errors

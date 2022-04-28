@@ -46,7 +46,7 @@ class Migration(migrations.Migration):
                 ('created_at', models.DateTimeField(default=django.utils.timezone.now)),
                 ('last_used_at', models.DateTimeField(default=django.utils.timezone.now)),
                 ('is_active', models.BooleanField(default=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='ssi.user')),
+                ('user', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='core.user')),
             ],
         ),
         migrations.CreateModel(
@@ -55,7 +55,7 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('alias', models.CharField(max_length=256)),
                 ('body', models.JSONField()),
-                ('holder', models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, to='ssi.did')),
+                ('holder', models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, to='core.did')),
             ],
         ),
         migrations.CreateModel(
@@ -63,7 +63,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('alias', models.CharField(max_length=256, primary_key=True, serialize=False)),
                 ('body', models.JSONField()),
-                ('holder', models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, to='ssi.did')),
+                ('holder', models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, to='core.did')),
             ],
         ),
         migrations.CreateModel(
@@ -80,8 +80,8 @@ class Migration(migrations.Migration):
                 ('birthyear', models.CharField(max_length=4, null=True)),
                 ('birthdate', models.CharField(max_length=64, null=True)),
                 ('afm', models.CharField(max_length=64)),
-                ('created_by', models.ForeignKey(null=True, on_delete=django.db.models.deletion.PROTECT, related_name='created_by', to='ssi.user')),
-                ('user', models.OneToOneField(null=True, on_delete=django.db.models.deletion.CASCADE, to='ssi.user')),
+                ('created_by', models.ForeignKey(null=True, on_delete=django.db.models.deletion.PROTECT, related_name='created_by', to='core.user')),
+                ('user', models.OneToOneField(null=True, on_delete=django.db.models.deletion.CASCADE, to='core.user')),
             ],
             options={
                 'abstract': False,

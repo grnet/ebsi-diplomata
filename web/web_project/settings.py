@@ -48,7 +48,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 ] + [
-    'ssi.apps.SSIConfig',
+    'core.apps.CoreConfig',
     'oauth.apps.OauthConfig',
 ]
 
