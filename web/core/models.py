@@ -10,26 +10,6 @@ TOKEN_EXPIRES_AFTER_SECS = settings.TOKEN_EXPIRES_AFTER_SECS
 TOKEN_REFRESH_AFTER_SECS = settings.TOKEN_REFRESH_AFTER_SECS
 
 
-class Did(models.Model):
-    """DID (body not NULL indicates resolved DID)"""
-    alias = models.CharField(max_length=256, primary_key=True)
-    body = JSONField(null=True)
-
-
-class Credential(models.Model):
-    """Verifiable credential"""
-    alias = models.CharField(max_length=256, primary_key=True)
-    holder = models.ForeignKey(Did, on_delete=models.DO_NOTHING)
-    body = JSONField(null=False)
-
-
-class Presentation(models.Model):
-    """Verifiable presentation"""
-    alias = models.CharField(max_length=256)
-    holder = models.ForeignKey(Did, on_delete=models.DO_NOTHING)
-    body = JSONField(null=False)
-
-
 class User(AbstractBaseUser):
     STUDENT = 'student'
     ALUMNUS = 'alumnus'
@@ -126,6 +106,7 @@ class Alumnus(UserProfile):
     birthyear = models.CharField(max_length=4, null=True)
     birthdate = models.CharField(max_length=64, null=True)
     afm = models.CharField(max_length=64)
+    # TODO: Include DID field
 
     @property
     def full_name(self):
@@ -147,4 +128,16 @@ class Alumnus(UserProfile):
         creator = self.created_by
         if creator:
             out['created_by'] = show_user(creator)
+        return out
+
+
+class Credential(models.Model):
+    """Verifiable credential"""
+    holder = models.ForeignKey(Alumnus, on_delete=models.PROTECT)
+    body = JSONField(null=False)
+
+    def serialize(self):
+        out = {}
+        out['holder'] = self.holder.serialize()  # TODO: Should use DID
+        out['body'] = self.body
         return out

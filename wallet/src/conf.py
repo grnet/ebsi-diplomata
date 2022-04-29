@@ -19,8 +19,11 @@ class Table:
     VP = 'vp'
 
 
-ISSUER_ADDRESS = 'http://localhost:7000'
-VERIFIER_ADDRESS = 'http://localhost:7001'
+CONNECT_TIMEOUT = 3.05
+READ_TIMEOUT = 27
+
+ISSUER_ADDRESS = os.environ.get('ISSUER_ADDRESS') or 'http://localhost:7000'
+VERIFIER_ADDRESS = os.environ.get('VERIFIER_ADDRESS') or 'http://localhost:7001'
 
 API_PREFIX = 'api/v1'
 

@@ -5,6 +5,7 @@ from django.conf import settings
 from ssi_lib import SSI, SSIGenerationError, SSIRegistrationError, \
     SSIResolutionError, SSIIssuanceError, SSIVerificationError, \
     Template, Vc
+from core.models import Alumnus, Credential
 
 
 class IdentityError(Exception):
@@ -151,11 +152,18 @@ def issue_credential(holder, vc_type, content, user_data):
         err = 'Malformed diploma content provided: %s' % err
         raise IssuanceError(err)
     try:
-        out = _ssi.issue_credential(holder, issuer, vc_type,
-                                    content)
+        vc = _ssi.issue_credential(holder, issuer, vc_type,
+                                   content)
     except SSIIssuanceError as err:
         raise IssuanceError(err)
-    return out
+    try:
+        # TODO: Should detect via DID
+        alumnus = Alumnus.objects.get(extern_id=user_data['extern_id'])
+    except Alumnus.DoesNotExist as err:
+        err = 'Could not detect alumnus: %s' % err
+        raise IssuanceError(err)
+    Credential.objects.create(holder=alumnus, body=vc)
+    return vc
 
 
 def verify_presentation(vp):

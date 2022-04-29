@@ -6,7 +6,7 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.core.cache import cache
-from core.models import User, Alumnus, UserToken
+from core.models import User, Alumnus, UserToken, Credential
 from core import logic
 from core.logic import (
     IdentityError,
@@ -97,6 +97,12 @@ def verify_credentials(request):
     except VerificationError as err:
         return render_errors(['%s' % err, ], 512)
     return render_200_OK({'results': results})
+
+
+@require_http_methods(['GET', ])
+def show_credentials(request):
+    credentials = [c.serialize() for c in Credential.objects.all()]
+    return render_200_OK(credentials)
 
 
 @require_http_methods(['GET', ])

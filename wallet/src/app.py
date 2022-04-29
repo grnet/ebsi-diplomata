@@ -43,7 +43,8 @@ class HttpClient(object):
 
     def _do_request(self, method, url, **kw):
         try:
-            resp = getattr(requests, method)(url, **kw)
+            resp = getattr(requests, method)(
+                url, **kw, timeout=(conf.CONNECT_TIMEOUT, conf.READ_TIMEOUT))
         except requests.exceptions.ConnectionError as err:
             raise HttpConnectionError(err)
         return resp

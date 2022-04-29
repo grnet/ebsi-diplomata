@@ -11,6 +11,7 @@ api_prefix = settings.API_PREFIX + ('/' if not
 core_urls = [
     path('did/', core.api.show_did),
     path('did/create/', core.api.create_did),
+    path('credentials/', core.api.show_credentials),
     path('credentials/issue/', core.api.issue_credential),
     path('credentials/verify/', core.api.verify_credentials),
     path('alumni/', core.api.show_alumni),

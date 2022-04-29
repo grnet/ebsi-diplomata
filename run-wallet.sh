@@ -6,6 +6,8 @@ Run the wallet container and optionally build the image.
 
 Options:
   --name        Container name. Defaults to \"holder\".
+  --issuer      Issuer service to connect. Default: http://localhost:7000
+  --verifier    Verifier service to connect. Default: http://localhost:7001
   --build       Build wallet image before running the application (will also
                 re-build the base image)
   -h, --help    Display help message and exit
@@ -20,6 +22,8 @@ CONTAINER=holder
 WORKDIR=/home/dev/app
 STORAGE=/home/dev/storage
 DBNAME=${STORAGE}/${CONTAINER}.db
+ISSUER_ADDRESS=
+VERIFIER_ADDRESS=
 
 DO_BUILD=false
 
@@ -29,6 +33,16 @@ do
     case $arg in
         --name)
             CONTAINER="$2"
+            shift
+            shift
+            ;;
+        --issuer)
+            ISSUER_ADDRESS="$2"
+            shift
+            shift
+            ;;
+        --verifier)
+            VERIFIER_ADDRESS="$2"
             shift
             shift
             ;;
@@ -63,6 +77,8 @@ docker run \
     -v ${PWD}/wallet:/${WORKDIR} \
     -v ${PWD}/storage/wallet:${STORAGE} \
     -v ${PWD}/ssi-lib/commands:/usr/local/sbin \
+    -e ISSUER_ADDRESS=${ISSUER_ADDRESS} \
+    -e VERIFIER_ADDRESS=${VERIFIER_ADDRESS} \
     -e DBNAME=${DBNAME} \
     -it \
     ${IMAGE}:latest
