@@ -38,6 +38,10 @@ TMPDIR = os.environ.get('TMPDIR')
 EBSI_PRFX = 'did:ebsi:'
 
 
+# Login
+UI_TOKEN_LOGIN_URL = '/login/code/#%s'
+
+
 # Application definition
 
 INSTALLED_APPS = [

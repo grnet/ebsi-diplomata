@@ -3,6 +3,8 @@ from json.decoder import JSONDecodeError
 from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.conf import settings
+from django.shortcuts import redirect
 from authlib.integrations.django_client import OAuth
 from oauth.login.base import OAuthLoginFailure
 from oauth.login.google import GoogleLoginHandler
@@ -18,6 +20,7 @@ def google_callback(request):
         code = google.create_session(request)
     except OAuthLoginFailure:
         return render_401_UNAUTHORIZED()
+    return redirect(settings.UI_TOKEN_LOGIN_URL % code)
     return render_200_OK({'session': code})
 
 
