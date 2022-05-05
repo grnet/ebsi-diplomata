@@ -1,0 +1,19 @@
+---
+image: dokku/ci-docker-image
+
+stages:
+  - deploy
+
+variables:
+  GIT_DEPTH: 0
+
+deploy:
+  stage: deploy
+  only:
+    - develop
+  variables:
+    GIT_REMOTE_URL: ssh://dokku@${DOKKU_HOST}:22/ebsi-diplomata
+  script: 
+    - dokku-deploy
+  after_script: 
+    - dokku-unlock
