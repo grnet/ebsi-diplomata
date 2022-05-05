@@ -1,6 +1,12 @@
 version: '3.8'
 
 services:
+  ui:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./ui:/app
   issuer:
     container_name: ebsi-issuer-dev
     build:
@@ -90,6 +96,6 @@ services:
       - "1337:80"
     depends_on:
       - issuer
-      # - ui
+      - ui
 volumes:
   diplomas_postgres_data:

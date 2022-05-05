@@ -1,0 +1,7 @@
+FROM node:16 as runner
+WORKDIR /app
+ADD . .
+RUN yarn install --frozen-lockfile
+
+EXPOSE 3000
+CMD ["yarn", "dev"]
