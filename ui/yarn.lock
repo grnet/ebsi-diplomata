@@ -1339,9 +1339,9 @@
   integrity sha512-I8ifscVJY6dLzIcGrS+ldAiQZh54k9bbQ7IvCGNr2odoPjHpzSLjpK0Rxfwt4uA0vUhED4yacSegofzqLCiCTA==
 
 "@digigov/ui@^0.17.0":
-  version "0.17.0"
-  resolved "https://registry.yarnpkg.com/@digigov/ui/-/ui-0.17.0.tgz#3842ac17006df303139b62d56af0cf3b30a767ab"
-  integrity sha512-3Zjvd1zQbTWkCB5LXbY+xmzvDirxzqiY+R+2ovV/sBYbu7TyTeZOZVO8hMAdx/DjDIJj2U+qgrd80k1+GMdYwg==
+  version "0.17.1"
+  resolved "https://registry.yarnpkg.com/@digigov/ui/-/ui-0.17.1.tgz#075769da0c36023cb429a91236e14b8d789df386"
+  integrity sha512-UyQCimh/6e4fA0H3OMgjWHQdAGGsEAEtptk5XIi51lBF+J35mi1wHJFLRh8EENRa3HIW+SWAN56oKj9cVqLxow==
   dependencies:
     google-libphonenumber "3.2.8"
     react-qr-reader "2.2.1"
@@ -8695,9 +8695,9 @@ react-hook-form@6.12.2:
   integrity sha512-O72E2DXyk7djFqyy6eYi5yESGweKe0CNHHPS0Mx4JazpLbE4Ox+66ldZ23f0J5ZN/krEjDWRD+hUfg5Shvfhtw==
 
 react-i18next@^11.3.3:
-  version "11.16.7"
-  resolved "https://registry.yarnpkg.com/react-i18next/-/react-i18next-11.16.7.tgz#8d0680b7f4c8e43f59996336b7183ad576a28df7"
-  integrity sha512-7yotILJLnKfvUfrl/nt9eK9vFpVFjZPLWAwBzWL6XppSZZEvlmlKk0GBGDCAPfLfs8oND7WAbry8wGzdoiW5Nw==
+  version "11.16.8"
+  resolved "https://registry.yarnpkg.com/react-i18next/-/react-i18next-11.16.8.tgz#e71621c16f8f77152e85795a88ba6a371e46687d"
+  integrity sha512-uuhSuwY0iMOPV9HUsN1OC4cGCrATPvzZ1O8UfvLR+imz/XjPmfDgZM1e4dPS0Suc2+aCQqJ0FmWP891lUkB2Cg==
   dependencies:
     "@babel/runtime" "^7.14.5"
     html-escaper "^2.0.2"
@@ -9939,6 +9939,11 @@ supports-preserve-symlinks-flag@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/supports-preserve-symlinks-flag/-/supports-preserve-symlinks-flag-1.0.0.tgz#6eda4bd344a3c94aea376d4cc31bc77311039e09"
   integrity sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==
+
+swr@^1.3.0:
+  version "1.3.0"
+  resolved "https://registry.yarnpkg.com/swr/-/swr-1.3.0.tgz#c6531866a35b4db37b38b72c45a63171faf9f4e8"
+  integrity sha512-dkghQrOl2ORX9HYrMDtPa7LTVHJjCTeZoB1dqTbnnEDlSvN8JEKpYIYurDfvbQFUUS8Cg8PceFVZNkW0KNNYPw==
 
 symbol-tree@^3.2.4:
   version "3.2.4"

@@ -11,36 +11,24 @@ import {
 } from '@digigov/ui';
 import { Main } from '@digigov/ui/layouts/Basic';
 import CommonLayout from 'ui/components/CommonLayout';
-
-const fields = [
-  {
-    name: 'email',
-    value: 'adal@gmail.com',
-  },
-  {
-    name: 'name',
-    value: ' Ada',
-  },
-  {
-    name: 'surname',
-    value: ' Lovelace',
-  },
-  {
-    name: 'DID',
-    value: 'XADFFRGRGVFV2232DFDFRF',
-  },
-]
+import { useUserDetails } from 'ui/auth';
 
 export default function Start() {
+  const { user, processing, error } = useUserDetails();
+  return processing ? 'loading...' : (error ? 'error loading token' : (user ? <Inner user={user} /> : 'redirect to login'));
+};
+
+function Inner(props) {
   const router = useRouter();
+  const user = props.user;
   return (
     <CommonLayout>
       <Main>
         <Caption size='xl'>Issuance request</Caption>
         <Title>Overview of your data</Title>
         <SummaryList>
-          {fields &&
-            fields.map((field, index) => {
+          {user &&
+            user.map((field, index) => {
               return (
                 <SummaryListItem key={index}>
                   <SummaryListItemKey>
@@ -53,10 +41,11 @@ export default function Start() {
               );
             })}
         </SummaryList>
-        < Button onClick={() => {
+        <Button onClick={() => {
           router.push('/issue/action');
-        }}>Confirm</Button>
+        } }>Confirm</Button>
       </Main>
     </CommonLayout>
   );
-};
+}
+
