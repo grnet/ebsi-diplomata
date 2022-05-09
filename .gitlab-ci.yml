@@ -37,8 +37,7 @@ build-base-image:
   script:
     - ssh ${REMOTE_USER}@${REMOTE_HOST} "cd ${DEPLOY_PATH} && sudo ./build-base-image.sh --tag local"
   rules:
-    - if: $CI_COMMIT_REF_NAME == "develop"
-    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_COMMIT_REF_NAME == "develop" && $CI_PIPELINE_SOURCE == "schedule"
 
 deploy-service:
   image: registry.docker.grnet.gr/dockerhub-cache/library/debian:buster-slim
