@@ -32,7 +32,7 @@ build-base-image:
   image: registry.docker.grnet.gr/dockerhub-cache/library/debian:buster-slim
   stage: build
   only:
-    - main
+    - develop
   script:
     - rsync -a --delete $CI_PROJECT_DIR ${REMOTE_USER}@${REMOTE_HOST}:.
     - ssh ${REMOTE_USER}@${REMOTE_HOST} "
