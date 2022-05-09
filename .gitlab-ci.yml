@@ -43,6 +43,6 @@ deploy-service:
   image: registry.docker.grnet.gr/dockerhub-cache/library/debian:buster-slim
   stage: deploy
   script:
-    - ssh ${REMOTE_USER}@${REMOTE_HOST} "cd ${DEPLOY_PATH} && sudo docker-compose --env-file .env-google up --build --remove-orphans"
+    - ssh ${REMOTE_USER}@${REMOTE_HOST} "cd ${DEPLOY_PATH} && sudo docker compose --env-file .env-google up --detach --build --remove-orphans"
   rules:
     - if: $CI_COMMIT_REF_NAME == "develop"
