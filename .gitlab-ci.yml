@@ -6,10 +6,12 @@ stages:
 
 variables:
   GIT_DEPTH: 1
-  DEPLOY_PATH: /opt/ebsi-diplomata 
+  DEPLOY_PATH: ~/ebsi-diplomata
 
 # See https://docs.gitlab.com/ee/ci/ssh_keys/#ssh-keys-when-using-the-docker-executor
 default:
+  only:
+    - develop
   before_script:
       ## Install ssh-agent and rsync if not already installed.
       - apt-get update -y
@@ -31,11 +33,8 @@ default:
 build-base-image:
   image: registry.docker.grnet.gr/dockerhub-cache/library/debian:buster-slim
   stage: build
-  only:
-    - develop
+  variables:
+    GIT_SUBMODULE_STRATEGY: recursive
   script:
-    - rsync -a --delete $CI_PROJECT_DIR ${REMOTE_USER}@${REMOTE_HOST}:.
-    - ssh ${REMOTE_USER}@${REMOTE_HOST} "
-        pwd;
-        ls;
-        sudo ls -l /etc"
+    - rsync -a --delete $CI_PROJECT_DIR ${REMOTE_USER}@${REMOTE_HOST}:${DEPLOY_PATH}
+    - ssh ${REMOTE_USER}@${REMOTE_HOST} "cd ${DEPLOY_PATH} && ./build-base-image.sh --tag local"
