@@ -13,7 +13,7 @@ default:
   before_script:
       ## Install ssh-agent and rsync if not already installed.
       - apt-get update -y
-      - apt-get install openssh-client rsync -y 
+      - apt-get install openssh-client rsync -y
       ## Run ssh-agent (inside the build environment)
       - eval $(ssh-agent -s)
       ## Add the SSH key stored in SSH_PRIVATE_KEY variable to the agent store
@@ -27,6 +27,7 @@ default:
       # Add remote host pub key to known_hosts
       - ssh-keyscan $REMOTE_HOST >> ~/.ssh/known_hosts
       - chmod 644 ~/.ssh/known_hosts
+      - rsync -a --delete --exclude '.env-google' ${CI_PROJECT_DIR}/ ${REMOTE_USER}@${REMOTE_HOST}:${DEPLOY_PATH}
 
 build-base-image:
   image: registry.docker.grnet.gr/dockerhub-cache/library/debian:buster-slim
@@ -36,5 +37,14 @@ build-base-image:
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
   script:
-    - rsync -a --delete ${CI_PROJECT_DIR}/ ${REMOTE_USER}@${REMOTE_HOST}:${DEPLOY_PATH}
     - ssh ${REMOTE_USER}@${REMOTE_HOST} "cd ${DEPLOY_PATH} && sudo ./build-base-image.sh --tag local"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+
+deploy-service:
+  image: registry.docker.grnet.gr/dockerhub-cache/library/debian:buster-slim
+  stage: deploy
+  only:
+    - develop
+  script:
+    - ssh ${REMOTE_USER}@${REMOTE_HOST} "cd ${DEPLOY_PATH} && sudo --env-file .env-google up --build --remove-orphans"
