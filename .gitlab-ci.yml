@@ -36,5 +36,5 @@ build-base-image:
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
   script:
-    - rsync -a --delete $CI_PROJECT_DIR ${REMOTE_USER}@${REMOTE_HOST}:${DEPLOY_PATH}
+    - rsync -a --delete ${CI_PROJECT_DIR}/ ${REMOTE_USER}@${REMOTE_HOST}:${DEPLOY_PATH}
     - ssh ${REMOTE_USER}@${REMOTE_HOST} "cd ${DEPLOY_PATH} && ./build-base-image.sh --tag local"
