@@ -10,8 +10,6 @@ variables:
 
 # See https://docs.gitlab.com/ee/ci/ssh_keys/#ssh-keys-when-using-the-docker-executor
 default:
-  only:
-    - develop
   before_script:
       ## Install ssh-agent and rsync if not already installed.
       - apt-get update -y
@@ -33,6 +31,8 @@ default:
 build-base-image:
   image: registry.docker.grnet.gr/dockerhub-cache/library/debian:buster-slim
   stage: build
+  only:
+    - develop
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
   script:
