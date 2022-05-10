@@ -1,0 +1,12 @@
+include:
+  - project: "devs/devline/templates-ci"
+    ref: master
+    file: "/templates/.static-export.yml"
+
+stages:
+  - export
+
+export:
+  stage: export
+  extends: '.export-named'
+

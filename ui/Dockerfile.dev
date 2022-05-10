@@ -1,0 +1,7 @@
+FROM node:16 as runner
+WORKDIR /app
+ADD ./docker/entrypoint.sh /usr/bin/entrypoint.sh
+ADD . .
+
+EXPOSE 3000
+CMD ["entrypoint.sh"]

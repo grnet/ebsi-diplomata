@@ -67,6 +67,7 @@ build_image() {
 
     echo "Building image ${image}:${tag} from ${dockerfile}"
 
+    export DOCKER_DEFAULT_PLATFORM=linux/amd64
     docker image build \
         -t ${image}:${tag} \
         -f ${dockerfile} \
